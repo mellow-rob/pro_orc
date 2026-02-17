@@ -94,7 +94,11 @@ Plans:
   2. The panel lists configured MCP servers with name, type, and description
   3. The panel lists installed Plugins with name, type, and description
   4. The tools inventory loads by reading `~/.claude/` at startup — no manual configuration required
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 05-01-PLAN.md — Tools scanner: types + scanClaudeTools() for skills, plugins, MCP detection
+- [ ] 05-02-PLAN.md — Tools panel component + third tab wiring into dashboard
 
 ## Progress
 
@@ -107,4 +111,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | 2. Data Layer | 3/3 | Complete | 2026-02-17 |
 | 3. Static Dashboard | 2/2 | Complete | 2026-02-17 |
 | 4. Live Updates | 0/TBD | Not started | - |
-| 5. Claude Tools | 0/TBD | Not started | - |
+| 5. Claude Tools | 0/2 | Not started | - |
