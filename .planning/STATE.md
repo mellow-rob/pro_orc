@@ -5,21 +5,21 @@
 See: .planning/PROJECT.md (updated 2026-02-17)
 
 **Core value:** Auf einen Blick sehen, wo jedes Projekt steht, was der nächste Schritt ist, und welche Tools zur Verfügung stehen — ohne Terminal-Hopping oder Notion-Suche.
-**Current focus:** Phase 5 in progress — Claude Tools scanner foundation built
+**Current focus:** Phase 5 COMPLETE — ToolsPanel UI with three-tab dashboard shipped
 
 ## Current Position
 
-Phase: 5 of 5 (Claude Tools) — IN PROGRESS
-Plan: 1 of 2 in current phase
-Status: Phase 5 Plan 1 complete — ClaudeTool types and scanClaudeTools() scanner built
-Last activity: 2026-02-17 — Completed Phase 5 Plan 1 (ClaudeTool types, tools-scanner.ts with scanClaudeTools)
+Phase: 5 of 5 (Claude Tools) — COMPLETE
+Plan: 2 of 2 in current phase
+Status: Phase 5 Plan 2 complete — ToolsPanel component and Tools tab wired into dashboard
+Last activity: 2026-02-17 — Completed Phase 5 Plan 2 (ToolsPanel component, ProjectTabs Tools tab, Promise.all scanner concurrency)
 
-Progress: [████████████████████] 95%
+Progress: [████████████████████] 100%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 10
+- Total plans completed: 11
 - Average duration: 2.1min
 - Total execution time: 0.35 hours
 
@@ -40,7 +40,7 @@ Progress: [████████████████████] 95%
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 05-claude-tools | 1 | 4min | 4min |
+| 05-claude-tools | 2 | 6min | 3min |
 
 ## Accumulated Context
 
@@ -78,6 +78,10 @@ Recent decisions affecting current work:
 - [Phase 05-01]: Manual regex parsing for YAML frontmatter instead of js-yaml — no new dependencies required
 - [Phase 05-01]: Dirent type imported from 'fs' to fix TypeScript NonSharedBuffer inference in readdir results
 - [Phase 05-01]: ClaudeToolsData splits plugins into mcpPlugins/skillPlugins at scan time for clean UI separation
+- [Phase 05-02]: Deleted orphaned /tools route — Tools feature lives as dashboard tab, not a separate Next.js route
+- [Phase 05-02]: Badge colors use inline className overrides (cyan/fuchsia/secondary) — no new cva variants needed
+- [Phase 05-02]: CategorySection returns null for empty arrays — no dead section headings appear
+- [Phase 05-02]: Promise.all for concurrent scanner execution in page.tsx — scanProjects() + scanClaudeTools() run together
 
 ### Pending Todos
 
@@ -91,5 +95,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-17
-Stopped at: Completed 05-01-PLAN.md — ClaudeTool types and scanClaudeTools() scanner module
+Stopped at: Completed 05-02-PLAN.md — ToolsPanel component and Tools tab wired into dashboard. ALL PHASES COMPLETE.
 Resume file: None
