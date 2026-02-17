@@ -64,7 +64,11 @@ Plans:
   3. Projects with no git activity for 30+ days are visually marked as stale
   4. Clicking "Open in Terminal" opens the project folder in Terminal.app; "Open in Finder" opens it in Finder; "Open Notion Page" opens the parsed Notion URL in the browser
   5. Research project cards show name, GSD status, and Notion link — no git metrics displayed
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 03-01-PLAN.md — Card components, server actions, status badge, and utility helpers
+- [ ] 03-02-PLAN.md — Dashboard page assembly with async data fetch and visual verification
 
 ### Phase 4: Live Updates
 **Goal**: The dashboard updates in real time when any `.planning/` file changes — no page reload required — using a chokidar singleton watcher and SSE push
