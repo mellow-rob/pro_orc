@@ -5,32 +5,33 @@
 See: .planning/PROJECT.md (updated 2026-02-17)
 
 **Core value:** Auf einen Blick sehen, wo jedes Projekt steht, was der nächste Schritt ist, und welche Tools zur Verfügung stehen — ohne Terminal-Hopping oder Notion-Suche.
-**Current focus:** Phase 1 complete — ready for Phase 2
+**Current focus:** Phase 2 Data Layer — git reader complete, continuing with scanner
 
 ## Current Position
 
-Phase: 1 of 5 (Foundation) — COMPLETE
-Plan: 3 of 3 in current phase
-Status: Phase complete
-Last activity: 2026-02-17 — Phase 1 Foundation complete (all 3 plans executed, visual checkpoint passed)
+Phase: 2 of 5 (Data Layer)
+Plan: 2 of 3 in current phase
+Status: In progress
+Last activity: 2026-02-17 — Completed 02-02 git reader module
 
-Progress: [██████████] 100%
+Progress: [████████░░░░░░░░░░░░] 40%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 3
-- Average duration: 2.7min
-- Total execution time: 0.13 hours
+- Total plans completed: 4
+- Average duration: 2.75min
+- Total execution time: 0.18 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01-foundation | 3 | 8min | 2.7min |
+| 02-data-layer | 1 | 3min | 3min |
 
 **Recent Trend:**
-- Last 5 plans: 01-01 (2min), 01-02 (3min), 01-03 (3min)
+- Last 5 plans: 01-01 (2min), 01-02 (3min), 01-03 (3min), 02-02 (3min)
 - Trend: Consistent
 
 *Updated after each plan completion*
@@ -52,6 +53,8 @@ Recent decisions affecting current work:
 - [01-02]: Kept shadcn/tailwind.css import for component base styles
 - [01-03]: Dark class hardcoded on html — no next-themes, no toggle, no flash
 - [01-03]: Inter (sans) + JetBrains Mono (mono) fonts via next/font/google CSS variables
+- [02-02]: simpleGit constructor inside try-catch — throws synchronously for nonexistent paths
+- [02-02]: Vitest with node environment for testing server-only modules
 
 ### Pending Todos
 
@@ -65,5 +68,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-17
-Stopped at: Phase 1 Foundation complete — all 3 plans executed, visual checkpoint passed
+Stopped at: Completed 02-02-PLAN.md
 Resume file: None
