@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-17)
 
 **Core value:** Auf einen Blick sehen, wo jedes Projekt steht, was der nächste Schritt ist, und welche Tools zur Verfügung stehen — ohne Terminal-Hopping oder Notion-Suche.
-**Current focus:** Phase 2 Data Layer complete — scanner, parser, git reader all done
+**Current focus:** Phase 3 Static Dashboard — card components and server actions built, wiring into page next
 
 ## Current Position
 
-Phase: 2 of 5 (Data Layer) -- COMPLETE
-Plan: 3 of 3 in current phase
-Status: Phase complete
-Last activity: 2026-02-17 — Completed 02-03 scanner module (phase 2 done)
+Phase: 3 of 5 (Static Dashboard)
+Plan: 1 of 2 in current phase
+Status: Plan 03-01 complete
+Last activity: 2026-02-17 — Completed 03-01 dashboard card components
 
-Progress: [████████████░░░░░░░░] 60%
+Progress: [██████████████░░░░░░] 70%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 6
-- Average duration: 2.7min
-- Total execution time: 0.27 hours
+- Total plans completed: 7
+- Average duration: 2.4min
+- Total execution time: 0.28 hours
 
 **By Phase:**
 
@@ -29,10 +29,11 @@ Progress: [████████████░░░░░░░░] 60%
 |-------|-------|-------|----------|
 | 01-foundation | 3 | 8min | 2.7min |
 | 02-data-layer | 3 | 8min | 2.7min |
+| 03-static-dashboard | 1 | 1min | 1min |
 
 **Recent Trend:**
-- Last 5 plans: 01-02 (3min), 01-03 (3min), 02-02 (3min), 02-01 (3min), 02-03 (2min)
-- Trend: Consistent
+- Last 5 plans: 01-03 (3min), 02-02 (3min), 02-01 (3min), 02-03 (2min), 03-01 (1min)
+- Trend: Accelerating
 
 *Updated after each plan completion*
 
@@ -57,6 +58,9 @@ Recent decisions affecting current work:
 - [02-02]: Vitest with node environment for testing server-only modules
 - [02-01]: Added non-bold regex variants (Phase: vs **Phase:**) to handle real STATE.md format
 - [02-01]: server-only installed as explicit dependency (not bundled with Next.js 16)
+- [03-01]: Notion link uses <a href> not server action (simpler, no JS required)
+- [03-01]: StatusBadge shared component avoids duplication across card types
+- [03-01]: isStale/formatRelativeTime local to codeProjectCard (single consumer)
 
 ### Pending Todos
 
@@ -70,5 +74,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-17
-Stopped at: Completed 02-03-PLAN.md (Phase 2 complete)
+Stopped at: Completed 03-01-PLAN.md
 Resume file: None
