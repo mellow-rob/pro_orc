@@ -30,7 +30,12 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. `next.config.ts` includes `serverExternalPackages` for chokidar, simple-git, and fsevents
   4. All shared TypeScript types (`ProjectData`, `ResearchProject`, `GsdStatus`, etc.) are defined in `lib/types.ts` and import cleanly
   5. No database, no auth, no hardcoded paths — all resolved via `os.homedir()`
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 01-01-PLAN.md — Scaffold Next.js project, configure next.config.ts, create lib/types.ts and lib/paths.ts
+- [ ] 01-02-PLAN.md — Initialize shadcn/ui New York style, configure n3urala1 dark theme in globals.css
+- [ ] 01-03-PLAN.md — Wire root layout with dark class and fonts, create placeholder pages, visual verify
 
 ### Phase 2: Data Layer
 **Goal**: Scanner, Parser, and Git Reader modules that reliably read the filesystem and git history — tested in isolation so data shapes are validated before any route handler or UI component touches them
@@ -85,7 +90,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation | 0/TBD | Not started | - |
+| 1. Foundation | 0/3 | Not started | - |
 | 2. Data Layer | 0/TBD | Not started | - |
 | 3. Static Dashboard | 0/TBD | Not started | - |
 | 4. Live Updates | 0/TBD | Not started | - |
