@@ -2,12 +2,13 @@
 
 import { useState, useCallback } from 'react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Code, BookOpen, EyeOff, ChevronRight } from 'lucide-react'
+import { Code, BookOpen, EyeOff, ChevronRight, Wrench } from 'lucide-react'
 import { CodeProjectCard } from '@/components/codeProjectCard'
 import { ResearchProjectCard } from '@/components/researchProjectCard'
+import { ToolsPanel } from '@/components/toolsPanel'
 import { usePrivateProjects } from '@/hooks/usePrivateProjects'
 import { useProjectEvents } from '@/hooks/useProjectEvents'
-import type { CodeProject, ResearchProject, Project } from '@/lib/types'
+import type { CodeProject, ResearchProject, Project, ClaudeToolsData } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
 const triggerBase = cn(
@@ -40,9 +41,11 @@ function PrivateSection({ count, children }: { count: number; children: React.Re
 export function ProjectTabs({
   codeProjects,
   researchProjects,
+  tools,
 }: {
   codeProjects: CodeProject[]
   researchProjects: ResearchProject[]
+  tools: ClaudeToolsData
 }) {
   const { isPrivate, toggle } = usePrivateProjects()
 
@@ -69,6 +72,8 @@ export function ProjectTabs({
   const codePrivate = resolvedCode.filter((p) => isPrivate(p.id))
   const researchVisible = resolvedResearch.filter((p) => !isPrivate(p.id))
   const researchPrivate = resolvedResearch.filter((p) => isPrivate(p.id))
+
+  const totalToolCount = tools.skills.length + tools.mcpPlugins.length + tools.skillPlugins.length
 
   return (
     <Tabs defaultValue="code">
@@ -99,6 +104,20 @@ export function ProjectTabs({
           Research
           <span className="rounded-full bg-accent/10 px-2 py-0.5 font-mono text-xs text-accent/80">
             {researchVisible.length}
+          </span>
+        </TabsTrigger>
+        <TabsTrigger
+          value="tools"
+          className={cn(
+            triggerBase,
+            'data-[state=active]:border-border data-[state=active]:bg-card/60',
+            'data-[state=active]:text-foreground data-[state=active]:shadow-[0_0_12px_oklch(0.715_0.143_212.34/0.05)]',
+          )}
+        >
+          <Wrench className="size-4" />
+          Tools
+          <span className="rounded-full bg-muted px-2 py-0.5 font-mono text-xs text-muted-foreground">
+            {totalToolCount}
           </span>
         </TabsTrigger>
       </TabsList>
@@ -156,6 +175,10 @@ export function ProjectTabs({
               </div>
             </PrivateSection>
           )}
+        </TabsContent>
+
+        <TabsContent value="tools" className="mt-0">
+          <ToolsPanel tools={tools} />
         </TabsContent>
       </div>
     </Tabs>

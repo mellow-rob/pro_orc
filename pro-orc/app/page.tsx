@@ -1,11 +1,15 @@
 import { scanProjects } from '@/lib/scanner'
+import { scanClaudeTools } from '@/lib/tools-scanner'
 import { isCodeProject } from '@/lib/types'
 import type { CodeProject, ResearchProject } from '@/lib/types'
 import { ProjectTabs } from '@/components/projectTabs'
 import { cn } from '@/lib/utils'
 
 export default async function DashboardPage() {
-  const projects = await scanProjects()
+  const [projects, tools] = await Promise.all([
+    scanProjects(),
+    scanClaudeTools(),
+  ])
 
   const codeProjects = projects.filter(isCodeProject)
   const researchProjects = projects.filter((p): p is ResearchProject => !isCodeProject(p))
@@ -44,6 +48,7 @@ export default async function DashboardPage() {
         <ProjectTabs
           codeProjects={codeProjects}
           researchProjects={researchProjects}
+          tools={tools}
         />
       </div>
     </main>
