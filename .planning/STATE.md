@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-17)
 
 **Core value:** Auf einen Blick sehen, wo jedes Projekt steht, was der nächste Schritt ist, und welche Tools zur Verfügung stehen — ohne Terminal-Hopping oder Notion-Suche.
-**Current focus:** Phase 3 Static Dashboard — card components and server actions built, wiring into page next
+**Current focus:** Phase 3 complete — ready for Phase 4 (Live Updates) or Phase 5 (Claude Tools)
 
 ## Current Position
 
-Phase: 3 of 5 (Static Dashboard)
-Plan: 1 of 2 in current phase
-Status: Plan 03-01 complete
-Last activity: 2026-02-17 — Completed 03-01 dashboard card components
+Phase: 3 of 5 (Static Dashboard) — COMPLETE
+Plan: 2 of 2 in current phase
+Status: Phase 3 verified and complete
+Last activity: 2026-02-17 — Completed Phase 3 static dashboard
 
-Progress: [██████████████░░░░░░] 70%
+Progress: [████████████████░░░░] 80%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 7
-- Average duration: 2.4min
-- Total execution time: 0.28 hours
+- Total plans completed: 8
+- Average duration: 2.3min
+- Total execution time: 0.30 hours
 
 **By Phase:**
 
@@ -29,10 +29,10 @@ Progress: [██████████████░░░░░░] 70%
 |-------|-------|-------|----------|
 | 01-foundation | 3 | 8min | 2.7min |
 | 02-data-layer | 3 | 8min | 2.7min |
-| 03-static-dashboard | 1 | 1min | 1min |
+| 03-static-dashboard | 2 | 3min | 1.5min |
 
 **Recent Trend:**
-- Last 5 plans: 01-03 (3min), 02-02 (3min), 02-01 (3min), 02-03 (2min), 03-01 (1min)
+- Last 5 plans: 02-01 (3min), 02-03 (2min), 03-01 (1min), 03-02 (2min)
 - Trend: Accelerating
 
 *Updated after each plan completion*
@@ -61,6 +61,8 @@ Recent decisions affecting current work:
 - [03-01]: Notion link uses <a href> not server action (simpler, no JS required)
 - [03-01]: StatusBadge shared component avoids duplication across card types
 - [03-01]: isStale/formatRelativeTime local to codeProjectCard (single consumer)
+- [03-02]: Type-prefixed React keys to avoid collision when same name in code/ and research/
+- [03-02]: openNotionPage server action unused — research card uses <a href> instead (dead code, minor)
 
 ### Pending Todos
 
@@ -74,5 +76,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-17
-Stopped at: Completed 03-01-PLAN.md
+Stopped at: Completed Phase 3 — ready for Phase 4 or 5
 Resume file: None

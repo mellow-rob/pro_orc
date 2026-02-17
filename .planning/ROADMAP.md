@@ -14,7 +14,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Foundation** - Next.js project with correct config, Tailwind v4 + shadcn/ui, dark mode CSS, shared types — no feature code until this is right
 - [x] **Phase 2: Data Layer** - Scanner, Parser, and Git Reader modules built and validated in isolation before any UI or API touches them
-- [ ] **Phase 3: Static Dashboard** - Fully functional read-only dashboard with both card types, GSD data displayed, and all quick actions — proves core value before SSE complexity
+- [x] **Phase 3: Static Dashboard** - Fully functional read-only dashboard with both card types, GSD data displayed, and all quick actions — proves core value before SSE complexity
 - [ ] **Phase 4: Live Updates** - chokidar singleton + SSE wired on top of the working static dashboard; cards update in real time without page reload
 - [ ] **Phase 5: Claude Tools** - Auto-discovered Skills, MCP servers, and Plugins from ~/.claude/ displayed in a dedicated panel
 
@@ -67,8 +67,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 03-01-PLAN.md — Card components, server actions, status badge, and utility helpers
-- [ ] 03-02-PLAN.md — Dashboard page assembly with async data fetch and visual verification
+- [x] 03-01-PLAN.md — Card components, server actions, status badge, and utility helpers
+- [x] 03-02-PLAN.md — Dashboard page assembly with async data fetch and visual verification
 
 ### Phase 4: Live Updates
 **Goal**: The dashboard updates in real time when any `.planning/` file changes — no page reload required — using a chokidar singleton watcher and SSE push
@@ -101,6 +101,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 |-------|----------------|--------|-----------|
 | 1. Foundation | 3/3 | Complete | 2026-02-17 |
 | 2. Data Layer | 3/3 | Complete | 2026-02-17 |
-| 3. Static Dashboard | 0/TBD | Not started | - |
+| 3. Static Dashboard | 2/2 | Complete | 2026-02-17 |
 | 4. Live Updates | 0/TBD | Not started | - |
 | 5. Claude Tools | 0/TBD | Not started | - |
