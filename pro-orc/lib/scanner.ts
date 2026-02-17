@@ -89,3 +89,75 @@ export async function scanProjects(): Promise<Project[]> {
   // 4. Return combined list
   return [...codeProjects, ...researchProjects]
 }
+
+// ============================================================
+// Public: scan a single project by ID and return typed Project | null
+// ============================================================
+export async function scanProjectById(id: string): Promise<Project | null> {
+  // 1. Try direct path lookup in PATHS.code
+  const codePath = path.join(PATHS.code, id)
+  try {
+    await fs.stat(codePath)
+    // Found in code root — enrich with git data
+    const gsdData = await parseGsdData(codePath)
+    let description = gsdData.description
+    if (!description) {
+      description = await parseDescription(codePath)
+    }
+    const gitData = await getGitData(codePath).catch(() => ({}))
+    const project: CodeProject = {
+      id: projectIdFromPath(codePath),
+      name: id,
+      path: codePath,
+      type: 'code',
+      ...gsdData,
+      ...(description && { description }),
+      ...gitData,
+    }
+    return project
+  } catch {
+    // Not found in code root — try research
+  }
+
+  // 2. Try direct path lookup in PATHS.research
+  const researchPath = path.join(PATHS.research, id)
+  try {
+    await fs.stat(researchPath)
+    // Found in research root — no git data
+    const gsdData = await parseGsdData(researchPath)
+    let description = gsdData.description
+    if (!description) {
+      description = await parseDescription(researchPath)
+    }
+    const project: ResearchProject = {
+      id: projectIdFromPath(researchPath),
+      name: id,
+      path: researchPath,
+      type: 'research',
+      ...gsdData,
+      ...(description && { description }),
+    }
+    return project
+  } catch {
+    // Not found by direct path — fall back to full scan
+  }
+
+  // 3. Fall back: scan both roots and filter by matching id
+  const [codeDirs, researchDirs] = await Promise.all([
+    scanDir(PATHS.code).catch(() => [] as Awaited<ReturnType<typeof scanDir>>),
+    scanDir(PATHS.research).catch(() => [] as Awaited<ReturnType<typeof scanDir>>),
+  ])
+
+  const codeEntry = codeDirs.find((e) => e.id === id)
+  if (codeEntry) {
+    const gitData = await getGitData(codeEntry.path).catch(() => ({}))
+    return { ...codeEntry, type: 'code' as const, ...gitData }
+  }
+
+  const researchEntry = researchDirs.find((e) => e.id === id)
+  if (researchEntry) {
+    return { ...researchEntry, type: 'research' as const }
+  }
+
+  return null
+}
