@@ -79,7 +79,11 @@ Plans:
   2. The watcher process does not accumulate file descriptors across HMR cycles in dev mode (chokidar singleton lives on `globalThis`)
   3. Closing and reopening the browser tab produces one clean SSE connection, not zombie streams accumulating with each navigation
   4. `node_modules/`, `.git/`, and `.next/` directories are never watched
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 04-01-PLAN.md — Server-side watcher singleton, SSE route handler, per-project data endpoint
+- [ ] 04-02-PLAN.md — Client-side SSE hook and ProjectTabs live data integration
 
 ### Phase 5: Claude Tools
 **Goal**: A dedicated panel showing all auto-discovered Claude capabilities — Skills, MCP servers, and Plugins from `~/.claude/` — so the user can see what tools are available without opening a terminal
