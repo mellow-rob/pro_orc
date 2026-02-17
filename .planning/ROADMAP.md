@@ -13,7 +13,7 @@ Pro Orc is built in five coherent phases: first laying a correctly-configured fo
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Foundation** - Next.js project with correct config, Tailwind v4 + shadcn/ui, dark mode CSS, shared types — no feature code until this is right
-- [ ] **Phase 2: Data Layer** - Scanner, Parser, and Git Reader modules built and validated in isolation before any UI or API touches them
+- [x] **Phase 2: Data Layer** - Scanner, Parser, and Git Reader modules built and validated in isolation before any UI or API touches them
 - [ ] **Phase 3: Static Dashboard** - Fully functional read-only dashboard with both card types, GSD data displayed, and all quick actions — proves core value before SSE complexity
 - [ ] **Phase 4: Live Updates** - chokidar singleton + SSE wired on top of the working static dashboard; cards update in real time without page reload
 - [ ] **Phase 5: Claude Tools** - Auto-discovered Skills, MCP servers, and Plugins from ~/.claude/ displayed in a dedicated panel
@@ -50,9 +50,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 02-01-PLAN.md — Parser module: defensive regex extraction from STATE.md, ROADMAP.md, PROJECT.md
-- [ ] 02-02-PLAN.md — Git Reader module: per-project git log with 5s timeout
-- [ ] 02-03-PLAN.md — Scanner module: orchestrates parser + git reader, discovers projects from code/ and research/
+- [x] 02-01-PLAN.md — Parser module: defensive regex extraction from STATE.md, ROADMAP.md, PROJECT.md
+- [x] 02-02-PLAN.md — Git Reader module: per-project git log with 5s timeout
+- [x] 02-03-PLAN.md — Scanner module: orchestrates parser + git reader, discovers projects from code/ and research/
 
 ### Phase 3: Static Dashboard
 **Goal**: A fully functional read-only dashboard at localhost:3000 — card grid, both card types, all GSD data visible, all quick actions working — that proves the core value proposition without any live-update complexity
@@ -96,7 +96,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation | 3/3 | Complete | 2026-02-17 |
-| 2. Data Layer | 0/3 | Not started | - |
+| 2. Data Layer | 3/3 | Complete | 2026-02-17 |
 | 3. Static Dashboard | 0/TBD | Not started | - |
 | 4. Live Updates | 0/TBD | Not started | - |
 | 5. Claude Tools | 0/TBD | Not started | - |
