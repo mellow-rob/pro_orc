@@ -47,7 +47,12 @@ Plans:
   3. Git reader returns last commit timestamp and message for code projects; non-git directories return no git data (no error)
   4. Concurrent git calls across all projects complete via `Promise.allSettled` within 5 seconds per project
   5. A project missing `.planning/` shows "no GSD data" rather than causing any error
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 02-01-PLAN.md — Parser module: defensive regex extraction from STATE.md, ROADMAP.md, PROJECT.md
+- [ ] 02-02-PLAN.md — Git Reader module: per-project git log with 5s timeout
+- [ ] 02-03-PLAN.md — Scanner module: orchestrates parser + git reader, discovers projects from code/ and research/
 
 ### Phase 3: Static Dashboard
 **Goal**: A fully functional read-only dashboard at localhost:3000 — card grid, both card types, all GSD data visible, all quick actions working — that proves the core value proposition without any live-update complexity
@@ -91,7 +96,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation | 3/3 | Complete | 2026-02-17 |
-| 2. Data Layer | 0/TBD | Not started | - |
+| 2. Data Layer | 0/3 | Not started | - |
 | 3. Static Dashboard | 0/TBD | Not started | - |
 | 4. Live Updates | 0/TBD | Not started | - |
 | 5. Claude Tools | 0/TBD | Not started | - |
