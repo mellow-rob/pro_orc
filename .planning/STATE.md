@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-17)
 
 **Core value:** Auf einen Blick sehen, wo jedes Projekt steht, was der nächste Schritt ist, und welche Tools zur Verfügung stehen — ohne Terminal-Hopping oder Notion-Suche.
-**Current focus:** Phase 4 complete — Live Updates end-to-end circuit operational
+**Current focus:** Phase 5 in progress — Claude Tools scanner foundation built
 
 ## Current Position
 
-Phase: 4 of 5 (Live Updates) — COMPLETE
-Plan: 2 of 2 in current phase
-Status: Phase 4 complete — client-side EventSource hook and live data overlay done
-Last activity: 2026-02-17 — Completed Phase 4 Plan 2 (useProjectEvents hook, projectTabs live overlay)
+Phase: 5 of 5 (Claude Tools) — IN PROGRESS
+Plan: 1 of 2 in current phase
+Status: Phase 5 Plan 1 complete — ClaudeTool types and scanClaudeTools() scanner built
+Last activity: 2026-02-17 — Completed Phase 5 Plan 1 (ClaudeTool types, tools-scanner.ts with scanClaudeTools)
 
-Progress: [████████████████████] 90%
+Progress: [████████████████████] 95%
 
 ## Performance Metrics
 
@@ -37,6 +37,10 @@ Progress: [████████████████████] 90%
 - Trend: Consistent ~1-2min per plan
 
 *Updated after each plan completion*
+
+| Phase | Plans | Total | Avg/Plan |
+|-------|-------|-------|----------|
+| 05-claude-tools | 1 | 4min | 4min |
 
 ## Accumulated Context
 
@@ -71,6 +75,9 @@ Recent decisions affecting current work:
 - [04-02]: useCallback with empty deps wraps onUpdate handler — referential stability prevents duplicate EventSource connections on re-render
 - [04-02]: liveData Map updated via functional update (new Map(prev).set(...)) to preserve immutability and trigger re-render
 - [04-02]: Live data merged before isPrivate filter so all downstream logic (counts, rendering, private grouping) reflects live data
+- [Phase 05-01]: Manual regex parsing for YAML frontmatter instead of js-yaml — no new dependencies required
+- [Phase 05-01]: Dirent type imported from 'fs' to fix TypeScript NonSharedBuffer inference in readdir results
+- [Phase 05-01]: ClaudeToolsData splits plugins into mcpPlugins/skillPlugins at scan time for clean UI separation
 
 ### Pending Todos
 
@@ -79,10 +86,10 @@ None yet.
 ### Blockers/Concerns
 
 - [Phase 1 RESOLVED]: serverExternalPackages added to next.config.ts — chokidar, simple-git, fsevents
-- [Phase 5]: `~/.claude/` directory structure for MCP servers/plugins needs direct inspection before building tools-reader — config format may vary by installation method
+- [Phase 5 RESOLVED]: `~/.claude/` directory structure inspected in research — scanner built with direct filesystem knowledge (skills/, plugins/installed_plugins.json, .mcp.json detection)
 
 ## Session Continuity
 
 Last session: 2026-02-17
-Stopped at: Completed Phase 4 Plan 2 — client-side EventSource hook (useProjectEvents) and live data overlay in ProjectTabs
+Stopped at: Completed 05-01-PLAN.md — ClaudeTool types and scanClaudeTools() scanner module
 Resume file: None
