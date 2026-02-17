@@ -102,3 +102,23 @@ export interface SseEvent {
   projectId?: string      // undefined for ping events
   changedFile?: string    // relative path of changed file, for debugging
 }
+
+// ============================================================
+// Claude Tools — auto-discovered from ~/.claude/
+// ============================================================
+export interface ClaudeTool {
+  id: string           // slug from directory name or plugin key (e.g. "enhance-prompt" or "context7@claude-plugins-official")
+  name: string         // display name from manifest/frontmatter
+  type: 'skill' | 'mcp' | 'plugin'
+  description?: string
+  version?: string
+  enabled?: boolean    // for plugins: from enabledPlugins in settings.json
+  marketplace?: string // for plugins: e.g. "claude-plugins-official"
+}
+
+export interface ClaudeToolsData {
+  skills: ClaudeTool[]
+  mcpPlugins: ClaudeTool[]    // plugins with .mcp.json = MCP-backed
+  skillPlugins: ClaudeTool[]  // plugins without .mcp.json = skill-only
+  scannedAt: string
+}
