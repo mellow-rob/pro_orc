@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeAll } from 'vitest'
 
 // Mock server-only (no Next.js runtime in tests)
 vi.mock('server-only', () => ({}))
