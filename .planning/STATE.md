@@ -10,27 +10,27 @@ See: .planning/PROJECT.md (updated 2026-02-17)
 ## Current Position
 
 Phase: 1 of 5 (Foundation)
-Plan: 1 of 3 in current phase
+Plan: 2 of 3 in current phase
 Status: Building
-Last activity: 2026-02-17 — Completed 01-01 (Project Scaffold)
+Last activity: 2026-02-17 — Completed 01-02 (shadcn/ui + Dark Theme)
 
-Progress: [███░░░░░░░] 33%
+Progress: [██████░░░░] 67%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 1
-- Average duration: 2min
-- Total execution time: 0.03 hours
+- Total plans completed: 2
+- Average duration: 2.5min
+- Total execution time: 0.08 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 01-foundation | 1 | 2min | 2min |
+| 01-foundation | 2 | 5min | 2.5min |
 
 **Recent Trend:**
-- Last 5 plans: 01-01 (2min)
+- Last 5 plans: 01-01 (2min), 01-02 (3min)
 - Trend: Starting
 
 *Updated after each plan completion*
@@ -47,6 +47,9 @@ Recent decisions affecting current work:
 - [Pre-phase]: `<!-- notion: URL -->` comment convention in PROJECT.md for Notion URL parsing
 - [01-01]: Used create-next-app defaults (TypeScript, Tailwind, ESLint, App Router, Turbopack)
 - [01-01]: GsdStatus uses open string union (string & {}) for autocomplete without rigidity
+- [01-02]: Cyan = primary (code/actions), Fuchsia = accent (research/highlights)
+- [01-02]: Card transparency at oklch 0.18/0.6 opacity for glassmorphism readability
+- [01-02]: Kept shadcn/tailwind.css import for component base styles
 
 ### Pending Todos
 
@@ -60,5 +63,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-17
-Stopped at: Completed 01-01-PLAN.md (Project Scaffold)
+Stopped at: Completed 01-02-PLAN.md (shadcn/ui + Dark Theme)
 Resume file: None
