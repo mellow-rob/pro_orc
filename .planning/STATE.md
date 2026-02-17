@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-17)
 
 **Core value:** Auf einen Blick sehen, wo jedes Projekt steht, was der nächste Schritt ist, und welche Tools zur Verfügung stehen — ohne Terminal-Hopping oder Notion-Suche.
-**Current focus:** Phase 4 in progress — Live Updates server infrastructure complete (Plan 1 of 2)
+**Current focus:** Phase 4 complete — Live Updates end-to-end circuit operational
 
 ## Current Position
 
-Phase: 4 of 5 (Live Updates) — IN PROGRESS
-Plan: 1 of 2 in current phase
-Status: Plan 1 complete — server-side SSE infrastructure ready
-Last activity: 2026-02-17 — Completed Phase 4 Plan 1 (watcher, SSE route, per-project endpoint)
+Phase: 4 of 5 (Live Updates) — COMPLETE
+Plan: 2 of 2 in current phase
+Status: Phase 4 complete — client-side EventSource hook and live data overlay done
+Last activity: 2026-02-17 — Completed Phase 4 Plan 2 (useProjectEvents hook, projectTabs live overlay)
 
-Progress: [█████████████████░░░] 85%
+Progress: [████████████████████] 90%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 9
-- Average duration: 2.2min
-- Total execution time: 0.33 hours
+- Total plans completed: 10
+- Average duration: 2.1min
+- Total execution time: 0.35 hours
 
 **By Phase:**
 
@@ -30,11 +30,11 @@ Progress: [█████████████████░░░] 85%
 | 01-foundation | 3 | 8min | 2.7min |
 | 02-data-layer | 3 | 8min | 2.7min |
 | 03-static-dashboard | 2 | 3min | 1.5min |
-| 04-live-updates | 1 | 2min | 2.0min |
+| 04-live-updates | 2 | 3min | 1.5min |
 
 **Recent Trend:**
-- Last 5 plans: 02-03 (2min), 03-01 (1min), 03-02 (2min), 04-01 (2min)
-- Trend: Consistent ~2min per plan
+- Last 5 plans: 03-01 (1min), 03-02 (2min), 04-01 (2min), 04-02 (1min)
+- Trend: Consistent ~1-2min per plan
 
 *Updated after each plan completion*
 
@@ -68,6 +68,9 @@ Recent decisions affecting current work:
 - [04-01]: watcherSubscribers exported as reference to globalThis.__watcherSubscribers — same Set reference survives HMR
 - [04-01]: scanProjectById tries direct path lookup first before full scan — avoids unnecessary directory reads
 - [04-01]: Next.js 16 async route params: { params: Promise<{ id: string }> } must be awaited
+- [04-02]: useCallback with empty deps wraps onUpdate handler — referential stability prevents duplicate EventSource connections on re-render
+- [04-02]: liveData Map updated via functional update (new Map(prev).set(...)) to preserve immutability and trigger re-render
+- [04-02]: Live data merged before isPrivate filter so all downstream logic (counts, rendering, private grouping) reflects live data
 
 ### Pending Todos
 
@@ -81,5 +84,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-17
-Stopped at: Completed Phase 4 Plan 1 — server-side SSE infrastructure (watcher, /api/events, /api/projects/[id])
+Stopped at: Completed Phase 4 Plan 2 — client-side EventSource hook (useProjectEvents) and live data overlay in ProjectTabs
 Resume file: None
