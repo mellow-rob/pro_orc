@@ -4,7 +4,7 @@ import { promises as fs } from 'fs'
 import path from 'path'
 import { PATHS, projectIdFromPath } from '@/lib/paths'
 import type { Project, CodeProject, ResearchProject } from '@/lib/types'
-import { parseGsdData } from '@/lib/parser'
+import { parseGsdData, parseDescription } from '@/lib/parser'
 import { getGitData } from '@/lib/git-reader'
 
 // ============================================================
@@ -14,11 +14,16 @@ interface BaseEntry {
   id: string
   name: string
   path: string
+  description?: string
   gsdStatus?: string
   currentPhase?: string
   nextStep?: string
   phaseProgress?: number
   notionUrl?: string
+  phasesCompleted?: number
+  phasesTotal?: number
+  plansCompleted?: number
+  plansTotal?: number
 }
 
 async function scanDir(rootPath: string): Promise<BaseEntry[]> {
@@ -35,11 +40,18 @@ async function scanDir(rootPath: string): Promise<BaseEntry[]> {
       const name = entry.name
       const gsdData = await parseGsdData(projectPath)
 
+      // Fallback description from CLAUDE.md if GSD didn't provide one
+      let description = gsdData.description
+      if (!description) {
+        description = await parseDescription(projectPath)
+      }
+
       return {
         id,
         name,
         path: projectPath,
         ...gsdData,
+        ...(description && { description }),
       }
     })
   )

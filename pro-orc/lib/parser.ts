@@ -14,6 +14,11 @@ export interface GsdParseResult {
   nextStep?: string
   phaseProgress?: number
   notionUrl?: string
+  description?: string
+  phasesCompleted?: number
+  phasesTotal?: number
+  plansCompleted?: number
+  plansTotal?: number
 }
 
 // ============================================================
@@ -84,12 +89,12 @@ function parseState(content: string | null): Pick<GsdParseResult, 'gsdStatus' | 
 // ============================================================
 function deriveStatus(statusRaw: string): GsdStatus | undefined {
   if (!statusRaw) return undefined
-  if (statusRaw.includes('complete')) return 'done'
-  if (statusRaw.includes('archived')) return 'archived'
-  if (statusRaw.includes('paused')) return 'paused'
-  if (statusRaw.includes('research')) return 'research'
-  if (statusRaw.includes('planning')) return 'planning'
-  if (statusRaw.includes('progress')) return 'building'
+  if (statusRaw.includes('complete') || statusRaw.includes('komplett')) return 'done'
+  if (statusRaw.includes('archived') || statusRaw.includes('archiviert')) return 'archived'
+  if (statusRaw.includes('paused') || statusRaw.includes('pausiert')) return 'paused'
+  if (statusRaw.includes('research') || statusRaw.includes('recherche')) return 'research'
+  if (statusRaw.includes('planning') || statusRaw.includes('planung')) return 'planning'
+  if (statusRaw.includes('progress') || statusRaw.includes('fortschritt')) return 'building'
   // Any phase mentioned implies active building
   if (/phase\s+\d/i.test(statusRaw)) return 'building'
   return undefined
@@ -98,26 +103,111 @@ function deriveStatus(statusRaw: string): GsdStatus | undefined {
 // ============================================================
 // Internal: ROADMAP.md parser — phaseProgress from checkboxes
 // ============================================================
-function parseRoadmap(content: string | null): Pick<GsdParseResult, 'phaseProgress'> {
+function parseRoadmap(content: string | null): Pick<GsdParseResult, 'phaseProgress' | 'phasesCompleted' | 'phasesTotal' | 'plansCompleted' | 'plansTotal'> {
   if (!content) return {}
 
-  const completed = (content.match(/^- \[x\]/gim) ?? []).length
-  const pending = (content.match(/^- \[ \]/gm) ?? []).length
-  const total = completed + pending
+  // Plan lines: "- [x] NN-NN-PLAN.md" or "- [ ] NN-NN-PLAN.md"
+  const plansDone = (content.match(/^- \[x\]\s+\d+-\d+-PLAN/gim) ?? []).length
+  const plansPending = (content.match(/^- \[ \]\s+\d+-\d+-PLAN/gim) ?? []).length
+  const plansTotal = plansDone + plansPending
 
-  if (total === 0) return {} // No plan checkboxes — don't return 0%, return undefined
+  // Phase counting — two formats supported:
+  // Format A (pro-orc style): "- [x] **Phase N:" checkbox lines
+  const phaseCheckDone = (content.match(/^- \[x\]\s+\*\*Phase\s/gim) ?? []).length
+  const phaseCheckPending = (content.match(/^- \[ \]\s+\*\*Phase\s/gim) ?? []).length
+  const phaseCheckTotal = phaseCheckDone + phaseCheckPending
 
-  return { phaseProgress: Math.round((completed / total) * 100) }
+  let phasesTotal: number
+  let phasesDone: number
+
+  if (phaseCheckTotal > 0) {
+    // Format A: phases are checkboxes
+    phasesTotal = phaseCheckTotal
+    phasesDone = phaseCheckDone
+  } else {
+    // Format B (site_intelligence/masterplan style): "### Phase N:" or "## Phase N:" headings
+    // Derive completion by checking if ALL plans within each phase section are [x]
+    const phaseHeadings = content.match(/^#{2,3}\s+Phase\s+\d/gim) ?? []
+    phasesTotal = phaseHeadings.length
+
+    if (phasesTotal > 0 && plansTotal > 0) {
+      // Split content by phase headings and check plan completion per phase
+      const sections = content.split(/^(?=#{2,3}\s+Phase\s+\d)/gim)
+      phasesDone = 0
+      for (const section of sections) {
+        // Only count sections that are actual phase sections
+        if (!/^#{2,3}\s+Phase\s+\d/im.test(section)) continue
+        const sectionPlansDone = (section.match(/^- \[x\]\s+\d+-\d+-PLAN/gim) ?? []).length
+        const sectionPlansPending = (section.match(/^- \[ \]\s+\d+-\d+-PLAN/gim) ?? []).length
+        const sectionPlansTotal = sectionPlansDone + sectionPlansPending
+        if (sectionPlansTotal > 0 && sectionPlansPending === 0) {
+          phasesDone++
+        }
+      }
+    } else {
+      phasesDone = 0
+    }
+  }
+
+  // Overall progress from all checkboxes
+  const allCompleted = (content.match(/^- \[x\]/gim) ?? []).length
+  const allPending = (content.match(/^- \[ \]/gm) ?? []).length
+  const allTotal = allCompleted + allPending
+
+  const result: Pick<GsdParseResult, 'phaseProgress' | 'phasesCompleted' | 'phasesTotal' | 'plansCompleted' | 'plansTotal'> = {}
+
+  if (allTotal > 0) {
+    result.phaseProgress = Math.round((allCompleted / allTotal) * 100)
+  }
+  if (phasesTotal > 0) {
+    result.phasesCompleted = phasesDone
+    result.phasesTotal = phasesTotal
+  }
+  if (plansTotal > 0) {
+    result.plansCompleted = plansDone
+    result.plansTotal = plansTotal
+  }
+
+  return result
 }
 
 // ============================================================
 // Internal: PROJECT.md parser — notionUrl from HTML comment
 // ============================================================
-function parseProject(content: string | null): Pick<GsdParseResult, 'notionUrl'> {
+function parseProject(content: string | null): Pick<GsdParseResult, 'notionUrl' | 'description'> {
   if (!content) return {}
 
   const notionMatch = content.match(/<!--\s*notion:\s*(https?:\/\/[^\s>]+)\s*-->/)
-  return { notionUrl: notionMatch?.[1] }
+
+  // Description — first non-empty line after common heading variants
+  let description: string | undefined
+  const descMatch = content.match(/^##\s+(?:Core Value|Kernwert|Was ist das|What This Is|What is this)\s*\n+(.+)/im)
+  if (descMatch) {
+    // Strip bold prefix like "**Die eine Sache:**" but keep the rest
+    description = descMatch[1].trim().replace(/^\*\*[^*]+\*\*:?\s*/, '').trim()
+    // If stripping removed everything (whole line was bold), use original
+    if (!description) description = descMatch[1].trim().replace(/\*\*/g, '')
+    if (description.length > 200) description = description.slice(0, 197) + '...'
+  }
+
+  return {
+    notionUrl: notionMatch?.[1],
+    ...(description && { description }),
+  }
+}
+
+// ============================================================
+// Public: parse description from CLAUDE.md (fallback for non-GSD)
+// ============================================================
+export async function parseDescription(projectPath: string): Promise<string | undefined> {
+  const content = await readFile(path.join(projectPath, 'CLAUDE.md'))
+  if (!content) return undefined
+  const match = content.match(/^##\s+(?:Project Overview|Project Purpose)\s*\n+(.+)/im)
+  if (!match) return undefined
+  // Strip bold/italic markers and "This is a **X** —" prefix patterns
+  let desc = match[1].trim().replace(/\*\*/g, '')
+  if (desc.length > 200) desc = desc.slice(0, 197) + '...'
+  return desc
 }
 
 // ============================================================
@@ -138,9 +228,21 @@ export async function parseGsdData(projectPath: string): Promise<GsdParseResult>
     return {}
   }
 
-  return {
+  const result = {
     ...parseState(stateContent),
     ...parseRoadmap(roadmapContent),
     ...parseProject(projectContent),
   }
+
+  // Post-process: "done" only when ALL phases are complete.
+  // If status says "complete/komplett" but there are remaining phases, it's still "building".
+  if (result.phasesTotal && result.phasesCompleted !== undefined) {
+    if (result.phasesCompleted >= result.phasesTotal) {
+      result.gsdStatus = 'done'
+    } else if (result.gsdStatus === 'done') {
+      result.gsdStatus = 'building'
+    }
+  }
+
+  return result
 }

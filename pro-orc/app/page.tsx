@@ -1,14 +1,14 @@
 import { scanProjects } from '@/lib/scanner'
 import { isCodeProject } from '@/lib/types'
-import { CodeProjectCard } from '@/components/codeProjectCard'
-import { ResearchProjectCard } from '@/components/researchProjectCard'
+import type { CodeProject, ResearchProject } from '@/lib/types'
+import { ProjectTabs } from '@/components/projectTabs'
 import { cn } from '@/lib/utils'
 
 export default async function DashboardPage() {
   const projects = await scanProjects()
 
   const codeProjects = projects.filter(isCodeProject)
-  const researchProjects = projects.filter((p) => !isCodeProject(p))
+  const researchProjects = projects.filter((p): p is ResearchProject => !isCodeProject(p))
 
   return (
     <main className="relative min-h-screen overflow-hidden">
@@ -41,15 +41,10 @@ export default async function DashboardPage() {
           </p>
         </header>
 
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {projects.map((project) =>
-            isCodeProject(project) ? (
-              <CodeProjectCard key={`${project.type}-${project.id}`} project={project} />
-            ) : (
-              <ResearchProjectCard key={`${project.type}-${project.id}`} project={project} />
-            )
-          )}
-        </div>
+        <ProjectTabs
+          codeProjects={codeProjects}
+          researchProjects={researchProjects}
+        />
       </div>
     </main>
   )

@@ -1,7 +1,7 @@
 'use client'
 
 import { useTransition } from 'react'
-import { Terminal, Folder, Clock } from 'lucide-react'
+import { Terminal, Folder, Clock, Code, Layers, Eye, EyeOff, Github, ExternalLink } from 'lucide-react'
 import {
   Card,
   CardHeader,
@@ -42,7 +42,15 @@ function formatRelativeTime(isoTimestamp: string): string {
   return 'just now'
 }
 
-export function CodeProjectCard({ project }: { project: CodeProject }) {
+export function CodeProjectCard({
+  project,
+  isPrivate,
+  onTogglePrivate,
+}: {
+  project: CodeProject
+  isPrivate?: boolean
+  onTogglePrivate?: () => void
+}) {
   const [isPending, startTransition] = useTransition()
   const stale = isStale(project.lastCommitTimestamp)
 
@@ -50,13 +58,33 @@ export function CodeProjectCard({ project }: { project: CodeProject }) {
     <Card
       className={cn(
         'backdrop-blur-sm transition-shadow duration-200',
-        stale ? 'border-amber-500/30 hover:glow-cyan' : 'hover:glow-cyan'
+        stale ? 'border-amber-500/30 hover:glow-cyan' : 'hover:glow-cyan',
+        isPrivate && 'opacity-60',
       )}
     >
       <CardHeader>
         <div className="flex items-start justify-between gap-2">
-          <CardTitle className="text-base">{project.name}</CardTitle>
-          <div className="flex shrink-0 gap-1">
+          <div className="flex items-center gap-2">
+            {project.gsdStatus ? (
+              <Layers className="size-4 shrink-0 text-primary" />
+            ) : (
+              <Code className="size-4 shrink-0 text-primary" />
+            )}
+            <CardTitle className="text-base">{project.name}</CardTitle>
+          </div>
+          <div className="flex shrink-0 items-center gap-1">
+            {onTogglePrivate && (
+              <button
+                onClick={onTogglePrivate}
+                className={cn(
+                  'rounded p-1 transition-colors hover:bg-muted',
+                  isPrivate ? 'text-muted-foreground' : 'text-muted-foreground/30 hover:text-muted-foreground/60',
+                )}
+                title={isPrivate ? 'Mark as visible' : 'Mark as private'}
+              >
+                {isPrivate ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
+              </button>
+            )}
             {stale && (
               <Badge
                 variant="outline"
@@ -76,6 +104,12 @@ export function CodeProjectCard({ project }: { project: CodeProject }) {
       </CardHeader>
 
       <CardContent className="space-y-3">
+        {project.description && (
+          <p className="line-clamp-2 text-xs text-muted-foreground/60 italic">
+            {project.description}
+          </p>
+        )}
+
         {project.phaseProgress !== undefined && (
           <div className="space-y-1">
             <div className="flex justify-between text-xs text-muted-foreground">
@@ -83,6 +117,23 @@ export function CodeProjectCard({ project }: { project: CodeProject }) {
               <span>{project.phaseProgress}%</span>
             </div>
             <Progress value={project.phaseProgress} className="h-1.5" />
+          </div>
+        )}
+
+        {(project.phasesTotal || project.plansTotal) && (
+          <div className="flex gap-3 font-mono text-xs text-muted-foreground/70">
+            {project.phasesTotal !== undefined && (
+              <span>
+                <span className="text-foreground/80">{project.phasesCompleted}</span>
+                /{project.phasesTotal} phases
+              </span>
+            )}
+            {project.plansTotal !== undefined && (
+              <span>
+                <span className="text-foreground/80">{project.plansCompleted}</span>
+                /{project.plansTotal} plans
+              </span>
+            )}
           </div>
         )}
 
@@ -100,12 +151,13 @@ export function CodeProjectCard({ project }: { project: CodeProject }) {
         )}
       </CardContent>
 
-      <CardFooter className="gap-2">
+      <CardFooter className="flex-wrap gap-2">
         <Button
-          variant="outline"
+          variant="ghost"
           size="sm"
           disabled={isPending}
           onClick={() => startTransition(() => openInTerminal(project.path))}
+          className="border border-border text-muted-foreground/70 hover:border-primary/40 hover:bg-primary/10 hover:text-primary"
         >
           <Terminal className="size-3.5" />
           Terminal
@@ -115,10 +167,27 @@ export function CodeProjectCard({ project }: { project: CodeProject }) {
           size="sm"
           disabled={isPending}
           onClick={() => startTransition(() => openInFinder(project.path))}
+          className="border border-border text-muted-foreground/70 hover:border-primary/40 hover:bg-primary/10 hover:text-primary"
         >
           <Folder className="size-3.5" />
           Finder
         </Button>
+        {project.githubUrl && (
+          <Button variant="ghost" size="sm" asChild className="border border-border text-muted-foreground/70 hover:border-primary/40 hover:bg-primary/10 hover:text-primary">
+            <a href={project.githubUrl} target="_blank" rel="noopener noreferrer">
+              <Github className="size-3.5" />
+              GitHub
+            </a>
+          </Button>
+        )}
+        {project.notionUrl && (
+          <Button variant="ghost" size="sm" asChild className="border border-border text-muted-foreground/70 hover:border-primary/40 hover:bg-primary/10 hover:text-primary">
+            <a href={project.notionUrl} target="_blank" rel="noopener noreferrer">
+              <ExternalLink className="size-3.5" />
+              Notion
+            </a>
+          </Button>
+        )}
       </CardFooter>
     </Card>
   )

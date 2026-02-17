@@ -22,12 +22,18 @@ export interface BaseProject {
   path: string            // absolute filesystem path (from os.homedir())
   type: 'code' | 'research'  // discriminant — determines card layout
 
+  description?: string          // short project description from PROJECT.md or CLAUDE.md
+
   // GSD planning data — optional (project may have no .planning/)
   gsdStatus?: GsdStatus
   currentPhase?: string         // e.g. "Phase 3: API Layer"
   nextStep?: string             // next action from STATE.md or ROADMAP.md
   phaseProgress?: number        // 0-100: completed checkboxes / total checkboxes
   notionUrl?: string            // from <!-- notion: URL --> in PROJECT.md
+  phasesCompleted?: number      // completed phases count
+  phasesTotal?: number          // total phases count
+  plansCompleted?: number       // completed plans (waves) count
+  plansTotal?: number           // total plans count
 }
 
 // ============================================================
@@ -43,6 +49,7 @@ export interface CodeProject extends BaseProject {
   lastCommitSha?: string        // short SHA: "a3f8b12"
   branch?: string               // current branch: "main"
   isDirty?: boolean             // uncommitted changes exist
+  githubUrl?: string            // https://github.com/owner/repo (from git remote)
 }
 
 // ============================================================
