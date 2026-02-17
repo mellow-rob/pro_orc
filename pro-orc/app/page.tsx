@@ -1,9 +1,14 @@
+import { scanProjects } from '@/lib/scanner'
+import { isCodeProject } from '@/lib/types'
+import { CodeProjectCard } from '@/components/codeProjectCard'
+import { ResearchProjectCard } from '@/components/researchProjectCard'
 import { cn } from '@/lib/utils'
-import type { Project } from '@/lib/types'
 
-export default function DashboardPage() {
-  // Phase 3 will replace this with real project data from /api/projects
-  const projects: Project[] = []
+export default async function DashboardPage() {
+  const projects = await scanProjects()
+
+  const codeProjects = projects.filter(isCodeProject)
+  const researchProjects = projects.filter((p) => !isCodeProject(p))
 
   return (
     <main className="relative min-h-screen overflow-hidden">
@@ -24,18 +29,27 @@ export default function DashboardPage() {
       />
 
       {/* Content */}
-      <div className="relative z-10 flex min-h-screen flex-col items-center justify-center gap-4 p-8">
-        <h1 className="font-sans text-4xl font-bold tracking-tighter text-foreground">
-          Pro{' '}
-          <span className="text-primary">Orc</span>
-        </h1>
-        <p className="text-muted-foreground">
-          Project Orchestration Dashboard
-        </p>
-        <p className="font-mono text-xs text-muted-foreground/60">
-          {/* Phase 3 will replace this with real project count */}
-          {projects.length} projects — data layer coming in Phase 2
-        </p>
+      <div className="relative z-10 p-8">
+        <header className="mb-8">
+          <h1 className="font-sans text-4xl font-bold tracking-tighter text-foreground">
+            Pro{' '}
+            <span className="text-primary">Orc</span>
+          </h1>
+          <p className="mt-2 font-mono text-sm text-muted-foreground/60">
+            {projects.length} projects &mdash; {codeProjects.length} code &middot;{' '}
+            {researchProjects.length} research
+          </p>
+        </header>
+
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {projects.map((project) =>
+            isCodeProject(project) ? (
+              <CodeProjectCard key={project.id} project={project} />
+            ) : (
+              <ResearchProjectCard key={project.id} project={project} />
+            )
+          )}
+        </div>
       </div>
     </main>
   )
