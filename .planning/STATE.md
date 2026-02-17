@@ -5,33 +5,33 @@
 See: .planning/PROJECT.md (updated 2026-02-17)
 
 **Core value:** Auf einen Blick sehen, wo jedes Projekt steht, was der nächste Schritt ist, und welche Tools zur Verfügung stehen — ohne Terminal-Hopping oder Notion-Suche.
-**Current focus:** Phase 2 Data Layer — git reader complete, continuing with scanner
+**Current focus:** Phase 2 Data Layer — parser and git reader complete, scanner next
 
 ## Current Position
 
 Phase: 2 of 5 (Data Layer)
 Plan: 2 of 3 in current phase
 Status: In progress
-Last activity: 2026-02-17 — Completed 02-02 git reader module
+Last activity: 2026-02-17 — Completed 02-01 parser module
 
 Progress: [████████░░░░░░░░░░░░] 40%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 4
-- Average duration: 2.75min
-- Total execution time: 0.18 hours
+- Total plans completed: 5
+- Average duration: 2.8min
+- Total execution time: 0.23 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01-foundation | 3 | 8min | 2.7min |
-| 02-data-layer | 1 | 3min | 3min |
+| 02-data-layer | 2 | 6min | 3min |
 
 **Recent Trend:**
-- Last 5 plans: 01-01 (2min), 01-02 (3min), 01-03 (3min), 02-02 (3min)
+- Last 5 plans: 01-01 (2min), 01-02 (3min), 01-03 (3min), 02-02 (3min), 02-01 (3min)
 - Trend: Consistent
 
 *Updated after each plan completion*
@@ -55,6 +55,8 @@ Recent decisions affecting current work:
 - [01-03]: Inter (sans) + JetBrains Mono (mono) fonts via next/font/google CSS variables
 - [02-02]: simpleGit constructor inside try-catch — throws synchronously for nonexistent paths
 - [02-02]: Vitest with node environment for testing server-only modules
+- [02-01]: Added non-bold regex variants (Phase: vs **Phase:**) to handle real STATE.md format
+- [02-01]: server-only installed as explicit dependency (not bundled with Next.js 16)
 
 ### Pending Todos
 
@@ -68,5 +70,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-17
-Stopped at: Completed 02-02-PLAN.md
+Stopped at: Completed 02-01-PLAN.md
 Resume file: None
