@@ -149,16 +149,8 @@ function parseRoadmap(content: string | null): Pick<GsdParseResult, 'phaseProgre
     }
   }
 
-  // Overall progress from all checkboxes
-  const allCompleted = (content.match(/^- \[x\]/gim) ?? []).length
-  const allPending = (content.match(/^- \[ \]/gm) ?? []).length
-  const allTotal = allCompleted + allPending
-
   const result: Pick<GsdParseResult, 'phaseProgress' | 'phasesCompleted' | 'phasesTotal' | 'plansCompleted' | 'plansTotal'> = {}
 
-  if (allTotal > 0) {
-    result.phaseProgress = Math.round((allCompleted / allTotal) * 100)
-  }
   if (phasesTotal > 0) {
     result.phasesCompleted = phasesDone
     result.phasesTotal = phasesTotal
@@ -166,6 +158,18 @@ function parseRoadmap(content: string | null): Pick<GsdParseResult, 'phaseProgre
   if (plansTotal > 0) {
     result.plansCompleted = plansDone
     result.plansTotal = plansTotal
+  }
+
+  // Progress = weighted average of phase completion and plan completion.
+  // Both must be 100% for overall 100%. Phases weigh 50%, plans weigh 50%.
+  if (phasesTotal > 0 && plansTotal > 0) {
+    const phasePercent = phasesDone / phasesTotal
+    const planPercent = plansDone / plansTotal
+    result.phaseProgress = Math.round(((phasePercent + planPercent) / 2) * 100)
+  } else if (phasesTotal > 0) {
+    result.phaseProgress = Math.round((phasesDone / phasesTotal) * 100)
+  } else if (plansTotal > 0) {
+    result.phaseProgress = Math.round((plansDone / plansTotal) * 100)
   }
 
   return result
@@ -232,6 +236,11 @@ export async function parseGsdData(projectPath: string): Promise<GsdParseResult>
     ...parseState(stateContent),
     ...parseRoadmap(roadmapContent),
     ...parseProject(projectContent),
+  }
+
+  // If .planning/ exists but no status was derived, default to 'planning'
+  if (!result.gsdStatus) {
+    result.gsdStatus = 'planning'
   }
 
   // Post-process: "done" only when ALL phases are complete.
