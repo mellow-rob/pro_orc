@@ -1,11 +1,13 @@
 'use client'
 
+import { useState, useCallback } from 'react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Code, BookOpen, EyeOff, ChevronRight } from 'lucide-react'
 import { CodeProjectCard } from '@/components/codeProjectCard'
 import { ResearchProjectCard } from '@/components/researchProjectCard'
 import { usePrivateProjects } from '@/hooks/usePrivateProjects'
-import type { CodeProject, ResearchProject } from '@/lib/types'
+import { useProjectEvents } from '@/hooks/useProjectEvents'
+import type { CodeProject, ResearchProject, Project } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
 const triggerBase = cn(
@@ -44,10 +46,29 @@ export function ProjectTabs({
 }) {
   const { isPrivate, toggle } = usePrivateProjects()
 
-  const codeVisible = codeProjects.filter((p) => !isPrivate(p.id))
-  const codePrivate = codeProjects.filter((p) => isPrivate(p.id))
-  const researchVisible = researchProjects.filter((p) => !isPrivate(p.id))
-  const researchPrivate = researchProjects.filter((p) => isPrivate(p.id))
+  // Live data overlay — keyed by project id, merged over server-rendered props
+  const [liveData, setLiveData] = useState<Map<string, Project>>(new Map())
+
+  // Stable callback: useCallback with empty deps prevents useProjectEvents
+  // from re-creating the EventSource on every render
+  const handleUpdate = useCallback((projectId: string, project: Project) => {
+    setLiveData((prev) => new Map(prev).set(projectId, project))
+  }, [])
+
+  useProjectEvents(handleUpdate)
+
+  // Merge live data over server-rendered props — live data wins when present
+  const resolvedCode = codeProjects.map(
+    (p) => (liveData.get(p.id) as CodeProject) ?? p,
+  )
+  const resolvedResearch = researchProjects.map(
+    (p) => (liveData.get(p.id) as ResearchProject) ?? p,
+  )
+
+  const codeVisible = resolvedCode.filter((p) => !isPrivate(p.id))
+  const codePrivate = resolvedCode.filter((p) => isPrivate(p.id))
+  const researchVisible = resolvedResearch.filter((p) => !isPrivate(p.id))
+  const researchPrivate = resolvedResearch.filter((p) => isPrivate(p.id))
 
   return (
     <Tabs defaultValue="code">
