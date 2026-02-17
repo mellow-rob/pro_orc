@@ -12,7 +12,7 @@ Pro Orc is built in five coherent phases: first laying a correctly-configured fo
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Foundation** - Next.js project with correct config, Tailwind v4 + shadcn/ui, dark mode CSS, shared types — no feature code until this is right
+- [x] **Phase 1: Foundation** - Next.js project with correct config, Tailwind v4 + shadcn/ui, dark mode CSS, shared types — no feature code until this is right
 - [ ] **Phase 2: Data Layer** - Scanner, Parser, and Git Reader modules built and validated in isolation before any UI or API touches them
 - [ ] **Phase 3: Static Dashboard** - Fully functional read-only dashboard with both card types, GSD data displayed, and all quick actions — proves core value before SSE complexity
 - [ ] **Phase 4: Live Updates** - chokidar singleton + SSE wired on top of the working static dashboard; cards update in real time without page reload
@@ -33,9 +33,9 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans**: 3 plans
 
 Plans:
-- [ ] 01-01-PLAN.md — Scaffold Next.js project, configure next.config.ts, create lib/types.ts and lib/paths.ts
-- [ ] 01-02-PLAN.md — Initialize shadcn/ui New York style, configure n3urala1 dark theme in globals.css
-- [ ] 01-03-PLAN.md — Wire root layout with dark class and fonts, create placeholder pages, visual verify
+- [x] 01-01-PLAN.md — Scaffold Next.js project, configure next.config.ts, create lib/types.ts and lib/paths.ts
+- [x] 01-02-PLAN.md — Initialize shadcn/ui New York style, configure n3urala1 dark theme in globals.css
+- [x] 01-03-PLAN.md — Wire root layout with dark class and fonts, create placeholder pages, visual verify
 
 ### Phase 2: Data Layer
 **Goal**: Scanner, Parser, and Git Reader modules that reliably read the filesystem and git history — tested in isolation so data shapes are validated before any route handler or UI component touches them
@@ -90,7 +90,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation | 0/3 | Not started | - |
+| 1. Foundation | 3/3 | Complete | 2026-02-17 |
 | 2. Data Layer | 0/TBD | Not started | - |
 | 3. Static Dashboard | 0/TBD | Not started | - |
 | 4. Live Updates | 0/TBD | Not started | - |
