@@ -34,10 +34,14 @@ function parseState(content: string | null): Pick<GsdParseResult, 'gsdStatus' | 
   if (!content) return {}
 
   // Current Phase — multiple field name variants seen in real projects
+  // Both bold (**Phase:**) and plain (Phase:) formats exist in the wild
   const phasePatterns = [
     /^\*\*Phase:\*\*\s*(.+)$/m,
     /^\*\*Current Phase:\*\*\s*(.+)$/m,
     /^\*\*Aktuelle Phase:\*\*\s*(.+)$/m,
+    /^Phase:\s*(.+)$/m,
+    /^Current Phase:\s*(.+)$/m,
+    /^Aktuelle Phase:\s*(.+)$/m,
   ]
   let currentPhase: string | undefined
   for (const pattern of phasePatterns) {
@@ -48,16 +52,20 @@ function parseState(content: string | null): Pick<GsdParseResult, 'gsdStatus' | 
     }
   }
 
-  // Status — derive GsdStatus from free-form STATUS field
+  // Status — derive GsdStatus from free-form STATUS field (bold or plain)
   const statusMatch = content.match(/^\*\*Status:\*\*\s*(.+)$/m)
+    ?? content.match(/^Status:\s*(.+)$/m)
   const statusRaw = statusMatch?.[1]?.trim().toLowerCase() ?? ''
   const gsdStatus = deriveStatus(statusRaw)
 
-  // Next step — multiple field name variants
+  // Next step — multiple field name variants (bold and plain)
   const nextStepPatterns = [
     /^\*\*Next Action:\*\*\s*(.+)$/m,
     /^\*\*Next Step:\*\*\s*(.+)$/m,
     /^\*\*Nächster Schritt:\*\*\s*(.+)$/m,
+    /^Next Action:\s*(.+)$/m,
+    /^Next Step:\s*(.+)$/m,
+    /^Nächster Schritt:\s*(.+)$/m,
   ]
   let nextStep: string | undefined
   for (const pattern of nextStepPatterns) {
