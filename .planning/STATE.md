@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-17)
 
 **Core value:** Auf einen Blick sehen, wo jedes Projekt steht, was der nächste Schritt ist, und welche Tools zur Verfügung stehen — ohne Terminal-Hopping oder Notion-Suche.
-**Current focus:** Phase 3 complete — ready for Phase 4 (Live Updates) or Phase 5 (Claude Tools)
+**Current focus:** Phase 4 in progress — Live Updates server infrastructure complete (Plan 1 of 2)
 
 ## Current Position
 
-Phase: 3 of 5 (Static Dashboard) — COMPLETE
-Plan: 2 of 2 in current phase
-Status: Phase 3 verified and complete
-Last activity: 2026-02-17 — Completed Phase 3 static dashboard
+Phase: 4 of 5 (Live Updates) — IN PROGRESS
+Plan: 1 of 2 in current phase
+Status: Plan 1 complete — server-side SSE infrastructure ready
+Last activity: 2026-02-17 — Completed Phase 4 Plan 1 (watcher, SSE route, per-project endpoint)
 
-Progress: [████████████████░░░░] 80%
+Progress: [█████████████████░░░] 85%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 8
-- Average duration: 2.3min
-- Total execution time: 0.30 hours
+- Total plans completed: 9
+- Average duration: 2.2min
+- Total execution time: 0.33 hours
 
 **By Phase:**
 
@@ -30,10 +30,11 @@ Progress: [████████████████░░░░] 80%
 | 01-foundation | 3 | 8min | 2.7min |
 | 02-data-layer | 3 | 8min | 2.7min |
 | 03-static-dashboard | 2 | 3min | 1.5min |
+| 04-live-updates | 1 | 2min | 2.0min |
 
 **Recent Trend:**
-- Last 5 plans: 02-01 (3min), 02-03 (2min), 03-01 (1min), 03-02 (2min)
-- Trend: Accelerating
+- Last 5 plans: 02-03 (2min), 03-01 (1min), 03-02 (2min), 04-01 (2min)
+- Trend: Consistent ~2min per plan
 
 *Updated after each plan completion*
 
@@ -63,6 +64,10 @@ Recent decisions affecting current work:
 - [03-01]: isStale/formatRelativeTime local to codeProjectCard (single consumer)
 - [03-02]: Type-prefixed React keys to avoid collision when same name in code/ and research/
 - [03-02]: openNotionPage server action unused — research card uses <a href> instead (dead code, minor)
+- [04-01]: No 'server-only' in watcher.ts — dynamic import from instrumentation.ts bypasses normal module graph
+- [04-01]: watcherSubscribers exported as reference to globalThis.__watcherSubscribers — same Set reference survives HMR
+- [04-01]: scanProjectById tries direct path lookup first before full scan — avoids unnecessary directory reads
+- [04-01]: Next.js 16 async route params: { params: Promise<{ id: string }> } must be awaited
 
 ### Pending Todos
 
@@ -76,5 +81,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-17
-Stopped at: Completed Phase 3 — ready for Phase 4 or 5
+Stopped at: Completed Phase 4 Plan 1 — server-side SSE infrastructure (watcher, /api/events, /api/projects/[id])
 Resume file: None
