@@ -1,17 +1,17 @@
 # Project Research Summary
 
-**Project:** Pro Orc — Project Orchestration Dashboard
-**Domain:** Local single-user developer dashboard with filesystem monitoring, git integration, and real-time SSE updates
-**Researched:** 2026-02-17
-**Confidence:** HIGH
+**Project:** Pro Orc v1.1 — Flutter macOS Native Desktop Rewrite
+**Domain:** macOS native desktop app — project orchestration dashboard
+**Researched:** 2026-02-19
+**Confidence:** MEDIUM-HIGH
 
 ## Executive Summary
 
-Pro Orc is a localhost-only Next.js dashboard that reads project state from the filesystem and surfaces it in a card grid with live updates. Experts build this class of tool as a thin read-only UI layer over existing data — no database, no auth, no external APIs. The architecture centers on a single chokidar filesystem watcher (initialized once via `instrumentation.ts`) that pushes change signals to browser clients over SSE, where they trigger targeted re-fetches of per-project data from a simple Route Handler API layer. This is a well-understood pattern with no architectural unknowns.
+Pro Orc v1.1 is a full rewrite of a Next.js web dashboard into a native macOS Flutter desktop application. The core motivation is eliminating the browser and dev server dependency while adding menubar-app behavior — a tray icon that exposes the dashboard from any context without a browser tab. This is a well-understood Flutter pattern, but it requires careful attention to macOS-specific plumbing (App Sandbox, AppDelegate.swift, entitlements) that must be established before any business logic is written. The research strongly indicates that skipping this foundation work causes rewrites.
 
-The recommended stack is Next.js 16.1.6 (App Router), React 19.2.4, TypeScript 5.9.3, Tailwind CSS 4.1.18, shadcn/ui, chokidar 3.6.0 (v3, not v4), and simple-git 3.x. All versions are confirmed as currently installed on this machine. The only non-obvious technology decision is using chokidar v3 rather than v4: v4 is ESM-only and creates bundling friction with Next.js; v3 is CJS-compatible and battle-tested on macOS with fsevents. Start on Next.js 16.x from day one — the spec reference to 15.2 is outdated and starting there would require migration work.
+The recommended stack is Flutter 3.29 + Dart 3.x + Riverpod 3.x for state, with `tray_manager` and `window_manager` for menubar integration, `watcher` for filesystem watching, and `dart:io Process.run` for git operations. The entire Next.js client/server architecture collapses into a single Dart process: the SSE layer disappears, `StreamController.broadcast()` replaces it, and `StreamBuilder` widgets subscribe directly. Every v1.0 feature has a direct, well-understood Flutter equivalent. No novel architectural experiments are required.
 
-The key risks are infrastructure-level, not domain-level: chokidar and simple-git must be declared in `serverExternalPackages` on day one or fsevents breaks silently; the chokidar singleton must be stored on `globalThis` (not module scope) to survive HMR in dev mode; the SSE route handler must wire cleanup to `request.signal` or zombie streams accumulate; and all markdown parsing must be wrapped in try/catch or a mid-save file write will crash the event pipeline. These pitfalls are well-documented and entirely preventable with upfront configuration.
+The single biggest risk is the macOS App Sandbox. It blocks all filesystem reads outside the app container and all subprocess execution — silently in release builds while appearing to work in `flutter run`. Disabling the sandbox in both entitlement files must happen in Phase 1, before any service code is written. The second highest risk is the menubar-app architecture: `tray_manager` manages the icon but window show/hide requires `window_manager` and native Swift AppDelegate changes that cannot be hot-reloaded. Both of these must be verified working before building the data layer.
 
 ---
 
@@ -19,89 +19,91 @@ The key risks are infrastructure-level, not domain-level: chokidar and simple-gi
 
 ### Recommended Stack
 
-The stack is deliberately minimal for a local single-user tool. Next.js App Router provides everything needed out of the box: Server Components for initial render, Route Handlers for the API layer and SSE endpoint, and `instrumentation.ts` for singleton initialization. No database is needed because the filesystem IS the database — `.planning/STATE.md`, `ROADMAP.md`, and `PROJECT.md` are the authoritative data sources.
+Flutter 3.29 with Dart 3 is the correct target. macOS desktop is a Tier 1 Flutter platform with Skia/Metal rendering (Impeller is not yet default on macOS desktop — use Skia without special flags). Riverpod 3.x is the community consensus for reactive state in medium-complexity Flutter apps: compile-time safety, no BuildContext dependency, and automatic disposal. The `leanflutter` packages (`tray_manager` 0.5.0, `window_manager` 0.4.x) are the standard for macOS menubar integration and are designed to work together. The Dart-native `watcher` package is the direct chokidar equivalent, wrapping macOS FSEvents. Git integration should use `dart:io Process.run` with `runInShell: true` — the `git` package is optional; raw subprocess calls are simpler for the Pro Orc use case.
 
 **Core technologies:**
-- **Next.js 16.1.6**: App framework — App Router + Route Handlers for SSE, `instrumentation.ts` for chokidar singleton, Server Components reduce client bundle
-- **React 19.2.4**: UI rendering — required peer dep of Next.js 16; Server Components handle read-heavy initial render
-- **TypeScript 5.9.3**: Type safety — essential for complex data shapes from filesystem parsing; `next.config.ts` supported natively
-- **Tailwind CSS 4.1.18**: Styling — v4 uses `@theme` in CSS, no `tailwind.config.js`; dark-mode-first, no toggle needed
-- **shadcn/ui (CLI)**: Components — installed via `npx shadcn@latest`, not a package; owns `Card`, `Badge`, `Button`, `Tooltip`, `Separator`
-- **chokidar 3.6.0**: Filesystem watching — v3 (NOT v4); CJS-compatible, fsevents on macOS, reliable directory recursion
-- **simple-git 3.x**: Git integration — async Promise API for `git log`, `git status`, `git branch` with timeout wrapper
-- **gray-matter 4.0.3**: Markdown parsing — frontmatter extraction and content parsing for `.planning/` files; fault-tolerant
-- **SSE via ReadableStream**: Live updates — native Web API in Next.js 16 Route Handlers; no extra package needed
+- Flutter 3.29 + Dart 3.x: macOS Tier 1 desktop target, Skia/Metal rendering — no special flags needed
+- flutter_riverpod ^3.2.1: reactive state with compile-time safety, `AsyncNotifier` + `StreamProvider` patterns
+- tray_manager ^0.5.0: NSStatusItem menubar icon — the single native differentiator vs web v1.0
+- window_manager ^0.4.x: native window show/hide/position — required companion to tray_manager
+- watcher ^1.x: FSEvents-backed directory watching — direct chokidar replacement, Dart team maintained
+- dart:io (built-in): filesystem reads, `Process.run` for git and shell commands — no extra packages
+- freezed ^2.x: immutable data models with `copyWith` — for `CodeProject`, `ResearchProject`, `GitInfo`
+- shared_preferences ^2.3.x: window position persistence via NSUserDefaults
 
-**Critical config:** `serverExternalPackages: ['chokidar', 'simple-git', 'fsevents']` in `next.config.ts` must be set before writing any watcher code.
+**Critical non-recommendation:** Do NOT use `macos_ui` package — it imposes native HIG styling that conflicts with the custom n3urala1 glassmorphism design. Do NOT add a local database (Hive, Isar, SQLite) — the filesystem IS the database. Avoid `oklch` pub.dev package (v0.0.2, low popularity) — convert OKLCH design tokens to sRGB hex at design time via oklch.com instead.
 
 See full stack research: `.planning/research/STACK.md`
 
 ### Expected Features
 
-The dashboard has a small, well-defined feature set. The core value proposition is GSD workflow awareness + Claude tool inventory + localhost-first simplicity — no comparable tool combines all three.
+The feature set is a v1.0 port to native plus one primary differentiator (menubar tray). Research confirmed the full v1.0 feature inventory by reading source code directly. Every v1.0 feature has a straightforward Flutter/Dart equivalent.
 
-**Must have (table stakes):**
-- Project card grid with auto-discovery of `code/` and `project research/` directories
-- GSD phase + next step displayed on each card face
-- Git last commit timestamp and branch per code project
-- Live updates via chokidar + SSE (dashboard that requires F5 feels broken)
-- Research project card variant (no git metrics, different metadata)
-- Quick actions: Open in Terminal, Open in Finder, Open Notion URL (parsed from PROJECT.md)
-- Dark mode only — no toggle needed for a developer tool
+**Must have (table stakes — v1.1 launch):**
+- Card grid for code and research projects with all v1.0 data fields (status, progress, next step, git commit, stale badge)
+- Tab navigation: Code / Research / Claude Tools
+- Directory scanner (`~/code/` and `~/project research/`) via `dart:io Directory.list()`
+- `.planning/` YAML parser for GSD status, phase/plan counts, next step
+- Git data reader (last commit message + timestamp) via `Process.run('git', ['log', ...])`
+- File system watcher with 350ms debounce via `StreamController.broadcast()`
+- Quick actions: Terminal.app, Finder, GitHub URL, Notion URL
+- Claude Tools panel (Skills, MCP, Plugins from `~/.claude/`)
+- n3urala1 dark theme: cyan/fuchsia OKLCH-converted colors, glassmorphism, atmospheric orbs
+- Menubar tray icon with show/hide window — the primary native differentiator
+- Window position/size persistence
 
-**Should have (differentiators):**
-- Claude Tools inventory panel (Skills, MCP servers, Plugins from `~/.claude/`)
-- Phase progress indicator (checkbox counting in ROADMAP.md)
-- Dual card types: code projects vs research projects render differently
-- Notion URL auto-discovery from `<!-- notion: URL -->` comment in PROJECT.md
+**Should have (v1.1.x — add after core is stable):**
+- Global keyboard shortcut (show/hide) via `hotkey_manager`
+- macOS native app menu (Cmd+C/Q/etc.) via `PlatformMenuBar`
+- macOS notifications for stale projects via `flutter_local_notifications`
 
-**Defer (v2+):**
-- Light mode toggle
-- Inline markdown preview (adds remark/rehype deps for little gain)
-- Notion API read/write (OAuth, token management — disproportionate for localhost tool)
-- Multi-terminal support (Terminal.app only in v1)
-- Any editing capability in the UI (Pro Orc is a read window, not an editor)
-- Triggering GSD commands from the UI
+**Defer (v1.2+):**
+- Search/filter across projects
+- Configurable terminal app (iTerm2, Warp, Ghostty)
+- Inline markdown rendering (`flutter_markdown`)
+- Project detail side panel
+
+**Anti-features (explicitly do not build):**
+- Light mode: intentionally dark; no user demand for a single-developer personal tool
+- App Store distribution: sandbox blocks programmatic filesystem access to arbitrary directories
+- SSE/HTTP server inside Flutter: eliminated by same-process pub/sub
+- Multi-window / WebView / cloud sync: scope creep
 
 See full features research: `.planning/research/FEATURES.md`
 
 ### Architecture Approach
 
-The architecture is deliberately simple: one singleton chokidar watcher emits to an in-memory EventBus, SSE Route Handlers subscribe to that bus and push change signals to browser clients, and browsers re-fetch per-project data from a standard API layer. There is no database, no external services, and no auth layer. All complexity concentrates in the watcher-to-SSE bridge and in parsing `.planning/` files correctly.
-
-The critical architectural decision is the SSE signal-only pattern: SSE events carry only `{ type, projectId }`, not full project data. The browser re-fetches `/api/projects/[id]` on receiving a signal. This keeps the SSE channel lightweight, avoids serialization complexity, and ensures git data (which is async) is always fresh.
+The architecture is a four-layer Dart application: models (pure Dart, no Flutter imports — usable in isolates), services (pure Dart business logic, no Riverpod — unit-testable), providers (thin Riverpod wiring layer, no business logic), and widgets (Flutter only, all data via `ref.watch()`). The critical structural insight: the Next.js server/client boundary disappears entirely. There is no HTTP layer. `StreamController.broadcast()` is the direct SSE replacement; `StreamBuilder` widgets are the `EventSource` replacement. The watcher and the UI are in the same Dart process.
 
 **Major components:**
-1. **WatcherService** (`lib/watcher.ts`) — chokidar singleton stored on `globalThis`; emits normalized change events to EventBus
-2. **EventBus** (`lib/event-bus.ts`) — in-memory EventEmitter with `setMaxListeners(50)`; fan-out to N SSE subscribers
-3. **SSE Route Handler** (`app/api/sse/route.ts`) — holds open HTTP connections; subscribes to EventBus; cleanup wired to `request.signal`
-4. **Scanner** (`lib/scanner.ts`) — walks `code/` and `project research/`; classifies project type
-5. **Parser** (`lib/parser.ts`) — parses `STATE.md`, `ROADMAP.md`, `PROJECT.md`; all calls wrapped in try/catch
-6. **GitReader** (`lib/git-reader.ts`) — `Promise.allSettled` + 5s timeout; non-fatal failures; single instance per repo
-7. **Projects API** (`app/api/projects/route.ts`) — snapshot endpoint; Scanner + Parser + GitReader in parallel
-8. **SSEListener Client Component** (`components/sse-listener.tsx`) — manages EventSource lifecycle; cleanup on unmount
-9. **ProjectCard Client Component** (`components/project-card.tsx`) — renders single project; re-fetches on SSE signal
-10. **ToolsReader** (`lib/tools-reader.ts`) — reads `~/.claude/` for Skills, MCP servers, Plugins
+1. `ProjectScannerService` — walks `~/code/` and `~/project research/`; direct port of `lib/scanner.ts`
+2. `GsdParser` — reads `.planning/STATE.md`, `ROADMAP.md`, `PROJECT.md`; same regex patterns as `lib/parser.ts`
+3. `GitReaderService` — `Process.run('git', ['log', '-1', ...])` with timeout wrapper; replaces simple-git
+4. `WatcherService` — `DirectoryWatcher` streams merged via `StreamGroup`; replaces chokidar singleton
+5. `ToolsScannerService` — walks `~/.claude/` for Skills/MCP/Plugins; direct port of `lib/tools-scanner.ts`
+6. Riverpod providers (`projectsProvider`, `watcherProvider`, `toolsProvider`) — thin wiring, no logic
+7. `platform/tray.dart` + `platform/window_manager.dart` — all macOS-specific integration isolated here
+8. Git isolate worker — `Isolate.run()` with 4-concurrent cap for initial scan enrichment
 
-**Build order from architecture research:** Foundation → Scanner/Parser/GitReader → API Layer → Static Dashboard UI → SSE (live updates) → Claude Tools → Quick Actions. This order ensures data shape is validated before building UI, and live updates are added onto a working static dashboard.
+**Key pattern:** `watcherProvider` uses `ref.keepAlive()` — never disposed. `projectsProvider` uses `ref.listen(watcherProvider)` to trigger `ref.invalidateSelf()` on any filesystem change. This is the exact replacement for the chokidar → SSE → React re-render chain in v1.0.
 
 See full architecture research: `.planning/research/ARCHITECTURE.md`
 
 ### Critical Pitfalls
 
-1. **chokidar/simple-git not in `serverExternalPackages`** — Add `serverExternalPackages: ['chokidar', 'simple-git', 'fsevents']` to `next.config.ts` on day zero. Without this, fsevents binary fails, chokidar silently polls at 100% CPU, and the watcher never fires reliably.
+1. **macOS App Sandbox blocks all filesystem reads** — Disable `com.apple.security.app-sandbox` in BOTH `DebugProfile.entitlements` AND `Release.entitlements` in Phase 1. Test with a built `.app`, not `flutter run`. Debug builds silently succeed; release builds silently fail. Recovery is easy (edit XML, rebuild) but discovering it late wastes implementation effort.
 
-2. **Chokidar singleton on module scope (not `globalThis`)** — Module scope can be reset by HMR in dev mode; `globalThis.__chokidarWatcher` persists across re-evaluations. Without this guard, each HMR cycle leaks file descriptors until the process crashes with `EMFILE: too many open files`.
+2. **`Process.run('git')` PATH not inherited from shell** — macOS GUI apps get a minimal LaunchServices PATH (`/usr/bin:/bin`). Homebrew git at `/opt/homebrew/bin/git` is invisible. Use `runInShell: true` (simplest fix) or resolve git path at startup against known candidate paths. Always wrap `Process.run` in `.timeout(Duration(seconds: 10))` — on Apple Silicon in debug mode, subprocess calls can hang indefinitely (confirmed Flutter issue #95805).
 
-3. **SSE Route Handler missing `request.signal` cleanup** — Wire `request.signal.addEventListener('abort', cleanupFn)` in every SSE route. Without it, zombie streams accumulate per tab navigation, eventually triggering `MaxListenersExceededWarning` and degraded event delivery.
+3. **Menubar architecture requires native Swift changes** — `tray_manager` handles the icon; `window_manager` handles show/hide. But `LSUIElement` requires `Info.plist` modification, and `AppDelegate.swift` must return `false` from `applicationShouldTerminateAfterLastWindowClosed` or closing the window quits the app. Swift code cannot be hot-reloaded. Establish the full menubar pattern in Phase 1 — if this is wrong, it's a Phase 1 rewrite, not a late one.
 
-4. **Missing `export const dynamic = 'force-dynamic'` on SSE route** — Next.js may statically cache the route. Dashboard appears to work in dev but is silently broken in production (client connects with HTTP 200 but receives no live events).
+4. **Dart file watcher is not chokidar** — The `watcher` package omits some directory-create events (dart-lang/sdk#62124), coalesces rapid changes, and has an `isDirectory` assertion crash on macOS (dart-lang/watcher#79). Wrap all watcher events with a 350ms debounce `Timer`. Never rely on directory-create events alone.
 
-5. **Markdown parsing without try/catch** — chokidar fires `change` before the file is fully written to disk. A half-written `STATE.md` will throw a parse error. If that error propagates to the SSE stream controller, it kills the event pipeline for all connected clients. Every `parseMarkdownSafe()` call must return `null` on error, never throw.
+5. **`BackdropFilter` glassmorphism has multiple rendering bugs** — White halo on dark backgrounds (Flutter issue #173530) is directly relevant to the n3urala1 dark theme. Fix: wrap every `BackdropFilter` in `RepaintBoundary` + `ClipRRect`, keep blur sigma between 5–15, avoid blur inside `ListView`. Establish the glassmorphism pattern once in the theming phase and reuse it.
 
-6. **Tailwind v4 utility class name changes** — `shadow-sm` → `shadow-xs`, `ring` → `ring-3`, `outline-none` → `outline-hidden`, `bg-opacity-*` removed. shadcn/ui components may use v3 class names. Run `npx @tailwindcss/upgrade` before any component work; audit all shadcn components after `npx shadcn@latest add`.
+6. **OKLCH colors cannot be used directly in Flutter** — CSS OKLCH values copied to `Color()` produce wrong colors (misinterpreted as RGB). Pre-convert all OKLCH design tokens to sRGB hex at design time using oklch.com. Store as named `Color` constants in a single file.
 
-7. **Concurrent simple-git calls on rapid file changes** — Debounce chokidar events (300-500ms) before triggering git operations. Use one `SimpleGit` instance per repository. Without this, bulk git operations (checkout, rebase) fire 50+ concurrent `git status` spawns, causing `.git/index.lock` contention errors.
+7. **Entitlement files are never automatically kept in sync** — `DebugProfile.entitlements` and `Release.entitlements` must be edited manually as XML (never via Xcode Capabilities UI, which creates a third file). Always add any entitlement to both files simultaneously.
 
 See full pitfalls research: `.planning/research/PITFALLS.md`
 
@@ -109,75 +111,66 @@ See full pitfalls research: `.planning/research/PITFALLS.md`
 
 ## Implications for Roadmap
 
-Based on the dependency graph established in architecture research and the pitfall phase warnings, the natural build sequence is 7 phases:
+Research is unambiguous about phase ordering. The dependency graph is clear: native plumbing must be verified before data services, data services before Riverpod providers, providers before widgets. The architecture research provides explicit build order with rationale. Use it directly.
 
-### Phase 1: Foundation + Configuration
-**Rationale:** Several critical pitfalls must be configured before writing a single line of feature code — `serverExternalPackages`, Tailwind v4 setup, and dark mode CSS variables. Getting these wrong requires rewrites. Architecture also establishes `lib/types.ts` as the first file with no dependencies.
-**Delivers:** Working Next.js project with correct config, Tailwind v4 + shadcn/ui initialized, shared TypeScript types defined, dark mode CSS in place
-**Addresses:** Auto-discovery groundwork, dark mode (table stakes)
-**Avoids:** Pitfalls 1 (bundling), 7 (Tailwind v4 class names), PITFALL.md Minor Pitfall 3 (params as Promise)
-**Research flag:** Standard patterns — skip research-phase
+### Phase 1: Native Foundation
+**Rationale:** The sandbox and menubar architecture are the two highest-risk items in the entire project. Both are macOS-native concerns that block everything downstream. A sandbox misconfiguration discovered in Phase 4 means rebuilding services. A wrong menubar architecture discovered in Phase 5 means rewriting UI. Validate both before writing a single line of business logic.
+**Delivers:** Working Flutter macOS app with tray icon, show/hide main window, correct entitlements in both files, `LSUIElement` suppressing Dock icon, `AppDelegate.swift` keeping app alive when window closes. Verified in both `flutter run` AND `flutter build macos`.
+**Addresses:** Menubar tray icon (primary native differentiator), window bounds persistence scaffold
+**Avoids:** Pitfalls 1 (sandbox), 3 (menubar AppDelegate), 7 (entitlement sync), platform hot reload workflow, tray_manager + app_links conflict, window z-order bug
 
-### Phase 2: Data Layer — Scanner, Parser, Git Reader
-**Rationale:** These are pure Node.js modules with no Next.js or UI dependency. They can be built and tested in isolation (via `ts-node` or Jest) before wiring into any route. Validating data shape here prevents UI rebuilds later. Architecture research explicitly calls this Phase 2.
-**Delivers:** Working `scanner.ts` (project discovery + type classification), `parser.ts` (STATE.md/ROADMAP.md/PROJECT.md extraction), `git-reader.ts` (parallel git calls with timeout + singleton-per-repo)
-**Uses:** chokidar 3.6.0, simple-git 3.x, gray-matter 4.0.3
-**Avoids:** Pitfalls 5 (git concurrency), 6 (markdown mid-save), Moderate Pitfall 4 (non-git directory guard)
-**Research flag:** Standard patterns — skip research-phase
+### Phase 2: Data Layer (Models + Services + Git)
+**Rationale:** Models have no dependencies and define data shapes for everything else. Services are pure Dart and unit-testable without Flutter infrastructure. Git integration needs PATH resolution and timeout wrappers validated before being wired into providers. The architecture research explicitly recommends proving git subprocess behavior before combining it with Riverpod.
+**Delivers:** `models/` (sealed `Project`, `GsdState`, `GitInfo`, `ClaudeTool`), `services/project_scanner.dart`, `services/gsd_parser.dart`, `services/git_reader.dart` with `runInShell: true` and `.timeout()` wrappers, unit tests for parsing logic, git isolate worker with 4-concurrent cap.
+**Uses:** `dart:io`, `yaml` package, `path` + `path_provider`, `freezed` for models
+**Avoids:** Pitfalls 2 (git PATH), 3 (process hang/timeout)
 
-### Phase 3: API Layer — Projects Snapshot
-**Rationale:** Build the `/api/projects` and `/api/projects/[id]` Route Handlers using Phase 2 modules before building any UI. Verify data shape via `curl` before any component work. The static API is the MVP's backbone.
-**Delivers:** `GET /api/projects` returning all project cards, `GET /api/projects/[id]` for per-project refresh
-**Implements:** Projects Route Handler component from architecture
-**Avoids:** Pitfall 4 (force-dynamic — not needed yet but establish the pattern)
-**Research flag:** Standard patterns — skip research-phase
+### Phase 3: Reactive State (Riverpod Providers + Filesystem Watcher)
+**Rationale:** Providers are thin wiring; services must exist before providers can wrap them. The watcher requires debounce from day one. The `ref.keepAlive()` pattern on `watcherProvider` and `ref.listen` → `ref.invalidateSelf()` on `projectsProvider` is the core live-update architecture. Validate this chain end-to-end before building UI on top of it.
+**Delivers:** `providers/watcher_provider.dart` (StreamProvider + keepAlive), `services/watcher_service.dart` (DirectoryWatcher + StreamGroup merge + 350ms debounce), `providers/projects_provider.dart` (AsyncNotifier + ref.listen), `providers/tools_provider.dart`. End-to-end test: edit `STATE.md` → data changes without app restart.
+**Uses:** `flutter_riverpod` ^3.2.1, `riverpod_annotation`, `build_runner`, `watcher` package
+**Avoids:** Pitfalls 4 (watcher event coalescing), 11 (state over-engineering)
 
-### Phase 4: Static Dashboard UI
-**Rationale:** Build a fully functional read-only dashboard without live updates. This proves core value before adding SSE complexity. Architecture research explicitly recommends this ordering: "Works without live updates — this is the MVP." Once this is shippable, every subsequent phase is an enhancement.
-**Delivers:** Server Component dashboard (`app/page.tsx`), `ProjectCard` component, `ProjectGrid` layout, both card types (code + research), quick actions (Terminal, Finder, Notion)
-**Addresses:** Project card grid, GSD phase display, next step, git activity, dual card types, quick actions, Notion URL discovery — all table stakes and most differentiators
-**Uses:** shadcn/ui Card/Badge/Button/Tooltip, Tailwind v4, lucide-react
-**Avoids:** Pitfall 7 (Tailwind v4 class name audit after each `shadcn add`)
-**Research flag:** Standard patterns — skip research-phase
+### Phase 4: Theme + UI Shell
+**Rationale:** The n3urala1 theme must exist before any card widgets — all components reference theme colors. OKLCH→sRGB conversion constants must be established here. The glassmorphism pattern must be defined once and reused to avoid ad-hoc blur additions that accumulate rendering bugs.
+**Delivers:** `ui/theme/app_theme.dart` with named `Color` constants (pre-converted from OKLCH), dark `ThemeData`, `TabBar` + `TabBarView` navigation scaffold, atmospheric background orbs (Stack + Positioned + RadialGradient), glassmorphism widget pattern (`RepaintBoundary` + `ClipRRect` + `BackdropFilter`), `ui/windows/main_window.dart` layout shell.
+**Addresses:** n3urala1 dark theme, tab navigation (Code / Research / Claude Tools)
+**Avoids:** Pitfalls 5 (BackdropFilter white halo), 6 (OKLCH colors), BackdropFilter performance in scrollable lists
 
-### Phase 5: Live Updates — Watcher + SSE
-**Rationale:** SSE is built on top of a working static dashboard. The `/api/projects/[id]` endpoint already exists from Phase 3 — SSE just signals the browser to call it. This ordering means each SSE event has a known, tested refresh target. Architecture research calls this dependency out explicitly.
-**Delivers:** `lib/event-bus.ts`, `lib/watcher.ts` (chokidar singleton on `globalThis`), `instrumentation.ts`, `/api/sse/route.ts`, `hooks/use-sse.ts`, `components/sse-listener.tsx` — dashboard updates in real time when any `.planning/` file changes
-**Avoids:** Pitfalls 2 (globalThis singleton), 3 (AbortSignal cleanup), 4 (force-dynamic), Moderate Pitfall 1 (React Strict Mode double-connection), Moderate Pitfall 3 (Turbopack HMR loop), Minor Pitfall 4 (heartbeat ping)
-**Research flag:** Phase likely needs careful implementation review — most pitfalls cluster here. Well-documented patterns, but multiple interacting concerns (HMR, cleanup, Strict Mode). No research-phase needed; pitfalls are already documented.
+### Phase 5: Card Widgets + Live Updates
+**Rationale:** Widgets need providers (Phase 3) and theme (Phase 4). Build atom widgets first (PhaseBadge, GitInfoRow, QuickActions), then molecule widgets (ProjectCard, ResearchCard), then wire into the layout. Live-update end-to-end test belongs here: verify the full chain from `watcher` event → `projectsProvider` invalidation → card rebuild.
+**Delivers:** `ui/widgets/phase_badge.dart`, `ui/widgets/git_info_row.dart`, `ui/widgets/quick_actions.dart`, `ui/widgets/project_card.dart`, `ui/widgets/research_card.dart`, `GridView.builder` with `SliverGridDelegateWithMaxCrossAxisExtent`, stale detection badge, private/visible toggle, relative time formatting, live-update verified end-to-end.
+**Addresses:** All P1 card features: status, progress, next step, git commit, stale badge, private toggle, quick actions (Terminal, Finder, GitHub, Notion)
 
-### Phase 6: Claude Tools Inventory
-**Rationale:** Self-contained feature with no dependency on the watcher or SSE. `~/.claude/` directory is static (changes rarely) — no live updates needed. Can be built independently after the core dashboard is working. Architecture research assigns this its own phase.
-**Delivers:** `lib/tools-reader.ts`, `/api/tools/route.ts`, `app/tools/page.tsx`, `components/tools-panel.tsx` — Skills, MCP servers, and Plugins displayed in a dedicated page
-**Addresses:** Claude Tools inventory differentiator, MCP server/plugin type tagging
-**Research flag:** May benefit from `/gsd:research-phase` if `~/.claude/` directory structure is more complex than anticipated. File format for MCP configs is not deeply documented in existing research.
+### Phase 6: Claude Tools Panel
+**Rationale:** Independent feature with no dependencies on card widgets. Completes the three-tab layout. Does not block any other phase — safe to leave until core feature parity is confirmed.
+**Delivers:** `services/tools_scanner.dart` (`~/.claude/` walk, JSON/YAML parsing for Skills/MCP/Plugins), `ui/widgets/tools_panel.dart`, Tools tab fully functional.
+**Addresses:** Claude Tools panel (Skills, MCP, Plugins)
 
-### Phase 7: Polish + Edge Cases
-**Rationale:** Phase progress bar (checkbox counting), client-side name filter, error states, loading skeletons, and any UX improvements after the full feature set is wired together. These are low-risk, no-dependency enhancements.
-**Delivers:** Phase progress indicator, card loading states, graceful error display for git failures, client-side filter by project name
-**Addresses:** Phase progress indicator (differentiator), responsive reflow polish
-**Research flag:** Standard patterns — skip research-phase
+### Phase 7: Polish + v1.1.x Native Features
+**Rationale:** After core feature parity is confirmed, add native-only differentiators scoped to v1.1.x. Global hotkey requires window behavior to be stable. Notifications require the data pipeline to be solid. App menu is low-cost polish.
+**Delivers:** Global keyboard shortcut (`hotkey_manager`), macOS native app menu (`PlatformMenuBar`), macOS notifications for stale projects (`flutter_local_notifications`), window bounds restoration on launch.
+**Addresses:** v1.1.x features from FEATURES.md
 
 ### Phase Ordering Rationale
 
-- Scanner/Parser/GitReader before API because data shape validation prevents UI rewrites
-- Static UI before SSE because a working dashboard validates the architecture before adding the most pitfall-dense feature
-- SSE depends on the `[id]` API endpoint (Phase 3) — you cannot signal a re-fetch before the fetch target exists
-- Claude Tools is self-contained with no watcher dependency — correct to isolate it
-- Quick actions are embedded in Phase 4 (not a separate phase) because they are low-complexity and tied to the card component
+- **Native plumbing first:** The macOS sandbox and menubar architecture are the only items that cannot be fixed cheaply late in the project. Both require testing in `flutter build macos` (not `flutter run`). Discovering either failure late means rewriting previously completed work.
+- **Models before services, services before providers:** This is the architecture's explicit dependency chain. Skipping it creates circular dependencies and untestable code. Services are testable without any Flutter infrastructure — validating parsing logic in unit tests is faster than running the full app.
+- **Theme before widgets:** All card widgets reference theme tokens. Building widgets before theme forces color changes to cascade across every widget file.
+- **Tools panel last:** It is entirely independent of the card pipeline. Cannot block any other phase.
+- **7-phase plan maps directly to the ARCHITECTURE.md build order** with one addition (Phase 7 for v1.1.x polish).
 
 ### Research Flags
 
-Phases likely needing deeper research during planning:
-- **Phase 6 (Claude Tools):** The `~/.claude/` directory structure for MCP servers and plugins may vary by installation method and version. If the inventory reader needs to handle multiple config formats, a brief research-phase is warranted before implementation.
+Phases needing deeper research during planning:
+- **Phase 1 (Native Foundation):** The menubar-only app pattern (LSUIElement + AppDelegate + window_manager interaction) has multiple known issues across package versions. Implement against the community template (github.com/mynameiskenlee/flutter_macos_menubar_example) and verify `tray_manager` version compatibility before starting. This phase warrants step-by-step verification.
+- **Phase 3 (Reactive State):** Check dart-lang/watcher#79 (isDirectory assertion crash) — if still open in the current package version, design a try/catch wrapper for directory events before building the full provider. Also verify `StreamGroup.merge()` behavior with multiple `DirectoryWatcher` instances before committing to the pattern.
 
 Phases with standard patterns (skip research-phase):
-- **Phase 1 (Foundation):** Next.js + Tailwind v4 + shadcn/ui init is fully documented and pitfalls are pre-empted in this research
-- **Phase 2 (Data Layer):** gray-matter, simple-git, and directory scanning are well-documented libraries with established patterns
-- **Phase 3 (API Layer):** Next.js Route Handlers are well-documented; data shape comes from Phase 2
-- **Phase 4 (Static UI):** shadcn/ui component patterns are well-documented; Tailwind v4 pitfalls are pre-empted
-- **Phase 5 (SSE):** All critical patterns are documented in ARCHITECTURE.md and PITFALLS.md; no unknown territory
-- **Phase 7 (Polish):** Standard UI work with no novel dependencies
+- **Phase 2 (Data Layer):** Pure Dart filesystem + subprocess operations. Well-documented. Git PATH resolution already documented with three concrete options in PITFALLS.md.
+- **Phase 4 (Theme + UI):** Flutter theming and `BackdropFilter` are well-documented. OKLCH conversion approach is clear. Glassmorphism mitigation pattern is already specified.
+- **Phase 5 (Card Widgets):** `GridView.builder`, `StreamBuilder`, `ref.watch` — standard Flutter patterns with high-confidence documentation.
+- **Phase 6 (Claude Tools):** Direct port of `lib/tools-scanner.ts`. Same file-walking logic, different I/O API.
 
 ---
 
@@ -185,41 +178,51 @@ Phases with standard patterns (skip research-phase):
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | HIGH | All versions confirmed from installed `node_modules` on this machine; Next.js 16.1.6 verified from 4 active projects; only simple-git version is MEDIUM (no local install found, but 3.x line stable since 2023) |
-| Features | MEDIUM | Derived from PROJECT.md (HIGH) + developer tooling domain knowledge (MEDIUM — training data); web search unavailable in research session; feature scope is owner-defined so domain comparison matters less |
-| Architecture | HIGH | All patterns verified against Next.js 16.1.6 official docs; SSE via ReadableStream is Web Streams API standard; chokidar singleton is established Node.js pattern; confidence degraded only by MEDIUM on `globalThis` HMR behavior |
-| Pitfalls | HIGH (critical) / MEDIUM (moderate) | Critical pitfalls verified against official Next.js docs and Tailwind v4 upgrade guide; chokidar/simple-git specifics are ecosystem knowledge from training data |
+| Stack | MEDIUM-HIGH | Flutter/Dart selection is HIGH; exact package versions (tray_manager 0.5.0, window_manager 0.4.x, riverpod 3.2.1) are MEDIUM — confirmed directionally via WebSearch but not directly fetched from pub.dev. Pin versions before implementation. |
+| Features | HIGH | v1.0 feature inventory sourced directly from reading source code. Flutter macOS API equivalents verified against official Flutter docs. Web-to-native mapping table is solid. |
+| Architecture | MEDIUM-HIGH | Layer structure and provider patterns are well-established Flutter community patterns. Isolate approach for git is documented. Main uncertainty is `watcher` package behavior with directory events on macOS (open issue). |
+| Pitfalls | MEDIUM-HIGH | Critical pitfalls (sandbox, git PATH, process hang) verified against open GitHub issues with issue numbers. BackdropFilter bugs have issue numbers. Some specifics (exact Riverpod 3 provider API edge cases) are MEDIUM. |
 
-**Overall confidence:** HIGH
+**Overall confidence:** MEDIUM-HIGH
 
 ### Gaps to Address
 
-- **simple-git exact version:** No local install confirmed. Use `npm install simple-git@latest` and pin the 3.x line. Verify `serverExternalPackages` includes it before first use.
-- **`~/.claude/` directory structure:** MCP server and plugin config formats may differ by Claude installation method. Inspect the actual directory before building `tools-reader.ts` — take 10 minutes to read the config files rather than assuming structure.
-- **chokidar v4 ESM concern:** The v3 recommendation is based on known Next.js + ESM-only package friction, not directly tested with Next.js 16. If chokidar v3 has any incompatibility discovered during Phase 5, the fallback is to use `serverExternalPackages` more aggressively and test v4 with explicit ESM config.
-- **Tailwind v4 + shadcn/ui compatibility:** As of early 2026, shadcn/ui's `npx shadcn@latest init` generates v4-compatible output, but individual component source may still carry v3 class names. Run the audit after each `npx shadcn@latest add` rather than at the end.
-- **Feature confidence caveat:** The features list is based on project spec and domain inference, not user research. The owner IS the user, so this is lower risk than a multi-user product, but revisit if requirements evolve during planning.
+- **Package version pinning:** Before writing code, run `flutter pub add` for each dependency and record the actual resolved versions. The researched versions need confirmation against current pub.dev before beginning Phase 1.
+- **`watcher` package `isDirectory` assertion bug status:** Check dart-lang/watcher#79 to confirm if fixed in the current version. If still open, design a try/catch wrapper for directory events before Phase 3.
+- **`Process.run()` M1 hang (Flutter issue #95805):** Confirm if resolved in Flutter 3.29. If not, add timeout wrappers to ALL subprocess calls from day one — not just git calls. This applies to `open -a Terminal` quick actions as well.
+- **OKLCH design tokens:** Before Phase 4, convert all OKLCH color values from the n3urala1 design system to sRGB hex using oklch.com. Create a single `color_tokens.dart` constants file. Design-time task, not a code task.
+- **`lucide_icons` Flutter package coverage:** The web v1.0 uses Lucide icons. The `lucide_icons` Flutter package exists but icon coverage may differ from the web version. Verify which icons are used in v1.0 before Phase 4.
 
 ---
 
 ## Sources
 
 ### Primary (HIGH confidence)
-- Next.js 16.1.6 official docs — instrumentation, Route Handlers, serverExternalPackages, SSE streaming, Turbopack, reactStrictMode: https://nextjs.org
-- Tailwind CSS v4 upgrade guide — breaking changes, class name changes: https://tailwindcss.com/docs/upgrade-guide
-- Next.js self-hosting guide — X-Accel-Buffering for SSE through proxies
-- Project spec: `/Users/rob/project_orchestration/.planning/PROJECT.md`
-- Installed packages verified: chokidar 3.6.0, Tailwind 4.1.18, React 19.2.4, TypeScript 5.9.3, Next.js 16.1.6, lucide-react 0.563.0, gray-matter 4.0.3, clsx 2.1.1, tailwind-merge 3.4.0, zod 4.3.6
+- Flutter macOS building docs: https://docs.flutter.dev/platform-integration/macos/building — sandbox, entitlements, deployment targets
+- Flutter isolates docs: https://docs.flutter.dev/perf/isolates — background isolate patterns
+- Dart isolates language reference: https://dart.dev/language/isolates — `Isolate.run()` API
+- v1.0 source code (direct read): `components/codeProjectCard.tsx`, `researchProjectCard.tsx`, `toolsPanel.tsx`, `projectTabs.tsx`, `lib/scanner.ts`, `lib/watcher.ts`, `lib/git-reader.ts`, `app/actions.ts`, `app/page.tsx` — feature inventory
 
 ### Secondary (MEDIUM confidence)
-- Developer tooling ecosystem — Portainer, LinearB, Backstage, Raycast comparisons (training data, 2025 cutoff)
-- chokidar v4 ESM friction with Next.js — ecosystem knowledge, not directly tested
-- simple-git concurrency / git index.lock behavior — ecosystem knowledge
-- Markdown mid-save write risks — ecosystem knowledge
+- pub.dev/packages/tray_manager — tray_manager 0.5.0, updated November 2025
+- pub.dev/packages/window_manager — updated October 2025, leanflutter
+- pub.dev/packages/watcher — Dart team maintained, ~January 2026, 10.5M downloads
+- pub.dev/packages/flutter_riverpod — ^3.2.1, Riverpod 3.x series
+- riverpod.dev/docs/whats_new — Riverpod 3.0 changes
+- codewithandrea.com — Flutter Riverpod AsyncNotifier and architecture patterns
+- Flutter macOS menubar template: https://github.com/mynameiskenlee/flutter_macos_menubar_example
+- Flutter issue #95805 — Process hangs on M1 debug mode
+- Dart SDK issue #38364 — PATH not resolved for Process on macOS
+- Flutter issue #66920 — FileSystemException sandbox
+- Flutter issue #173530 — BackdropFilter white halo on dark backgrounds
+- Flutter issues #149368, #143947, #126353 — Impeller BackdropFilter performance
+- dart-lang/watcher issue #79 — isDirectory assertion failure on macOS
+- dart-lang/sdk issue #62124 — macOS watcher omits directory create events
 
 ### Tertiary (LOW confidence)
-- `~/.claude/` directory format for MCP servers/plugins — inferred from project context; needs direct inspection before Phase 6 implementation
+- pub.dev/packages/oklch — v0.0.2, niche package; prefer manual OKLCH→sRGB conversion at design time
+- dasroot.net/posts/2026/02/flutter-desktop-applications — Flutter Desktop 2026 overview (third-party)
 
 ---
-*Research completed: 2026-02-17*
+*Research completed: 2026-02-19*
 *Ready for roadmap: yes*

@@ -1,482 +1,604 @@
-# Architecture Patterns
+# Architecture Research
 
-**Domain:** Local Next.js developer dashboard with filesystem monitoring, SSE streaming, git integration, and markdown parsing
-**Project:** Pro Orc
-**Researched:** 2026-02-17
-**Confidence:** HIGH (based on verified Next.js 15.2 official docs + established patterns)
-
----
-
-## Recommended Architecture
-
-Pro Orc is a single-process, single-user local tool. The architecture is deliberately simple: **one singleton watcher that pushes events to subscribed SSE connections, with filesystem as the only data source**. There is no database, no auth layer, no external API. Complexity lives in the watcher-to-SSE bridge and in parsing .planning/ files correctly.
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│  NEXT.JS PROCESS (localhost:3000)                            │
-│                                                              │
-│  instrumentation.ts                                          │
-│  └─ register() [called once on server start]                 │
-│     └─ WatcherService.init()  ←── singleton guard           │
-│        ├─ chokidar.watch([code/, project research/])         │
-│        └─ EventBus (in-memory EventEmitter)                  │
-│                                                              │
-│  Route Handlers (app/api/)                                   │
-│  ├─ GET /api/sse          → ReadableStream, subscribes to    │
-│  │                          EventBus, streams SSE events     │
-│  ├─ GET /api/projects     → initial snapshot (all projects)  │
-│  ├─ GET /api/projects/[id]→ single project data             │
-│  └─ GET /api/tools        → Claude tools inventory          │
-│                                                              │
-│  Lib Layer (lib/)                                            │
-│  ├─ scanner.ts            → fs.readdir + path resolution     │
-│  ├─ parser.ts             → STATE.md, ROADMAP.md, PROJECT.md │
-│  ├─ git-reader.ts         → simple-git with timeout wrapper  │
-│  └─ tools-reader.ts       → ~/.claude/ inventory             │
-│                                                              │
-│  React UI (app/, components/)                                │
-│  ├─ Server Components     → initial render (projects page)   │
-│  ├─ Client Components     → SSE listener, card updates       │
-│  └─ shadcn/ui + Tailwind  → layout, cards, badges           │
-└─────────────────────────────────────────────────────────────┘
-
-  Browser (EventSource API)
-  └─ useSSE hook  → EventSource('/api/sse')
-     └─ on message → update React state → re-render cards
-```
+**Domain:** Flutter macOS desktop dashboard — local filesystem + git metadata, menubar + main window
+**Researched:** 2026-02-19
+**Confidence:** MEDIUM-HIGH (WebSearch verified; some package versions unconfirmed without direct pub.dev fetch)
 
 ---
 
-## Component Boundaries
+## Context: v1.0 → v1.1 Layer Mapping
 
-| Component | File Location | Responsibility | Communicates With |
-|-----------|--------------|----------------|-------------------|
-| WatcherService | `lib/watcher.ts` | Singleton chokidar instance, emits normalized change events | EventBus |
-| EventBus | `lib/event-bus.ts` | In-memory EventEmitter, fan-out to N SSE subscribers | WatcherService (receives), SSE Route Handler (provides) |
-| SSE Route Handler | `app/api/sse/route.ts` | Holds open HTTP connection, subscribes to EventBus, formats SSE protocol | EventBus, Browser |
-| Scanner | `lib/scanner.ts` | Reads directory trees for code/ and project research/, classifies project types | Parser, Git Reader |
-| Parser | `lib/parser.ts` | Parses .planning/STATE.md, ROADMAP.md, PROJECT.md — extracts status, phase, next step, Notion URL | Scanner output, Route Handlers |
-| Git Reader | `lib/git-reader.ts` | simple-git async calls wrapped in Promise.allSettled + 5s timeout, returns last commit info | Scanner output, Route Handlers |
-| Tools Reader | `lib/tools-reader.ts` | Reads ~/.claude/ for skills, MCP configs, plugins | Route Handlers |
-| Projects Route | `app/api/projects/route.ts` | Snapshot of all projects (scanner + parser + git in parallel) | Scanner, Parser, Git Reader |
-| Tools Route | `app/api/tools/route.ts` | Claude tools inventory | Tools Reader |
-| Instrumentation | `instrumentation.ts` | Server startup hook — initializes WatcherService once | WatcherService |
-| ProjectGrid (Server) | `app/page.tsx` | Initial server render of all project cards | Projects Route (fetch on server) |
-| SSEListener (Client) | `components/sse-listener.tsx` | Manages EventSource lifecycle, updates project state | SSE Route, React state |
-| ProjectCard (Client) | `components/project-card.tsx` | Renders single project, receives updates via SSEListener context | SSEListener |
-| ToolsPanel (Server) | `app/tools/page.tsx` | Renders Claude tools inventory (static, no SSE needed) | Tools Route |
+The existing Next.js v1.0 has five backend "lib" modules. Each maps directly to a Dart equivalent.
+
+The critical architectural insight: the Next.js server/client boundary disappears entirely. The Flutter app IS both sides — Dart services read the filesystem directly, Riverpod streams replace SSE, widgets replace React components. There is no HTTP layer between scanner and UI.
+
+| Next.js v1.0 Layer | Responsibility | Dart/Flutter Equivalent |
+|--------------------|---------------|------------------------|
+| `lib/scanner.ts` | Walk `code/` + `project research/` dirs, return project list | `ProjectScannerService` (dart:io `Directory.list()`) |
+| `lib/parser.ts` | Parse `.planning/STATE.md`, `ROADMAP.md`, `PROJECT.md` | `GsdParser` (dart:io `File.readAsString()` + RegExp) |
+| `lib/git-reader.ts` | `git log`, `git status` via simple-git | `GitReaderService` (dart:io `Process.run('git', ...)`) |
+| `lib/watcher.ts` | chokidar singleton for filesystem events | `WatcherService` (Dart `watcher` package, `DirectoryWatcher`) |
+| `lib/tools-scanner.ts` | Walk `~/.claude/` for Skills/MCP/Plugins | `ToolsScannerService` (dart:io `Directory.list()`) |
+| SSE route handler | Push events to browser over HTTP | Riverpod `StreamProvider` — in-process, no HTTP at all |
+| React hooks (`usePrivateProjects`, `useProjectEvents`) | Client state + live updates | Riverpod `ref.watch()` on AsyncNotifier providers |
+
+---
+
+## Standard Architecture
+
+### System Overview
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                        PRESENTATION LAYER                           │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐              │
+│  │  MenuBarApp  │  │  MainWindow  │  │  ToolsPanel  │              │
+│  │  (tray icon) │  │  (card grid) │  │  (claude inv)│              │
+│  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘              │
+│         │                 │                  │                      │
+│  ┌──────▼─────────────────▼──────────────────▼───────────────────┐  │
+│  │                    Riverpod Providers                          │  │
+│  │  projectsProvider   watcherProvider   toolsProvider           │  │
+│  └──────┬──────────────────┬─────────────────┬────────────────────┘  │
+├─────────┼──────────────────┼─────────────────┼─────────────────────┤
+│                        SERVICE LAYER                                │
+│  ┌──────▼───────┐   ┌──────▼───────┐   ┌──────▼───────┐            │
+│  │  ProjectScanner  │  WatcherSvc  │   │  ToolsScanner│            │
+│  │  GsdParser   │   │  (watcher   │   │              │            │
+│  │  GitReader   │   │   package)  │   │              │            │
+│  └──────┬───────┘   └──────┬───────┘   └──────┬───────┘            │
+├─────────┼──────────────────┼─────────────────┼─────────────────────┤
+│                   BACKGROUND ISOLATE (optional)                     │
+│  ┌──────▼────────────────────────────────────────────────────────┐  │
+│  │  Isolate.run() — git subprocess calls on initial scan        │  │
+│  │  ReceivePort/SendPort communication back to main isolate     │  │
+│  └───────────────────────────────────────────────────────────────┘  │
+├─────────────────────────────────────────────────────────────────────┤
+│                  PLATFORM LAYER (macOS native)                      │
+│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐     │
+│  │  tray_manager   │  │  dart:io        │  │  Process.run    │     │
+│  │  (NSStatusItem) │  │  (filesystem)   │  │  (git CLI)      │     │
+│  └─────────────────┘  └─────────────────┘  └─────────────────┘     │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### Component Responsibilities
+
+| Component | Responsibility | Implementation |
+|-----------|---------------|----------------|
+| `MenuBarApp` | Tray icon, click to show/hide main window | `tray_manager` package + NSStatusItem |
+| `MainWindow` | Full dashboard, project card grid layout | Flutter `MaterialApp`, custom window chrome |
+| `ProjectCard` | Single code project display | Stateless widget, receives `CodeProject` model |
+| `ResearchCard` | Research project variant (no git section) | Stateless widget, receives `ResearchProject` model |
+| `ToolsPanel` | Claude tools inventory sidebar | Riverpod-fed list of `ClaudeTool` models |
+| `projectsProvider` | Async stream of all discovered projects | Riverpod `AsyncNotifierProvider<List<Project>>` |
+| `watcherProvider` | Filesystem change events (stays alive) | Riverpod `StreamProvider<WatchEvent>` with `ref.keepAlive()` |
+| `toolsProvider` | Claude tools list (static, loaded once) | Riverpod `FutureProvider<List<ClaudeTool>>` |
+| `ProjectScannerService` | Walk `code/` and `project research/` | `dart:io Directory.list(recursive: true)` |
+| `GsdParser` | Parse `.planning/STATE.md`, `ROADMAP.md`, `PROJECT.md` | `dart:io File.readAsString()` + `RegExp` |
+| `GitReaderService` | Extract branch, last commit SHA, message, timestamp | `dart:io Process.run('git', ['log', ...])` |
+| `WatcherService` | Watch scan paths, emit change events | Dart `watcher` package `DirectoryWatcher` |
+| `ToolsScannerService` | Walk `~/.claude/` for Skills/MCP/Plugins | `dart:io Directory.list()` + JSON/YAML parsing |
+
+---
+
+## Recommended Project Structure
+
+```
+lib/
+├── main.dart                      # App entry: init tray, window, ProviderScope
+├── app.dart                       # Root MaterialApp widget
+│
+├── models/                        # Pure Dart — no Flutter imports, usable in isolates
+│   ├── project.dart               # Project (sealed class), CodeProject, ResearchProject
+│   ├── gsd_state.dart             # GsdPhase, NextStep, RoadmapProgress
+│   ├── git_info.dart              # GitInfo (branch, lastCommit, sha, timestamp)
+│   └── claude_tool.dart           # ClaudeTool (name, type: skill/mcp/plugin, description)
+│
+├── services/                      # Pure Dart business logic — no Riverpod, no Flutter
+│   ├── project_scanner.dart       # Directory walk → List<Project>
+│   ├── gsd_parser.dart            # File read + regex → GsdState per project
+│   ├── git_reader.dart            # Process.run git → GitInfo
+│   ├── watcher_service.dart       # DirectoryWatcher → Stream<WatchEvent>
+│   └── tools_scanner.dart         # ~/.claude/ walk → List<ClaudeTool>
+│
+├── providers/                     # Riverpod — wires services into widget tree
+│   ├── projects_provider.dart     # AsyncNotifierProvider<List<Project>>
+│   ├── watcher_provider.dart      # StreamProvider<WatchEvent>
+│   └── tools_provider.dart        # FutureProvider<List<ClaudeTool>>
+│
+├── ui/
+│   ├── windows/
+│   │   └── main_window.dart       # Dashboard window layout + card grid
+│   ├── widgets/
+│   │   ├── project_card.dart      # Code project card
+│   │   ├── research_card.dart     # Research project card (no git section)
+│   │   ├── tools_panel.dart       # Claude tools inventory
+│   │   ├── phase_badge.dart       # GSD phase visual indicator (pill/chip)
+│   │   ├── git_info_row.dart      # Branch + last commit + relative timestamp
+│   │   └── quick_actions.dart     # Terminal / Finder / Notion buttons
+│   └── theme/
+│       └── app_theme.dart         # Dark theme, macOS-native typography + spacing
+│
+├── platform/                      # macOS-specific integration
+│   ├── tray.dart                  # tray_manager setup + click handler
+│   └── window_manager.dart        # Window show/hide/position helpers
+│
+└── isolates/
+    └── git_worker.dart            # Isolate.run() wrapper for concurrent git calls
+```
+
+### Structure Rationale
+
+- **`models/`:** No Flutter imports. This enables models to be used inside `Isolate.run()` without pulling in Flutter bindings. Sealed class `Project` forces exhaustive handling of `CodeProject` vs `ResearchProject` in the UI.
+- **`services/`:** No Riverpod dependency. Services are plain Dart classes, trivially unit-testable. Riverpod providers instantiate them — services never reach up into providers.
+- **`providers/`:** Thin wiring layer. Providers hold no business logic; they instantiate services and expose reactive state. A provider that is 20 lines is correct; 100 lines means logic leaked from services.
+- **`ui/`:** Pure Flutter. Widgets get all data via `ref.watch()`. No widget imports a service directly.
+- **`platform/`:** macOS-specific code lives here, not in services or UI. Makes it easy to find all native integration points and keeps the rest of the codebase portable.
+- **`isolates/`:** Background work is explicit and contained. Only git subprocess calls go here on initial load.
+
+---
+
+## Architectural Patterns
+
+### Pattern 1: Riverpod AsyncNotifier for Projects
+
+**What:** Projects load asynchronously at startup; the notifier subscribes to the watcher stream and invalidates itself on any filesystem change.
+
+**When to use:** Any state with both async initialization AND live-update triggers.
+
+**Trade-offs:** Slightly more code than `FutureProvider`, but the `ref.listen`-based invalidation pattern is the correct way to wire a watcher event into a re-scan. A plain `FutureProvider` cannot respond to external events.
+
+**Example:**
+```dart
+// providers/projects_provider.dart
+@riverpod
+class Projects extends _$Projects {
+  @override
+  Future<List<Project>> build() async {
+    // Re-scan whenever the watcher fires any event
+    ref.listen(watcherProvider, (prev, next) {
+      ref.invalidateSelf();
+    });
+
+    final scanner = ProjectScannerService();
+    final projects = await scanner.scan();
+
+    // Enrich code projects with git info (runs concurrently)
+    return Future.wait(
+      projects.map((p) => _enrichWithGit(p)),
+    );
+  }
+
+  Future<Project> _enrichWithGit(Project p) async {
+    if (p is! CodeProject) return p;
+    final gitInfo = await gitWorker.fetchGitInfo(p.path);
+    return p.copyWith(gitInfo: gitInfo);
+  }
+}
+```
+
+### Pattern 2: StreamProvider with keepAlive for Filesystem Watcher
+
+**What:** `WatcherService` exposes a `Stream<WatchEvent>`. The provider wraps it and must stay alive permanently so the watcher never stops even when no widget is actively observing it.
+
+**When to use:** Any persistent event source that must run for the app lifetime.
+
+**Trade-offs:** `ref.keepAlive()` is required and non-obvious. Without it, Riverpod disposes the stream when the last subscriber unmounts (e.g., during window hide), which kills the watcher silently.
+
+**Example:**
+```dart
+// providers/watcher_provider.dart
+@riverpod
+Stream<WatchEvent> watcher(WatcherRef ref) {
+  ref.keepAlive();  // Never dispose — watcher must outlive any single widget
+
+  final home = Platform.environment['HOME'] ?? '';
+  final service = WatcherService(paths: [
+    '$home/project_orchestration/code',
+    '$home/project_orchestration/project research',
+  ]);
+
+  return service.events;
+}
+
+// services/watcher_service.dart
+class WatcherService {
+  final List<String> paths;
+  WatcherService({required this.paths});
+
+  Stream<WatchEvent> get events {
+    // Merge streams from all watched directories
+    final streams = paths.map((p) {
+      return DirectoryWatcher(p).events.map(
+        (e) => WatchEvent(path: e.path, type: e.type.toString()),
+      );
+    });
+    return StreamGroup.merge(streams.toList());
+  }
+}
+```
+
+**Note:** The Dart `watcher` package uses FSEvents on macOS natively — the same underlying mechanism as Node.js chokidar. It is the direct Dart equivalent of `lib/watcher.ts`. Use `async` package's `StreamGroup.merge()` to combine multiple directory watchers into one stream.
+
+### Pattern 3: Background Isolate for Git Subprocesses
+
+**What:** Git subprocess calls block while the OS spawns the process and waits for output. With 20+ projects, sequential calls cause multi-second UI freezes on startup. `Isolate.run()` offloads these to a background isolate.
+
+**When to use:** During the initial project scan enrichment pass. For single watcher-triggered re-scans (one project at a time), the blocking cost (~100ms) is acceptable on the main isolate.
+
+**Trade-offs:** `Isolate.run()` is simple and clean but creates a new isolate per call. For the initial scan, batch calls via `Future.wait` with a concurrency cap rather than one-isolate-per-project.
+
+**Example:**
+```dart
+// isolates/git_worker.dart
+Future<GitInfo?> fetchGitInfo(String projectPath) {
+  return Isolate.run(() async {
+    final result = await Process.run(
+      'git',
+      ['log', '-1', '--format=%H%n%s%n%ai'],
+      workingDirectory: projectPath,
+      runInShell: false,
+    );
+    if (result.exitCode != 0) return null;
+    return GitInfo.parse(result.stdout as String);
+  });
+}
+
+// In provider: concurrency-capped parallel enrichment
+Future<List<Project>> _enrichAll(List<Project> projects) async {
+  const maxConcurrent = 4;  // avoid spawning 50 isolates at once
+  final results = <Project>[];
+
+  for (final chunk in projects.slices(maxConcurrent)) {
+    final enriched = await Future.wait(
+      chunk.map((p) => _enrichWithGit(p)),
+    );
+    results.addAll(enriched);
+  }
+  return results;
+}
+```
+
+### Pattern 4: Tray Icon + Main Window Lifecycle
+
+**What:** App lives in the menubar. Main window starts hidden. Tray click shows/hides. `LSUIElement` in `Info.plist` suppresses the Dock icon.
+
+**When to use:** Standard macOS menubar utility pattern.
+
+**Trade-offs:** Requires `Info.plist` edit and `window_manager` setup. The macOS sandbox must be disabled or the window may not respond to tray clicks correctly in all configurations (open issue in `tray_manager` GitHub).
+
+**Example:**
+```dart
+// main.dart
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await windowManager.ensureInitialized();
+
+  await windowManager.waitUntilReadyToShow(
+    const WindowOptions(
+      size: Size(1200, 800),
+      minimumSize: Size(900, 600),
+      titleBarStyle: TitleBarStyle.hidden,
+      skipTaskbar: true,
+    ),
+    () async {
+      await windowManager.hide();  // start hidden; tray click reveals
+    },
+  );
+
+  await _initTray();
+  runApp(const ProviderScope(child: ProOrcApp()));
+}
+
+// platform/tray.dart
+Future<void> initTray() async {
+  await trayManager.setIcon('assets/tray_icon.png');
+  await trayManager.setContextMenu(Menu(items: [
+    MenuItem(label: 'Show Dashboard', onClick: (_) => _showWindow()),
+    MenuItem.separator(),
+    MenuItem(label: 'Quit', onClick: (_) => exit(0)),
+  ]));
+  trayManager.addListener(_TrayListener());
+}
+
+class _TrayListener extends TrayListener {
+  @override
+  void onTrayIconMouseDown() => _showWindow();
+}
+
+void _showWindow() async {
+  await windowManager.show();
+  await windowManager.focus();
+}
+```
+
+**Info.plist addition (required — hides Dock icon):**
+```xml
+<!-- macos/Runner/Info.plist -->
+<key>LSUIElement</key>
+<true/>
+```
 
 ---
 
 ## Data Flow
 
-### Initial Page Load
+### Startup Flow
 
 ```
-Browser request → app/page.tsx (Server Component)
-  └─ fetch('/api/projects')
-       └─ Scanner.scan([code/, project research/])
-            ├─ per project: Parser.parse(.planning/)
-            └─ per code project: GitReader.read(projectPath)
-                                 [Promise.allSettled, 5s timeout]
-  └─ return ProjectGrid with all project data rendered
-  └─ hydrate SSEListener Client Component
+main() called
+  ├─ windowManager.ensureInitialized()
+  ├─ window starts hidden (tray click needed to show)
+  ├─ trayManager initialized — NSStatusItem appears in menubar
+  └─ ProviderScope starts Flutter widget tree
+
+  First widget observing projectsProvider triggers build():
+  ├─ ref.listen(watcherProvider) registered — watcher starts (keepAlive)
+  ├─ ProjectScannerService.scan() runs
+  │   ├─ Directory.list('code/') → finds code projects
+  │   └─ Directory.list('project research/') → finds research projects
+  ├─ GsdParser.parse(path) per project → GsdState
+  └─ GitReaderService (via Isolate.run) × code projects, max 4 concurrent
+       └─ Process.run('git', ['log', '-1', ...])
+
+  AsyncValue.data resolves → projectsProvider emits List<Project>
+  → MainWindow renders card grid
 ```
 
-### Live Update (File Change)
+### Live Update Flow (replaces SSE entirely)
 
 ```
-File changes on disk
-  └─ chokidar emits 'change'/'add'/'unlink' event
-       └─ WatcherService normalizes → determines affected project
-            └─ EventBus.emit('project:updated', { projectId, path })
-                 └─ SSE Route Handler (subscribed via EventBus)
-                      └─ controller.enqueue(sseFormattedEvent)
-                           └─ Browser EventSource fires onmessage
-                                └─ useSSE hook dispatches to React state
-                                     └─ ProjectCard re-renders
+User edits STATE.md / commits / adds a project directory
+  ↓
+dart:io FSEvents fires (via DirectoryWatcher in WatcherService)
+  ↓
+watcherProvider Stream<WatchEvent> emits new event
+  ↓
+ref.listen callback in projectsProvider fires
+  ↓
+ref.invalidateSelf() — projectsProvider transitions to AsyncValue.loading
+  ↓
+build() runs again: scan + parse + git enrichment
+  ↓
+projectsProvider emits new AsyncValue.data
+  ↓
+All widgets using ref.watch(projectsProvider) rebuild automatically
 ```
 
-### SSE Event Format
+### Quick Action Flow
 
 ```
-data: {"type":"project:updated","projectId":"landlord-checker","changedFile":".planning/STATE.md"}\n\n
-data: {"type":"project:added","projectId":"new-project","path":"/code/new-project"}\n\n
-data: {"type":"project:removed","projectId":"old-project"}\n\n
-data: {"type":"ping"}\n\n
+User clicks "Open in Terminal" on ProjectCard
+  ↓
+QuickActionsService.openInTerminal(project.path)
+  ↓
+Process.run('open', ['-a', 'Terminal', project.path])
+  ↓
+macOS opens Terminal.app cd'd to that directory
 ```
-
-The browser triggers a re-fetch of `/api/projects/[projectId]` on `project:updated` — it does NOT send full project data over SSE. SSE only signals "something changed, refresh this project." This keeps the SSE channel lightweight and avoids serialization complexity.
-
-### Git Data Flow
-
-```
-GitReader.read(path)
-  └─ Promise.allSettled([
-       git.log({ maxCount: 1 }),      // last commit
-       git.status(),                   // clean/dirty
-       git.branch()                    // current branch
-     ], { timeout: 5000 })
-  └─ return { lastCommit, status, branch } | { error: 'timeout' | 'not-a-repo' }
-```
-
-Git failures are non-fatal. Projects without git show "no git" gracefully. Research projects skip git entirely.
-
-### Markdown Parsing Data Flow
-
-```
-Parser.parse(projectPath)
-  └─ fs.readFile('.planning/STATE.md')    → current phase, status, next step
-  └─ fs.readFile('.planning/ROADMAP.md')  → total phases, completed phases
-  └─ fs.readFile('.planning/PROJECT.md')  → project name, Notion URL comment
-  └─ returns ProjectData { name, status, phase, nextStep, progress, notionUrl }
-```
-
-Notion URL extracted from HTML comment: `<!-- notion: https://notion.so/... -->` in PROJECT.md header.
 
 ---
 
-## Patterns to Follow
+## macOS Sandbox Configuration
 
-### Pattern 1: Singleton Guard in WatcherService
+This is the single biggest implementation risk. Flutter macOS builds are sandboxed by default.
 
-**What:** Module-level variable guards against multiple watcher instances during Next.js dev mode HMR.
-**When:** Always — chokidar opens OS file handles; leaking them causes "too many open files."
+**What the sandbox blocks:**
+- `dart:io File.readAsString()` for paths outside the app container (i.e., all project directories)
+- `Process.run('git', ...)` — subprocess execution
+- `DirectoryWatcher` for arbitrary filesystem paths
 
-```typescript
-// lib/watcher.ts
-import 'server-only'
-import chokidar from 'chokidar'
-import { EventBus } from './event-bus'
-import os from 'os'
-import path from 'path'
-
-let watcher: chokidar.FSWatcher | null = null
-
-export function initWatcher(): void {
-  if (watcher) return // singleton guard
-
-  const watchPaths = [
-    path.join(os.homedir(), 'project_orchestration', 'code'),
-    path.join(os.homedir(), 'project_orchestration', 'project research'),
-  ]
-
-  watcher = chokidar.watch(watchPaths, {
-    ignored: /(node_modules|\.git|\.next)/,
-    persistent: true,
-    depth: 4,           // enough to reach .planning/STATE.md
-    ignoreInitial: true,
-  })
-
-  watcher.on('change', (filePath) => {
-    const projectId = resolveProjectId(filePath)
-    if (projectId) EventBus.emit('project:updated', { projectId, filePath })
-  })
-
-  watcher.on('addDir', (dirPath) => {
-    // new project directory at depth 1
-    if (isProjectRoot(dirPath)) {
-      EventBus.emit('project:added', { dirPath })
-    }
-  })
-}
+**Required entitlement changes — all three entitlement files:**
+```xml
+<!-- macos/Runner/DebugProfile.entitlements -->
+<!-- macos/Runner/Release.entitlements -->
+<key>com.apple.security.app-sandbox</key>
+<false/>
 ```
 
-### Pattern 2: SSE via ReadableStream with Cleanup
+**Alternative (App Store compatible, but far more complex):**
+Use `NSOpenPanel` (user-selected file access) via a platform channel. This requires the user to explicitly grant folder access once. It is the correct approach for App Store distribution but introduces significant native code complexity unsuitable for a personal tool.
 
-**What:** Route Handler returns a ReadableStream, subscribes to EventBus on start, unsubscribes on client disconnect.
-**When:** The SSE endpoint — /api/sse/route.ts.
-
-```typescript
-// app/api/sse/route.ts
-import { EventBus } from '@/lib/event-bus'
-export const dynamic = 'force-dynamic'
-export const runtime = 'nodejs'
-
-export async function GET() {
-  const encoder = new TextEncoder()
-
-  const stream = new ReadableStream({
-    start(controller) {
-      const handler = (event: ProjectEvent) => {
-        const data = `data: ${JSON.stringify(event)}\n\n`
-        controller.enqueue(encoder.encode(data))
-      }
-
-      EventBus.on('project:updated', handler)
-      EventBus.on('project:added', handler)
-      EventBus.on('project:removed', handler)
-
-      // keepalive ping every 30s
-      const ping = setInterval(() => {
-        controller.enqueue(encoder.encode('data: {"type":"ping"}\n\n'))
-      }, 30_000)
-
-      // cleanup on client disconnect
-      return () => {
-        EventBus.off('project:updated', handler)
-        EventBus.off('project:added', handler)
-        EventBus.off('project:removed', handler)
-        clearInterval(ping)
-      }
-    },
-  })
-
-  return new Response(stream, {
-    headers: {
-      'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache',
-      'Connection': 'keep-alive',
-    },
-  })
-}
-```
-
-### Pattern 3: instrumentation.ts for Watcher Bootstrap
-
-**What:** `register()` is called exactly once by Next.js on server start — ideal for singleton initialization.
-**When:** Always use this over app/layout.tsx or manual imports.
-
-```typescript
-// instrumentation.ts (root of project)
-export async function register() {
-  if (process.env.NEXT_RUNTIME === 'nodejs') {
-    const { initWatcher } = await import('./lib/watcher')
-    initWatcher()
-  }
-  // do NOT init in 'edge' runtime — chokidar is Node.js only
-}
-```
-
-The `NEXT_RUNTIME === 'nodejs'` guard is mandatory. Next.js calls `register()` in both Node.js and Edge contexts. Chokidar requires Node.js.
-
-### Pattern 4: Git Reader with Promise.allSettled + Timeout
-
-**What:** Parallel git calls with a fixed timeout, non-fatal failures.
-**When:** Every code project card on initial load and on `project:updated` events.
-
-```typescript
-// lib/git-reader.ts
-import 'server-only'
-import simpleGit from 'simple-git'
-
-function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
-  return Promise.race([
-    promise,
-    new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error('timeout')), ms)
-    ),
-  ])
-}
-
-export async function readGitInfo(projectPath: string) {
-  const git = simpleGit(projectPath)
-
-  const [logResult, statusResult, branchResult] = await Promise.allSettled([
-    withTimeout(git.log({ maxCount: 1 }), 5000),
-    withTimeout(git.status(), 5000),
-    withTimeout(git.branch(), 5000),
-  ])
-
-  return {
-    lastCommit: logResult.status === 'fulfilled'
-      ? logResult.value.latest
-      : null,
-    isDirty: statusResult.status === 'fulfilled'
-      ? !statusResult.value.isClean()
-      : null,
-    branch: branchResult.status === 'fulfilled'
-      ? branchResult.value.current
-      : null,
-  }
-}
-```
-
-### Pattern 5: Project Type Classification
-
-**What:** Scanner determines whether a directory is a code project, research project, or irrelevant.
-**When:** During initial scan and when `project:added` fires.
-
-```typescript
-// lib/scanner.ts
-type ProjectType = 'code' | 'research' | 'unknown'
-
-function classifyProject(dirPath: string): ProjectType {
-  // Code projects: have .git or .planning/
-  // Research projects: path is under "project research/", no .git expected
-  // Both show different card layouts
-}
-```
-
-Research projects use a different card layout — no git metrics, no phase progress (unless they have .planning/).
+**Recommendation:** Disable sandbox entirely. This app is a personal developer tool, not distributed via App Store. The sandbox provides no value here and blocks all core functionality.
 
 ---
 
-## Anti-Patterns to Avoid
+## Anti-Patterns
 
-### Anti-Pattern 1: Per-Request Watcher Creation
+### Anti-Pattern 1: Calling Services Directly from Widgets
 
-**What:** Creating a chokidar watcher inside a route handler or on every SSE connection.
-**Why bad:** Each watcher opens OS file handles. Under Next.js dev mode, hot module replacement causes handlers to re-run. This exhausts the OS inotify/kqueue limit and makes the process crash.
-**Instead:** Single singleton via instrumentation.ts, initialized once.
+**What people do:** Import `ProjectScannerService` in a widget and call `scanner.scan()` in `build()` or `initState()`.
 
-### Anti-Pattern 2: Sending Full Project Data Over SSE
+**Why it's wrong:** Bypasses Riverpod lifecycle. Results in duplicate work, no caching, no reactivity, and no error/loading state management. The scan runs on every rebuild.
 
-**What:** Serializing entire ProjectData objects into SSE events.
-**Why bad:** Adds serialization/deserialization surface, SSE events become large, git data cannot be re-fetched over SSE (it's async), and it bypasses the existing API layer.
-**Instead:** SSE signals change-type + projectId. Browser re-fetches `/api/projects/[id]` for fresh data.
+**Do this instead:** Widgets call `ref.watch(projectsProvider)` and `ref.read(projectsProvider.notifier)`. Services are never imported into widget files.
 
-### Anti-Pattern 3: Direct Filesystem Reads in React Components
+### Anti-Pattern 2: Running Git Calls on the Main Isolate at Startup
 
-**What:** Using `fs` in Server Components directly, bypassing the lib layer.
-**Why bad:** Duplicates parsing logic, harder to test, no consistent error handling, no timeout enforcement.
-**Instead:** All filesystem access goes through Scanner, Parser, GitReader. Server Components call `/api/*` route handlers or the lib functions — never raw `fs` directly in page.tsx.
+**What people do:** Call `Process.run('git', [...])` sequentially in a provider's `build()` method without isolate offloading.
 
-### Anti-Pattern 4: Global EventEmitter Without Max Listeners
+**Why it's wrong:** `Process.run` is `async` but the dart runtime still has to manage the subprocess. With 20+ projects, this creates visible jank during startup — the widget tree is blocked from painting while awaiting git calls.
 
-**What:** Using a plain EventEmitter without increasing the maxListeners limit.
-**Why bad:** Node.js warns at 11 listeners by default. Each open SSE tab adds a listener set. On a developer's machine, you might have 3-5 tabs open during development — each adds 3 listeners (updated/added/removed). Hit 11 fast.
-**Instead:** `EventBus.setMaxListeners(50)` on initialization, or use a dedicated pub/sub with proper cleanup.
+**Do this instead:** Use `Isolate.run()` for the initial enrichment pass. Cap concurrency at 4 to avoid spawning 50 isolates simultaneously. For watcher-triggered single-project refreshes, the main isolate is fine.
 
-### Anti-Pattern 5: Hardcoded Scan Paths
+### Anti-Pattern 3: Ignoring the Sandbox Early
 
-**What:** `'/Users/rob/project_orchestration/code'` as a string literal anywhere.
-**Why bad:** Path breaks immediately if run on another machine or if the user renames their home directory.
-**Instead:** Always `path.join(os.homedir(), 'project_orchestration', 'code')`.
+**What people do:** Write all the dart:io and Process.run code, test it successfully in `flutter run` (which runs with reduced sandbox in debug mode), then discover it all fails in release mode.
 
-### Anti-Pattern 6: Blocking Markdown Parsing on git
+**Why it's wrong:** Release builds enforce the full App Sandbox. `dart:io File` throws `FileSystemException: Cannot open file` on the first read of a project directory. `Process.run('git', ...)` fails with permission denied. This happens after significant implementation effort.
 
-**What:** Awaiting git data before returning parsed markdown data.
-**Why bad:** Git on large repos with many commits can be slow. Blocks the UI from showing project metadata.
-**Instead:** Return parser data immediately, stream git data separately or show a loading state per-card.
+**Do this instead:** Disable the sandbox in ALL entitlement files from day one. Test a release build (`flutter build macos`) before writing any service logic. Make this a Phase 1 checklist item.
+
+### Anti-Pattern 4: Multiple DirectoryWatcher Instances per Path
+
+**What people do:** Create a new `WatcherService` on each provider rebuild or watch call.
+
+**Why it's wrong:** Each `DirectoryWatcher` opens OS FSEvents handles. Recreation without prior disposal leaks handles and generates duplicate events. On macOS, the system limit for FSEvents streams is relatively low.
+
+**Do this instead:** Use `ref.keepAlive()` to prevent the `watcherProvider` from ever being disposed. The watcher service should be instantiated once and persist for the application lifetime.
+
+### Anti-Pattern 5: Encoding Window State in Widget Tree
+
+**What people do:** Use `Navigator` or route changes to show/hide the dashboard window.
+
+**Why it's wrong:** On macOS, window visibility is a native concept managed by AppKit, not Flutter's Navigator. Using Navigator hides the Flutter content but leaves the native window visible (or vice versa).
+
+**Do this instead:** Use `window_manager.show()` and `window_manager.hide()` exclusively for window visibility. Flutter Navigator is for in-window routing only (if needed at all for this single-page app).
 
 ---
 
-## Directory Structure
+## Integration Points
 
-```
-pro-orc/                             # Next.js project root
-├── instrumentation.ts               # Singleton watcher bootstrap
-├── app/
-│   ├── layout.tsx                   # Root layout, ThemeProvider
-│   ├── page.tsx                     # Server Component: initial dashboard render
-│   ├── tools/
-│   │   └── page.tsx                 # Claude tools inventory page
-│   └── api/
-│       ├── sse/
-│       │   └── route.ts             # SSE endpoint (force-dynamic, nodejs runtime)
-│       ├── projects/
-│       │   ├── route.ts             # GET all projects snapshot
-│       │   └── [id]/
-│       │       └── route.ts         # GET single project (post-SSE refresh)
-│       └── tools/
-│           └── route.ts             # GET Claude tools inventory
-├── components/
-│   ├── project-card.tsx             # 'use client' — single project card
-│   ├── project-grid.tsx             # 'use client' — grid layout with SSE state
-│   ├── sse-listener.tsx             # 'use client' — EventSource lifecycle
-│   ├── tools-panel.tsx              # Claude tools list (Server Component safe)
-│   └── ui/                          # shadcn/ui generated components
-├── lib/
-│   ├── watcher.ts                   # chokidar singleton (server-only)
-│   ├── event-bus.ts                 # EventEmitter singleton (server-only)
-│   ├── scanner.ts                   # Directory scanning + project classification
-│   ├── parser.ts                    # .planning/ markdown parsing
-│   ├── git-reader.ts                # simple-git with timeout (server-only)
-│   ├── tools-reader.ts              # ~/.claude/ inventory (server-only)
-│   └── types.ts                     # Shared TypeScript types
-├── hooks/
-│   └── use-sse.ts                   # 'use client' — EventSource hook
-└── next.config.ts
-```
+### New vs Modified (v1.0 → v1.1)
+
+| Component | Status | Notes |
+|-----------|--------|-------|
+| Scanner logic (path walk, depth, ignore patterns) | **Port** from `lib/scanner.ts` | Identical logic, different API: `Directory.list()` vs `fs.readdir()` |
+| GSD parser (STATE.md, ROADMAP.md, PROJECT.md regex) | **Port** from `lib/parser.ts` | Same regex patterns; Dart `RegExp` API matches JS |
+| Git reader (log format, timeout, non-fatal errors) | **Port** from `lib/git-reader.ts` | `Process.run` instead of simple-git; same `git log -1 --format=` pattern |
+| Watcher (directory watch, event types) | **Replace** `lib/watcher.ts` | `watcher` package `DirectoryWatcher` replaces chokidar; no singleton guard needed (Riverpod handles lifecycle) |
+| Tools scanner (`~/.claude/` walk) | **Port** from `lib/tools-scanner.ts` | Same JSON/YAML parsing, different I/O API |
+| SSE → Riverpod providers | **New pattern** | SSE network layer replaced by in-process streams; no HTTP at all |
+| React components → Flutter widgets | **Rewrite** | `ProjectCard`, `ResearchCard`, `ToolsPanel`, `PhaseBadge`, `GitInfoRow` |
+| menubar / tray | **New** | Did not exist in v1.0; `tray_manager` + `window_manager` + `Info.plist` |
+| Quick actions (Terminal, Finder, Notion) | **Port** | Same shell commands (`open -a Terminal`, `open`, `open <url>`); `Process.run` instead of Node.js `child_process` |
+
+### External Dependencies (macOS Platform)
+
+| Native Concern | Flutter/Dart Bridge | Package |
+|---------------|---------------------|---------|
+| Tray icon click → show window | `TrayListener.onTrayIconMouseDown` | `tray_manager` |
+| Window show/hide/resize | `windowManager.show()` / `.hide()` | `window_manager` |
+| Filesystem events | `DirectoryWatcher(path).events` | `watcher` |
+| Git subprocess | `dart:io Process.run('git', args, workingDirectory: path)` | Built-in (`dart:io`) |
+| Open Terminal.app | `Process.run('open', ['-a', 'Terminal', path])` | Built-in |
+| Open Finder | `Process.run('open', [path])` | Built-in |
+| Open Notion URL | `Process.run('open', [notionUrl])` | Built-in |
 
 ---
 
 ## Build Order (Phase Dependencies)
 
-This is the dependency graph that should drive roadmap phase sequencing:
+Phase sequencing considers the dependency graph: each phase must compile independently before the next is started.
 
 ```
-Phase 1: Foundation
-  ├─ next.config.ts + TypeScript setup
-  ├─ Tailwind v4 + shadcn/ui dark mode theme
-  └─ lib/types.ts (shared types, no deps)
+Phase 1: Native Foundation (macOS plumbing)
+  → flutter create pro_orc --platforms=macos
+  → Add tray_manager + window_manager to pubspec.yaml
+  → Edit Info.plist: LSUIElement = true
+  → Edit all entitlement files: app-sandbox = false
+  → Implement platform/tray.dart + platform/window_manager.dart
+  → Verify: app launches as menubar icon, main window shows on click
 
-Phase 2: Scanner + Parser (no UI, testable in isolation)
-  ├─ lib/scanner.ts — reads code/ and project research/
-  ├─ lib/parser.ts — parses .planning/ files
-  └─ lib/git-reader.ts — simple-git with timeout
-  (These have no Next.js dependency — pure Node.js modules)
+  WHY FIRST: Validates the native integration that blocks everything else.
+  A sandbox misconfiguration discovered in Phase 4 means rewriting Phase 2-3 work.
 
-Phase 3: API Layer
-  ├─ app/api/projects/route.ts — uses Phase 2 modules
-  └─ Verify data shape is correct via curl before building UI
+Phase 2: Models (pure Dart, no Flutter)
+  → models/project.dart (sealed class: CodeProject, ResearchProject)
+  → models/gsd_state.dart (GsdPhase, NextStep, RoadmapProgress)
+  → models/git_info.dart (GitInfo with parse() factory)
+  → models/claude_tool.dart (ClaudeTool)
 
-Phase 4: Static Dashboard UI
-  ├─ app/page.tsx — Server Component fetching from Phase 3 API
-  ├─ components/project-card.tsx — renders ProjectData
-  └─ components/project-grid.tsx — layout
-  (Works without live updates — this is the MVP)
+  WHY HERE: Models have no deps. Define data shapes before services that produce them.
 
-Phase 5: Watcher + SSE (adds live updates)
-  ├─ lib/event-bus.ts — EventEmitter singleton
-  ├─ lib/watcher.ts — chokidar + EventBus integration
-  ├─ instrumentation.ts — bootstrap watcher on server start
-  ├─ app/api/sse/route.ts — SSE endpoint
-  ├─ hooks/use-sse.ts — browser EventSource hook
-  └─ components/sse-listener.tsx — integrates hook with grid
+Phase 3: Services (pure Dart, unit-testable)
+  → services/project_scanner.dart
+  → services/gsd_parser.dart
+  → services/git_reader.dart
+  → Add test/services/ with unit tests (no Flutter required)
 
-Phase 6: Claude Tools Inventory
-  ├─ lib/tools-reader.ts — reads ~/.claude/
-  ├─ app/api/tools/route.ts
-  └─ app/tools/page.tsx + components/tools-panel.tsx
+  WHY BEFORE RIVERPOD: Services are testable without any Flutter infrastructure.
+  Validating parsing logic in tests is far faster than running the full app.
 
-Phase 7: Quick Actions
-  └─ app/api/open/route.ts — shell exec via child_process
-     (open -a Terminal, open -R in Finder, open notion:// URL)
+Phase 4: Background Worker + Git Concurrency
+  → isolates/git_worker.dart
+  → Concurrency-capped Future.wait pattern in git_worker
+
+  WHY HERE: Git is the first real performance concern. Proving the isolate pattern
+  before wiring it into Riverpod avoids debugging two systems simultaneously.
+
+Phase 5: Riverpod Providers
+  → Add flutter_riverpod + riverpod_annotation + riverpod_generator to pubspec.yaml
+  → providers/watcher_provider.dart (StreamProvider + keepAlive)
+  → services/watcher_service.dart (DirectoryWatcher streams)
+  → providers/projects_provider.dart (AsyncNotifier + ref.listen)
+  → providers/tools_provider.dart (FutureProvider)
+
+  WHY HERE: Providers are thin wrappers. Services must exist before providers can wrap them.
+
+Phase 6: UI — Card Grid
+  → ui/theme/app_theme.dart (dark, macOS-native)
+  → ui/widgets/phase_badge.dart
+  → ui/widgets/git_info_row.dart
+  → ui/widgets/project_card.dart
+  → ui/widgets/research_card.dart
+  → ui/windows/main_window.dart (card grid layout)
+
+  WHY HERE: Widget tree needs providers from Phase 5. Build top-down: atoms first (badge),
+  then molecules (card), then layouts (window).
+
+Phase 7: Live Updates (watcher → invalidation → UI)
+  → Connect watcherProvider to projectsProvider via ref.listen
+  → Test end-to-end: edit STATE.md → card updates without restart
+  → Tune debounce (many rapid FS events on git commit = multiple invalidations)
+
+Phase 8: Claude Tools Inventory
+  → services/tools_scanner.dart
+  → providers/tools_provider.dart (already scaffolded in Phase 5)
+  → ui/widgets/tools_panel.dart
+  → Integrate into main_window.dart layout
+
+  WHY LAST: Independent feature. Does not block any other phase.
 ```
-
-**Why this order:**
-- Scanner/Parser before API ensures data shape is right before building UI
-- Static UI before SSE proves the dashboard value without the complexity of real-time
-- SSE after static UI means each SSE event has a known refresh target (the API from Phase 3)
-- Tools inventory is self-contained, no dependency on watcher
-- Quick Actions last — they're convenience features, not core value
 
 ---
 
-## Scalability Considerations
+## Scaling Considerations
 
-This is a local single-user tool targeting <50 projects. Scalability is not a concern. The design choices are intentionally simple:
+This is a personal single-user tool. Scale concerns are about local data volume, not concurrent users.
 
-| Concern | Current Approach | If It Becomes a Problem |
-|---------|-----------------|------------------------|
-| Many projects | Scan all on start | Client-side filter (already in scope for v1) |
-| Git slowness | 5s timeout, non-fatal | Per-card lazy loading |
-| Many SSE tabs | EventBus with 50 max listeners | Not a real concern — single user |
-| HMR in dev | Singleton guard | Already handled by guard |
-| Large .planning/ files | readFile is synchronous-feeling but async | Not an issue at these sizes |
+| Scale | Architecture Adjustment |
+|-------|------------------------|
+| <20 projects | Main isolate git calls fine; no background isolate needed |
+| 20–50 projects | Background isolate with 4-concurrent cap (already in Phase 4 design) |
+| >50 projects | Add disk cache: write `~/.pro-orc-cache.json` on scan; skip git on projects with unchanged mtime; load cache on startup while re-scan runs in background |
 
----
+**First bottleneck:** Git subprocess calls. 50 projects × ~150ms per `git log` = 7.5 seconds if sequential. Fix: concurrency cap to 4 parallel isolates cuts to ~2 seconds. Already addressed in Phase 4 design.
 
-## Key Constraints (Verified)
-
-| Constraint | Source | Impact |
-|------------|--------|--------|
-| `register()` called once per server instance | Next.js official docs v16.1.6 | Singleton initialization is safe here |
-| `NEXT_RUNTIME` must be checked | Next.js official docs v16.1.6 | chokidar import MUST be guarded to Node.js only |
-| SSE route needs `force-dynamic` | Next.js 15 default: GET handlers are dynamic, but explicit is safer | Prevents static optimization of SSE endpoint |
-| SSE route needs `runtime = 'nodejs'` | chokidar + EventEmitter are Node.js-only | Without this, Edge runtime breaks the import chain |
-| ReadableStream cleanup runs on disconnect | Web Streams API / Next.js route handlers | EventBus listener removal must happen in the cancel/return callback |
-| `server-only` package | Best practice for lib/watcher.ts, lib/git-reader.ts | Prevents accidental client bundle inclusion of Node.js code |
-| params is now a Promise | Next.js 15.0.0-RC breaking change | `const { id } = await params` in all dynamic route handlers |
+**Second bottleneck:** Directory walk depth into `node_modules`. The scanner must ignore `node_modules`, `.git`, `.venv`, `.next`, `build/`, `dist/` at depth > 1. Same `ignored` pattern list as chokidar v1.0.
 
 ---
 
 ## Sources
 
-- Next.js 15 instrumentation docs: https://nextjs.org/docs/app/api-reference/file-conventions/instrumentation (verified 2026-02-17, doc version 16.1.6)
-- Next.js Route Handlers docs: https://nextjs.org/docs/app/building-your-application/routing/route-handlers (verified 2026-02-17, doc version 16.1.6)
-- Next.js Server/Client Components: https://nextjs.org/docs/app/building-your-application/rendering/server-components (verified 2026-02-17, doc version 16.1.6)
-- Project requirements: /Users/rob/project_orchestration/.planning/PROJECT.md (read 2026-02-17)
-- Confidence: HIGH for Next.js architecture patterns (official docs), HIGH for chokidar singleton pattern (established Node.js singleton pattern), HIGH for SSE via ReadableStream (Web Streams API standard)
+- Flutter macOS building + sandbox entitlements: https://docs.flutter.dev/platform-integration/macos/building
+  (HIGH confidence — official Flutter docs)
+- tray_manager package: https://pub.dev/packages/tray_manager
+  (MEDIUM confidence — WebSearch verified, leanflutter maintained)
+- window_manager package: https://pub.dev/packages/window_manager
+  (MEDIUM confidence — WebSearch verified, same author as tray_manager)
+- Dart watcher package: https://pub.dev/packages/watcher
+  (HIGH confidence — Dart team maintained, pub.dev official)
+- Flutter isolates + background work: https://docs.flutter.dev/perf/isolates
+  (HIGH confidence — official Flutter docs)
+- Dart isolate language reference: https://dart.dev/language/isolates
+  (HIGH confidence — official Dart docs)
+- Riverpod 3.0 changes: https://riverpod.dev/docs/whats_new
+  (MEDIUM confidence — WebSearch, not directly fetched)
+- Riverpod AsyncNotifier pattern (codewithandrea): https://codewithandrea.com/articles/flutter-riverpod-async-notifier/
+  (MEDIUM confidence — established Flutter community resource)
+- Flutter macOS menubar implementation: https://blog.whidev.com/menu-bar-extra-flutter-macos-app/
+  (MEDIUM confidence — WebSearch, practitioner blog)
+- Flutter menubar example template: https://github.com/mynameiskenlee/flutter_macos_menubar_example
+  (MEDIUM confidence — WebSearch, community starter)
+- macOS sandbox + subprocess issues: https://github.com/flutter/flutter/issues/66920
+  (MEDIUM confidence — WebSearch, GitHub issue thread)
+- Flutter app architecture with Riverpod: https://codewithandrea.com/articles/flutter-app-architecture-riverpod-introduction/
+  (MEDIUM confidence — WebSearch, established reference)
+- Riverpod + repository pattern: https://codewithandrea.com/articles/flutter-repository-pattern/
+  (MEDIUM confidence — WebSearch)
+
+---
+*Architecture research for: Pro Orc v1.1 — Flutter macOS desktop dashboard*
+*Researched: 2026-02-19*

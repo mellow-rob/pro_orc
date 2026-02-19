@@ -1,181 +1,215 @@
-# Technology Stack
+# Stack Research
 
-**Project:** Pro Orc — Project Orchestration Dashboard
-**Researched:** 2026-02-17
-**Confidence:** HIGH (verified against installed packages and official Next.js 16.1.6 docs)
+**Domain:** Flutter macOS native desktop app (Pro Orc v1.1 rewrite)
+**Researched:** 2026-02-19
+**Confidence:** MEDIUM-HIGH (pub.dev packages verified via WebSearch; exact latest patch versions LOW confidence without direct pub.dev access)
 
 ---
 
-## Version Alignment Warning
+## Context: What This Stack Replaces
 
-The project spec references Next.js 15.2. All active projects on this machine already run **Next.js 16.1.6** (confirmed in `masterplan_download_gsd`, `n3ural.a1_gsd`, `sc08_website_gsd`, `landlord_checker_gsd`). This research reflects the actual current state of the ecosystem as of February 2026.
-
-**Recommendation: Start with Next.js 16.1.6, not 15.2.** The 15.2 → 16.x gap includes breaking changes that would require migration work if you started on 15.2 and upgraded later. Building on 16.x from the start avoids that pain.
+The v1.0 stack (Next.js 16 + chokidar + simple-git + Tailwind/shadcn) is being fully replaced. This document covers only the Flutter/Dart additions needed for the macOS native rewrite. Node.js, npm, and the web stack are discarded entirely.
 
 ---
 
 ## Recommended Stack
 
-### Core Framework
+### Core Technologies
 
-| Technology | Version | Purpose | Why |
-|------------|---------|---------|-----|
-| Next.js | 16.1.6 | App framework | Current stable on this machine. App Router + Route Handlers for SSE. `instrumentation.ts` for chokidar singleton. |
-| React | 19.2.4 | UI rendering | Required peer dep of Next.js 16. Server Components reduce client bundle for this read-heavy dashboard. |
-| TypeScript | 5.9.3 | Type safety | Current stable. `next.config.ts` supported natively. Essential for complex data shapes from filesystem parsing. |
-| Node.js | 20.9+ | Runtime | Next.js 16 minimum. macOS default should satisfy this. |
+| Technology | Version | Purpose | Why Recommended |
+|------------|---------|---------|-----------------|
+| Flutter SDK | 3.29.x stable | Cross-platform UI framework targeting macOS desktop | Latest stable as of early 2026. macOS desktop is Tier 1 supported. Impeller is default on mobile; macOS uses Skia/Metal — stable for this use case. |
+| Dart | 3.x (bundled with Flutter 3.29) | Language for all business logic | Bundled with Flutter. Strong typing, async/await, `dart:io` for filesystem/process ops — no additional runtime needed. |
+| flutter_riverpod | ^3.2.1 | App-wide state management | Riverpod 3 is the 2025/2026 community consensus for medium-complexity Flutter apps. Compile-time safety, no BuildContext dependency, automatic disposal. Provider (predecessor) is deprecated-path. BLoC is overkill for a single-user dashboard. |
+| riverpod_annotation | ^3.x | Code generation for Riverpod providers | Required companion to flutter_riverpod 3.x for `@riverpod` annotation-based provider generation. Reduces boilerplate dramatically. |
+| build_runner | ^2.x (dev) | Code generation runner | Required to run `riverpod_annotation` and `freezed` generators. Dev dependency only. |
 
-**Confidence:** HIGH — versions confirmed from installed `node_modules` on this machine.
+**Confidence:** HIGH for Flutter/Dart selection. MEDIUM for Riverpod 3.2.1 version (verified as current 3.x series but exact patch not confirmed without direct pub.dev access).
 
-### Styling
+---
 
-| Technology | Version | Purpose | Why |
-|------------|---------|---------|-----|
-| Tailwind CSS | 4.1.18 | Utility CSS | Current stable on this machine. v4 uses `@theme` directive in CSS, no `tailwind.config.js`. Dark mode first = `dark:` classes or CSS variables. |
-| @tailwindcss/postcss | 4.1.18 | Tailwind v4 PostCSS integration | Required in v4 — replaces the old PostCSS plugin setup. Add to `devDependencies`. |
-| shadcn/ui | latest (npx shadcn@latest) | Component library | Not a package — a CLI that copies components into your project. Supports Tailwind v4. Use `npx shadcn@latest init` and `npx shadcn@latest add [component]`. |
-| lucide-react | 0.563.0 | Icon set | Current stable on this machine. shadcn/ui uses it by default. |
-| clsx | 2.1.1 | Conditional class names | Required by shadcn's `cn()` utility. |
-| tailwind-merge | 3.4.0 | Merge Tailwind classes without conflicts | Required by shadcn's `cn()` utility. |
+### macOS Desktop Integration
 
-**Confidence:** HIGH — versions verified from installed `node_modules`.
+| Library | Version | Purpose | Why Recommended |
+|---------|---------|---------|-----------------|
+| tray_manager | ^0.5.0 | System tray / menu bar icon + context menu | The standard Flutter package for macOS status bar integration. Uses NSStatusBar/NSStatusItem natively. Actively maintained (updated November 2025). Supports click-to-show-window, right-click context menus, and dynamic icon updates. Cross-platform (Windows/Linux) but macOS is primary target. |
+| window_manager | ^0.4.x | Main window control (show/hide, position, resize, frameless) | Required for the menubar-app pattern: hide window on launch, show on tray click, set window level. From leanflutter (same author as tray_manager — consistent API design). Updated October 2025. |
 
-**shadcn/ui note:** shadcn/ui is installed via CLI, not as a package. Running `npx shadcn@latest init` adds dependencies (`@radix-ui/*`, `class-variance-authority`, `clsx`, `tailwind-merge`) and creates `lib/utils.ts` with the `cn()` function. Each component (`Card`, `Badge`, `Button`, `Tooltip`, `Separator`) is added individually and owned by your codebase.
+**Confidence:** MEDIUM-HIGH for tray_manager (well-established, 0.5.0 referenced in multiple 2025 sources). MEDIUM for window_manager version (updated October 2025 per search results, exact version not directly confirmed).
 
-### Filesystem Monitoring
+**Critical macOS entitlement note:** Using `Process.run()` for git CLI calls requires disabling App Sandbox. Edit both `macos/Runner/DebugProfile.entitlements` AND `macos/Runner/Release.entitlements` — set `com.apple.security.app-sandbox` to `false`. This means the app **cannot be distributed via the Mac App Store**. For an internal developer tool (Pro Orc), this is acceptable. Do not use App Sandbox + hardened runtime for this project.
 
-| Technology | Version | Purpose | Why |
-|------------|---------|---------|-----|
-| chokidar | 3.6.0 (v3, NOT v4) | Filesystem watcher | **Use v3, not v4.** chokidar v4 switched to ESM-only, which creates bundling conflicts with Next.js's Node.js runtime in App Router. v3.6.0 is CJS-compatible and battle-tested on macOS with fsevents. |
+---
 
-**Confidence:** HIGH for v3 recommendation. MEDIUM for v4 ESM concern (based on known Next.js + ESM-only packages friction, not directly tested here).
+### Filesystem Operations
 
-**chokidar v3 vs v4 decision:** v4 (released 2024) is ESM-only. Next.js App Router's server-side bundling handles ESM packages but with some friction — requires `serverExternalPackages` config AND the package must be in the allowlist or explicitly named. v3 avoids this entirely. Since this is a local dev tool with no scaling concerns, v3 stability is worth more than v4's minor improvements.
+| Library | Version | Purpose | Why Recommended |
+|---------|---------|---------|-----------------|
+| watcher | ^1.x | Directory/file watching for live updates | The canonical Dart package for filesystem watching. Maintained by the Dart team (dart-archive). Wraps native FSEvents on macOS for efficient, event-driven notifications. Replaces chokidar. Published ~January 2026 (10.5M downloads). |
+| path | ^1.9.x | Platform-aware path manipulation | Dart team package. Use instead of string concatenation for paths. Handles macOS `/` separators, `join()`, `basename()`, `dirname()`. Required companion to all filesystem work. |
+| path_provider | ^2.1.x | Locate standard macOS directories | Flutter first-party plugin. Returns `applicationDocumentsDirectory`, `applicationSupportDirectory`, etc. Needed to locate `~/` and standard macOS paths. macOS desktop supported. |
 
-**Singleton pattern via `instrumentation.ts`:**
-```typescript
-// instrumentation.ts (root of project, NOT in /app)
-export async function register() {
-  if (process.env.NEXT_RUNTIME === 'nodejs') {
-    await import('./lib/watcher')  // side-effect: starts chokidar
-  }
-}
-```
-`register()` is called exactly once when the Next.js server starts. This is the correct pattern for global singletons — confirmed in Next.js 16.1.6 docs.
+**Confidence:** HIGH for `watcher` (Dart team maintained, widely used). HIGH for `path` and `path_provider` (first-party Flutter packages).
+
+**`dart:io` is sufficient for most FS ops.** `File`, `Directory`, `FileSystemEntity` are built into Dart's standard library. Only add `watcher` for the reactive watching layer — reading `.md` files, walking directory trees, and parsing text are all native `dart:io` operations.
+
+---
 
 ### Git Integration
 
-| Technology | Version | Purpose | Why |
-|------------|---------|---------|-----|
-| simple-git | ^3.x (latest 3.x) | Git operations from Node.js | Async Promise-based API. Supports timeout via `simpleGit({ timeout: { block: 5000 } })`. Need `simpleGit('/path/to/repo')` — always pass the working directory explicitly. |
+| Library | Version | Purpose | Why Recommended |
+|---------|---------|---------|-----------------|
+| git | ^2.x | Git CLI wrapper for Dart | Dart package (by kevmoo, maintained by Google tooling team). Wraps `git` CLI via `Process.run()`. Provides `GitDir` abstraction: `GitDir.fromExisting()`, `getCommits()`, `getBranchName()`. Last updated September 2025. Replaces simple-git. |
 
-**Confidence:** MEDIUM — simple-git 3.x API is well-established. Exact latest version not confirmed (no local install found), but 3.x line has been stable since 2023.
+**Confidence:** MEDIUM — `git` package (pub.dev/packages/git) is well-established and Google-maintained. Exact version 2.x confirmed from pub.dev search results showing `git 1.2.0` in version history and the package being actively updated September 2025.
 
-**simple-git note:** Must be added to `serverExternalPackages` in `next.config.ts` because it spawns child processes and uses Node.js internals that conflict with Next.js's server bundling.
+**Alternative: raw `dart:io` Process.run().** `Process.run('git', ['log', '--oneline', '-5'], workingDirectory: repoPath)` is a valid alternative that avoids the dependency entirely. For the Pro Orc use case (reading branch name, last commit message, status), raw process calls may be simpler than the `GitDir` abstraction. Use `git` package when you need structured commit objects; use raw `Process.run` for one-off queries.
 
-### SSE (Live Updates)
+**Subprocess sandbox requirement applies here.** The same entitlement change that allows `Process.run` for git also applies to shell subprocesses generally.
 
-| Mechanism | Version | Purpose | Why |
-|-----------|---------|---------|-----|
-| ReadableStream + Route Handler | Native Web API (Next.js 16) | Push filesystem change events to browser | No additional package needed. Built into Next.js Route Handlers. SSE via `text/event-stream` content type. |
+---
 
-**Pattern:**
-```typescript
-// app/api/events/route.ts
-export const dynamic = 'force-dynamic'
+### Theming: OKLCH Colors + Glassmorphism
 
-export async function GET() {
-  const encoder = new TextEncoder()
+| Approach | Package | Why |
+|----------|---------|-----|
+| OKLCH color conversion | `oklch` (^0.0.2) or manual conversion | The `oklch` pub.dev package (by leandroozorioj) converts OKLCH P3 color space values to Flutter `Color`. Thin utility — handles the math so you don't need to. Alternatively, `okcolor` package covers OkLab/OkLCH conversions. |
+| Theme definition | Flutter `ThemeData` + `ColorScheme` | Define the n3urala1 dark theme using `ThemeData.dark()` as base, override with OKLCH-derived `Color` objects. No additional package needed for theming structure. |
+| Glassmorphism effects | Native Flutter `BackdropFilter` + `dart:ui ImageFilter.blur` | No package needed. `BackdropFilter(filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12), child: ...)` is the standard Flutter approach. The `glassmorphism` package on pub.dev is thin wrapper — use it directly for full control. |
+| Gradient overlays | Native Flutter `LinearGradient`, `Container` + `BoxDecoration` | Combine with `BackdropFilter` for the frosted glass + color overlay effect. |
 
-  const stream = new ReadableStream({
-    start(controller) {
-      // Subscribe to chokidar singleton events
-      const cleanup = subscribeToWatcher((event) => {
-        const data = `data: ${JSON.stringify(event)}\n\n`
-        controller.enqueue(encoder.encode(data))
-      })
+**Confidence:** MEDIUM for `oklch` package (exists on pub.dev, version 0.0.2, niche package — low maintenance risk but low popularity). HIGH for native `BackdropFilter` approach (documented Flutter API, macOS-tested).
 
-      return () => cleanup()
-    }
-  })
-
-  return new Response(stream, {
-    headers: {
-      'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache',
-      'Connection': 'keep-alive',
-    }
-  })
-}
+**OKLCH → Flutter `Color` conversion (manual fallback):**
+```dart
+// If the oklch package is insufficient, convert manually at design time:
+// Use https://oklch.com to get sRGB hex values for your OKLCH design tokens,
+// then hardcode as Flutter Color constants. OKLCH is for design tooling;
+// Flutter renders in sRGB at runtime regardless.
+const Color cyanPrimary = Color(0xFF00E5FF);   // OKLCH(85% 0.18 200)
+const Color fuchsiaAccent = Color(0xFFE040FB); // OKLCH(70% 0.22 310)
 ```
+This avoids a niche dependency entirely. Recommended approach for Pro Orc.
 
-**`export const dynamic = 'force-dynamic'` is required** — without it, Next.js 16's default caching may try to statically optimize the route.
+**macOS Impeller status:** As of Flutter 3.27-3.29, Impeller is default on iOS/Android but NOT on macOS desktop — macOS uses Skia/Metal. `BackdropFilter` works correctly on macOS via Skia. No special configuration needed.
 
-**Confidence:** HIGH — pattern confirmed from official Next.js 16.1.6 docs.
-
-### Markdown Parsing
-
-| Technology | Version | Purpose | Why |
-|------------|---------|---------|-----|
-| gray-matter | 4.0.3 | Parse YAML frontmatter from .md files | Current stable (confirmed in sc08_website_gsd project on this machine). Handles `STATE.md`, `ROADMAP.md`, `PROJECT.md` parsing. No YAML frontmatter in these files currently, but gray-matter also does clean content extraction. |
-
-**Confidence:** HIGH — version confirmed from local `node_modules`.
-
-**Alternative considered:** `remark` / `unified` — overkill for this use case. We don't need to render markdown to HTML; we need to extract structured data (headings, checkbox lists, specific sections). Use regex + string parsing for the GSD-specific formats (STATE.md, ROADMAP.md sections). gray-matter handles any YAML frontmatter that might be present.
+---
 
 ### Supporting Libraries
 
 | Library | Version | Purpose | When to Use |
 |---------|---------|---------|-------------|
-| zod | 4.3.6 | Runtime type validation | Validate parsed filesystem data shapes (project cards, state entries) before passing to UI. ESM-only in v4 — use `serverExternalPackages` if needed. |
-| clsx | 2.1.1 | Class name composition | Already required by shadcn/ui. Use everywhere for conditional classes. |
-| tailwind-merge | 3.4.0 | Merge Tailwind classes | Already required by shadcn/ui. Use in `cn()` utility. |
-
-**Confidence:** HIGH — versions from local `node_modules`.
+| freezed | ^2.x | Immutable data classes with copyWith/equality | Use for project data models (ProjectCard, PhaseData, etc). Reduces boilerplate vs manual classes. Companion: `freezed_annotation` + `build_runner`. |
+| json_serializable | ^6.x | JSON serialization code gen | Only add if reading/writing JSON config files. May not be needed if STATE.md/ROADMAP.md are parsed as text. |
+| shared_preferences | ^2.3.x | Key-value persistence for app settings | Store user preferences (scan paths, window position). Uses NSUserDefaults on macOS. Use the new `SharedPreferencesAsync` API (non-deprecated since 2.3.0). |
+| url_launcher | ^6.x | Open URLs in system browser | For any "open in browser" actions on project cards. macOS desktop supported. |
 
 ---
 
-## next.config.ts — Required Configuration
+## Installation
 
-```typescript
-import type { NextConfig } from 'next'
+```bash
+# Create Flutter macOS desktop project
+flutter create --platforms=macos pro_orc_flutter
 
-const nextConfig: NextConfig = {
-  // Required: prevent Next.js from bundling Node.js-native packages
-  serverExternalPackages: ['chokidar', 'simple-git', 'fsevents'],
+# In pubspec.yaml, add dependencies:
+flutter pub add flutter_riverpod riverpod_annotation
+flutter pub add tray_manager window_manager
+flutter pub add watcher path path_provider
+flutter pub add git
+flutter pub add freezed_annotation
 
-  // Turbopack is default in Next.js 16 — no config needed to enable
-  // Disable if you have custom webpack needs:
-  // turbopack: false,
+# Dev dependencies
+flutter pub add --dev build_runner riverpod_generator freezed
 
-  // Optional: faster dev startup (beta)
-  experimental: {
-    turbopackFileSystemCacheForDev: true,
-  },
-}
-
-export default nextConfig
+# Optional (see theming section — may prefer manual OKLCH conversion)
+flutter pub add oklch
 ```
 
-**`serverExternalPackages` is critical.** Without it, Next.js will try to bundle `chokidar` and `simple-git` into server-side bundles, which fails because they use Node.js native modules (`fsevents`, `child_process`). Neither is in Next.js's built-in auto-exclude list.
+**pubspec.yaml dependencies block:**
+```yaml
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # State management
+  flutter_riverpod: ^3.2.1
+  riverpod_annotation: ^3.0.0
+
+  # macOS desktop integration
+  tray_manager: ^0.5.0
+  window_manager: ^0.4.0
+
+  # Filesystem
+  watcher: ^1.0.0
+  path: ^1.9.0
+  path_provider: ^2.1.0
+
+  # Git operations
+  git: ^2.0.0
+
+  # Data models
+  freezed_annotation: ^2.0.0
+
+  # Settings persistence
+  shared_preferences: ^2.3.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  build_runner: ^2.4.0
+  riverpod_generator: ^3.0.0
+  freezed: ^2.4.0
+```
 
 ---
 
-## What NOT to Use
+## macOS-Specific Configuration Required
 
-| Anti-Choice | Why Not | Use Instead |
-|-------------|---------|-------------|
-| chokidar v4 | ESM-only — friction with Next.js CJS/ESM bundling | chokidar 3.6.0 |
-| WebSockets | Overkill for one-way server→client updates. Requires additional server setup | SSE via ReadableStream |
-| Polling (`setInterval` + fetch) | Works but wastes resources when nothing has changed | SSE + chokidar events |
-| Next.js Pages Router | Old API, no Server Components | App Router (default in Next.js 16) |
-| SWR / React Query | Adds complexity for a local app with no API caching needs | Direct Server Component data fetching + SSE for live updates |
-| Prisma / SQLite | The filesystem IS the database. Adding a DB layer defeats the purpose | `fs` module + gray-matter |
-| next-themes | Unnecessary for a dark-mode-only, single-user app | Hard-code dark theme in CSS |
-| framer-motion | Heavy for simple transitions on a utility dashboard | `motion` 12.x (already used in n3ural project) or CSS transitions |
-| middleware.ts | Deprecated in Next.js 16, renamed to proxy.ts | `proxy.ts` for any request interception (but none needed for localhost-only app) |
-| next/image | Unnecessary — no external images in a filesystem dashboard | Plain `<img>` or SVG icons |
-| i18n | Deprecated in Next.js 16 App Router | Not needed for single-user German+UI tool |
+### 1. Entitlements (CRITICAL — required for git/process operations)
+
+`macos/Runner/DebugProfile.entitlements`:
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <!-- DISABLE sandbox to allow git subprocess calls -->
+  <key>com.apple.security.app-sandbox</key>
+  <false/>
+  <!-- Keep these for debug/dev -->
+  <key>com.apple.security.network.server</key>
+  <true/>
+  <key>com.apple.security.cs.allow-jit</key>
+  <true/>
+</dict>
+</plist>
+```
+
+Apply the same sandbox disable to `macos/Runner/Release.entitlements`. Without this, `Process.run('git', ...)` will throw `ProcessException: Operation not permitted`.
+
+### 2. Info.plist (macOS deployment target)
+
+Ensure `macos/Runner/Info.plist` has at minimum macOS 10.14.6 deployment target (required by `macos_ui` if used; `tray_manager` requires macOS 10.11+).
+
+### 3. tray_manager setup (AppDelegate.swift)
+
+```swift
+// macos/Runner/AppDelegate.swift
+import Cocoa
+import FlutterMacOS
+
+@NSApplicationMain
+class AppDelegate: FlutterAppDelegate {
+  override func applicationShouldTerminateAfterLastWindowClosed(
+    _ sender: NSApplication
+  ) -> Bool {
+    return false  // REQUIRED: keep app alive when main window closes
+  }
+}
+```
+
+Without `return false`, closing the main window quits the app — defeating the menubar-app pattern.
 
 ---
 
@@ -183,107 +217,63 @@ export default nextConfig
 
 | Category | Recommended | Alternative | Why Not |
 |----------|-------------|-------------|---------|
-| Framework | Next.js 16 App Router | Vite + React SPA | App Router gives Server Components, SSE route handlers, and instrumentation.ts out of the box. For a local tool, the full Next.js setup is the right fit. |
-| Filesystem watcher | chokidar 3.x | Node.js native `fs.watch` | `fs.watch` is unreliable on macOS for directory recursion and doesn't report changed file paths cleanly. chokidar's fsevents integration is far more reliable. |
-| Git integration | simple-git | nodegit, isomorphic-git | simple-git is the simplest async Promise API for `git log`, `git status` calls. nodegit is a native C++ binding (compilation issues). isomorphic-git is for cross-platform/browser scenarios. |
-| Component library | shadcn/ui | Radix UI (bare), Headless UI | shadcn/ui gives pre-built accessible components with Tailwind styles that you own. Bare Radix needs more setup; Headless UI is Tailwind Labs' library but less component-rich. |
-| Icons | lucide-react | heroicons, phosphor-icons | shadcn/ui defaults to lucide-react. Staying consistent avoids dual icon libraries. |
-| Markdown parser | gray-matter | remark, front-matter | gray-matter is battle-tested and minimal. remark is for full HTML rendering (overkill). `front-matter` is similar to gray-matter but less maintained. |
+| State management | Riverpod 3.x | BLoC | BLoC is excellent for large teams but adds Streams/Events/States boilerplate for a single-developer dashboard. Riverpod providers + `ref.watch` is simpler. |
+| State management | Riverpod 3.x | Provider (flutter_provider) | Provider is the predecessor to Riverpod. The Flutter team now recommends Riverpod. Provider doesn't have compile-time safety. |
+| State management | Riverpod 3.x | setState / InheritedWidget | Workable for small widgets but doesn't scale to cross-widget state (tray events → UI updates). |
+| Tray integration | tray_manager | system_tray | system_tray (pub.dev) exists but tray_manager has more active maintenance and cleaner API. Both use NSStatusBar natively. |
+| Tray integration | tray_manager | Custom macOS plugin | Viable (Flutter plugins with AppKit are straightforward) but unnecessary given tray_manager's quality. |
+| File watching | watcher | dart:io FileSystemEntity.watch | `FileSystemEntity.watch()` is built-in but doesn't handle recursive directory trees well on macOS. `watcher` wraps FSEvents for reliable recursive watching — same reason chokidar existed in Node.js. |
+| Git operations | git package | process_run package | `process_run` is a heavier utility for shell scripting. For git specifically, the `git` package's `GitDir` abstraction is cleaner. Raw `dart:io Process.run` is fine for simple one-shot calls. |
+| Git operations | git package | libgit2 (dart binding) | No maintained Dart binding for libgit2. Not viable. |
+| OKLCH theming | Manual hex constants | oklch pub.dev package | The `oklch` package at v0.0.2 is low-popularity. Converting OKLCH to sRGB at design time (via oklch.com) and hardcoding Flutter Color constants is simpler, zero-dependency, and maintainable. |
+| Glassmorphism | Native BackdropFilter | glassmorphism package | The package is a thin wrapper around BackdropFilter — adds nothing you can't do in 10 lines. Own the code. |
+| macOS UI widgets | Flutter Material widgets | macos_ui package | macos_ui (v2.1.10, updated Oct 2025) provides native macOS-look widgets. BUT the Pro Orc design spec calls for the custom n3urala1 dark theme (glassmorphism, OKLCH cyan/fuchsia) — not native macOS HIG appearance. Don't use macos_ui; use Material widgets styled to match the design. |
 
 ---
 
-## Installation
+## What NOT to Use
 
-```bash
-# Initialize project
-npx create-next-app@latest pro-orc --typescript --tailwind --eslint --app --src-dir
-
-# After init, upgrade to latest versions if needed
-npm install next@latest react@latest react-dom@latest
-
-# Filesystem & Git
-npm install chokidar@^3.6.0 simple-git gray-matter
-
-# shadcn/ui (interactive CLI — run and follow prompts)
-npx shadcn@latest init
-
-# Add shadcn components as needed
-npx shadcn@latest add card badge button tooltip separator progress
-
-# UI utilities (installed by shadcn, but list explicitly)
-npm install clsx tailwind-merge lucide-react
-
-# Optional: validation
-npm install zod
-
-# Dev dependencies (likely already installed by create-next-app)
-npm install -D @types/node typescript @tailwindcss/postcss
-```
+| Avoid | Why | Use Instead |
+|-------|-----|-------------|
+| macos_ui package | Imposes native macOS HIG styling (sidebars, toolbars) that conflicts with the custom n3urala1 glassmorphism design. You'd spend more time fighting the widget system than using it. | Flutter Material widgets + custom ThemeData |
+| GetX | All-in-one framework (state + routing + DI) with global state patterns that make testing hard. Large footprint for minimal gain vs Riverpod. | Riverpod for state, Navigator 2.0 for routing |
+| flutter_bloc | Not wrong, just more ceremony than this project needs. Every feature requires Event/State/Bloc classes. | Riverpod AsyncNotifier/Notifier |
+| Hive / Isar / SQLite (drift) | The filesystem IS the database for Pro Orc — scanning .md files is the data layer. Adding a local DB creates a sync problem (cache invalidation from external filesystem changes). | `dart:io` + `watcher` |
+| flutter_gen (asset codegen) | Useful for large apps with many assets. Pro Orc is a minimal tool app — manual asset references are fine. | String asset paths directly |
+| auto_route / go_router | Pro Orc is a single-window app with minimal navigation. Simple Navigator.push or a top-level state variable for "current view" is sufficient. | Built-in Navigator or conditional widget rendering |
+| Impeller opt-in flags for macOS | Impeller is not yet default on macOS desktop. Forcing it on may cause visual artifacts or performance regressions. Wait for Flutter team to enable by default. | Default Skia/Metal rendering (no flag needed) |
+| App Sandbox (for distribution) | Disabling sandbox (required for git subprocess) means no Mac App Store distribution. This is intentional for a developer tool — don't try to re-enable sandbox and work around it. | Distribute as direct download / Homebrew cask |
 
 ---
 
-## Key Configuration Files
+## Version Compatibility
 
-### `instrumentation.ts` (root)
-```typescript
-export async function register() {
-  if (process.env.NEXT_RUNTIME === 'nodejs') {
-    // Import watcher module as side effect — starts chokidar singleton
-    await import('./lib/watcher')
-  }
-}
-```
-
-### `lib/watcher.ts`
-```typescript
-import chokidar from 'chokidar'
-import os from 'os'
-import path from 'path'
-
-const BASE = path.join(os.homedir(), 'project_orchestration')
-const SCAN_PATHS = [
-  path.join(BASE, 'code'),
-  path.join(BASE, 'project research'),
-]
-
-// Singleton: module is only loaded once
-export const watcher = chokidar.watch(SCAN_PATHS, {
-  persistent: true,
-  ignoreInitial: true,
-  depth: 4,
-  ignored: /(node_modules|\.git|\.venv)/,
-})
-
-// Pub-sub: Route handlers subscribe to receive events
-type Listener = (event: { type: string; path: string }) => void
-const listeners = new Set<Listener>()
-
-export function subscribeToWatcher(fn: Listener) {
-  listeners.add(fn)
-  return () => listeners.delete(fn)
-}
-
-watcher.on('all', (event, filePath) => {
-  for (const fn of listeners) {
-    fn({ type: event, path: filePath })
-  }
-})
-```
+| Package | Compatible Flutter Version | Notes |
+|---------|---------------------------|-------|
+| tray_manager ^0.5.0 | Flutter 3.3+ / Dart 3.0+ | Minimum SDK bump in recent changelog |
+| window_manager ^0.4.x | Flutter 3.x | Same leanflutter ecosystem as tray_manager |
+| watcher ^1.0.0 | Dart 2.12+ (null-safe) | Dart team package, stable |
+| flutter_riverpod ^3.2.1 | Flutter 3.x / Dart 3.x | Riverpod 3 requires Dart 3 for records/patterns |
+| git ^2.x | Dart 2.19+ | Google-maintained, stable |
+| path_provider ^2.1.x | Flutter 3.x | First-party Flutter plugin |
 
 ---
 
 ## Sources
 
-- Next.js 16.1.6 blog post: https://nextjs.org/blog/next-16 (release: October 21, 2025)
-- Next.js 15.2 blog post: https://nextjs.org/blog/next-15-2 (release: February 26, 2025)
-- Next.js 16.1.6 instrumentation docs: https://nextjs.org/docs/app/guides/instrumentation
-- Next.js 16.1.6 instrumentation API reference: https://nextjs.org/docs/app/api-reference/file-conventions/instrumentation
-- Next.js 16.1.6 route handlers (SSE): https://nextjs.org/docs/app/api-reference/file-conventions/route
-- Next.js 16.1.6 serverExternalPackages: https://nextjs.org/docs/app/api-reference/config/next-config-js/serverExternalPackages
-- chokidar 3.6.0 package.json: confirmed in `/Users/rob/project_orchestration/code/PowerTrip/trip-agent/node_modules/chokidar/`
-- Next.js 16.1.6 confirmed installed in 4 local projects
-- Tailwind CSS 4.1.18 confirmed installed in local projects
-- lucide-react 0.563.0 confirmed from n3ural.a1_gsd project
-- gray-matter 4.0.3 confirmed from sc08_website_gsd project
-- clsx 2.1.1, tailwind-merge 3.4.0, typescript 5.9.3, react 19.2.4 confirmed from local projects
-- zod 4.3.6 confirmed from sc08_website_gsd project
+- pub.dev/packages/tray_manager — tray_manager 0.5.0, updated November 2025 (WebSearch, MEDIUM confidence)
+- pub.dev/packages/window_manager — window_manager, updated October 2025 (WebSearch, MEDIUM confidence)
+- pub.dev/packages/watcher — watcher Dart team package, published ~January 2026, 10.5M downloads (WebSearch, MEDIUM confidence)
+- pub.dev/packages/git — git package by kevmoo/Google, updated September 2025, GitDir abstraction (WebSearch, MEDIUM confidence)
+- pub.dev/packages/flutter_riverpod — flutter_riverpod ^3.2.1 current series, Riverpod 3.0 released (WebSearch, MEDIUM confidence)
+- pub.dev/packages/oklch — oklch 0.0.2 OKLCH→Flutter Color conversion (WebSearch, LOW confidence — niche package)
+- pub.dev/packages/macos_ui — macos_ui 2.1.10, October 2025 (WebSearch, MEDIUM confidence; explicitly NOT recommended)
+- Flutter macOS desktop docs: https://docs.flutter.dev/platform-integration/macos/building — App Sandbox entitlement requirements (WebSearch, HIGH confidence)
+- Flutter Impeller docs: https://docs.flutter.dev/perf/impeller — macOS not yet Impeller-default (WebSearch, MEDIUM confidence)
+- riverpod.dev/docs/whats_new — Riverpod 3.0 release and features (WebSearch, MEDIUM confidence)
+- GitHub github.com/leanflutter/tray_manager — NSStatusBar/NSStatusItem implementation approach (WebSearch, MEDIUM confidence)
+- GitHub github.com/mynameiskenlee/flutter_macos_menubar_example — applicationShouldTerminateAfterLastWindowClosed pattern (WebSearch, MEDIUM confidence)
+
+---
+*Stack research for: Flutter macOS native desktop (Pro Orc v1.1 rewrite)*
+*Researched: 2026-02-19*
