@@ -87,7 +87,10 @@ Plans:
   2. Background renders atmospheric radial-gradient orbs (cyan and fuchsia) on a near-black surface
   3. A glassmorphism placeholder card shows correct blur, border, and no white halo artifact on the dark background
   4. All named color constants match the n3urala1 OKLCH design tokens (converted to sRGB hex)
-**Plans**: TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 09-01-PLAN.md -- AppColors ThemeExtension + ThemeData factory + GlowBorderShell cleanup
+- [ ] 09-02-PLAN.md -- Orb background + GlassCard + tab navigation + visual verification
 
 ### Phase 10: Card Widgets + Quick Actions
 **Goal**: The Code and Research tabs display live project cards with all v1.0 data fields, quick action buttons work, and editing a planning file updates the card in real time
@@ -123,6 +126,6 @@ Plans:
 | 6. Native Foundation | v1.1 | 0/3 | Planning complete | - |
 | 7. Data Layer | v1.1 | 0/4 | Planning complete | - |
 | 8. Reactive State | v1.1 | Complete    | 2026-02-19 | - |
-| 9. Theme + UI Shell | v1.1 | 0/? | Not started | - |
+| 9. Theme + UI Shell | v1.1 | 0/2 | Planning complete | - |
 | 10. Card Widgets + Quick Actions | v1.1 | 0/? | Not started | - |
 | 11. Claude Tools Panel | v1.1 | 0/? | Not started | - |
