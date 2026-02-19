@@ -16,62 +16,77 @@ import 'package:watcher/watcher.dart';
 /// Design decisions:
 /// - Watch-scope: Watches the root scan directory (covers all LIVE-01/02/03).
 /// - Debounce: 350ms fixed, trailing-edge, global (one timer for all events).
-/// - Start-timing: Watcher created lazily on first [events] access.
+/// - Start-timing: Watcher and internal subscription started eagerly on
+///   construction — the DirectoryWatcher requires an active listener to drive
+///   its internal event loop and for [ready] to complete.
 /// - Error handling: Defensive [handleError] around event stream per locked
 ///   decision — guards against watcher#79 and similar macOS edge cases even
 ///   though the assert was removed in watcher 1.2.1.
+///
+/// **Internal architecture:**
+/// A [StreamController.broadcast] re-broadcasts [DirectoryWatcher.events]
+/// through a permanent internal subscription. This keeps the watcher's event
+/// loop running regardless of how many external listeners [events] has.
+/// The debounced [events] getter returns a new single-subscription stream
+/// tapping into this broadcast controller on each call.
 class WatcherService {
   final String _rootDir;
-  DirectoryWatcher? _watcher;
+  late final DirectoryWatcher _watcher;
+  late final StreamController<WatchEvent> _controller;
+  late final StreamSubscription<WatchEvent> _internalSub;
 
-  WatcherService(this._rootDir);
+  WatcherService(this._rootDir) {
+    _watcher = DirectoryWatcher(_rootDir);
+    _controller = StreamController<WatchEvent>.broadcast();
 
-  /// Returns a debounced, error-guarded stream of [WatchEvent]s emitted from
-  /// the watched directory.
+    // Keep a permanent internal subscription so the watcher's event loop
+    // runs and watcher.ready eventually completes.
+    _internalSub = _watcher.events.listen(
+      (event) {
+        if (!_controller.isClosed) {
+          _controller.add(event);
+        }
+      },
+      onError: (Object error, StackTrace stackTrace) {
+        // Log but do not rethrow — defensive against watcher#79 and similar
+        // macOS FSEvents edge cases. Prevents assertion crashes from
+        // propagating through the provider chain in debug mode.
+        // ignore: avoid_print
+        print('[WatcherService] Suppressed watcher error: $error');
+      },
+      onDone: () {
+        if (!_controller.isClosed) {
+          _controller.close();
+        }
+      },
+      cancelOnError: false,
+    );
+  }
+
+  /// Returns a debounced stream of [WatchEvent]s emitted from the watched
+  /// directory.
   ///
-  /// The [DirectoryWatcher] is created lazily on first access. Events are
-  /// debounced with a 350ms trailing-edge window so that rapid bursts of
-  /// filesystem activity (e.g. editor auto-save) collapse into a single
-  /// downstream event.
+  /// Events are debounced with a 350ms trailing-edge window so that rapid
+  /// bursts of filesystem activity (e.g. editor auto-save) collapse into a
+  /// single downstream event. Multiple calls return independent debounced
+  /// streams sharing the same underlying broadcast source.
   Stream<WatchEvent> get events {
-    _watcher ??= DirectoryWatcher(_rootDir);
-    return _watcher!.events
-        .handleError((Object error, StackTrace stackTrace) {
-          // Log but do not rethrow — defensive against watcher#79 and similar
-          // macOS FSEvents edge cases. Prevents assertion crashes from
-          // propagating through the provider chain in debug mode.
-          // ignore: avoid_print
-          print('[WatcherService] Suppressed watcher error: $error');
-        })
-        .debounce(const Duration(milliseconds: 350));
+    return _controller.stream.debounce(const Duration(milliseconds: 350));
   }
 
   /// Returns true once the underlying [DirectoryWatcher] is ready to emit
   /// events (i.e., the initial directory scan is complete).
-  ///
-  /// Returns false if the watcher has not been created yet (events not yet
-  /// accessed).
-  bool get isReady => _watcher?.isReady ?? false;
+  bool get isReady => _watcher.isReady;
 
   /// Returns a [Future] that completes when the watcher is ready.
   ///
   /// Useful in tests to await the initial scan before writing files.
-  /// Creates the watcher if not already created.
-  Future<void> get ready async {
-    _watcher ??= DirectoryWatcher(_rootDir);
-    await _watcher!.ready;
-  }
+  Future<void> get ready => _watcher.ready;
 
-  /// Disposes the watcher service.
-  ///
-  /// [DirectoryWatcher] does not expose an explicit dispose method; callers
-  /// should cancel any [StreamSubscription]s they hold on [events]. This
-  /// method exists to satisfy a common service lifecycle contract and allows
-  /// future cleanup if the underlying watcher API gains a dispose.
+  /// Disposes the watcher service, cancelling the internal subscription and
+  /// closing the broadcast controller.
   Future<void> dispose() async {
-    // DirectoryWatcher does not have an explicit close/cancel API.
-    // Subscriptions created by listeners are the callers' responsibility.
-    // Nullify the watcher reference to allow GC and signal end-of-life.
-    _watcher = null;
+    await _internalSub.cancel();
+    await _controller.close();
   }
 }
