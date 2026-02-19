@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:launch_at_startup/launch_at_startup.dart';
 import 'package:macos_window_utils/macos_window_utils.dart';
 import 'package:window_manager/window_manager.dart';
@@ -42,7 +43,7 @@ void main() async {
     await windowManager.focus();
   });
 
-  runApp(const ProOrcApp());
+  runApp(const ProviderScope(child: ProOrcApp()));
 }
 
 class ProOrcApp extends StatelessWidget {
