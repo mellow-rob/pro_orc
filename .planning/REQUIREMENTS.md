@@ -91,41 +91,41 @@ Deferred to future release. Tracked but not in current roadmap.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| NAT-01 | — | Pending |
-| NAT-02 | — | Pending |
-| NAT-03 | — | Pending |
-| NAT-04 | — | Pending |
-| SCAN-01 | — | Pending |
-| SCAN-02 | — | Pending |
-| SCAN-03 | — | Pending |
-| SCAN-04 | — | Pending |
-| SCAN-05 | — | Pending |
-| GIT-01 | — | Pending |
-| GIT-02 | — | Pending |
-| GIT-03 | — | Pending |
-| LIVE-01 | — | Pending |
-| LIVE-02 | — | Pending |
-| LIVE-03 | — | Pending |
-| UI-01 | — | Pending |
-| UI-02 | — | Pending |
-| UI-03 | — | Pending |
-| UI-04 | — | Pending |
-| UI-05 | — | Pending |
-| UI-06 | — | Pending |
-| ACT-01 | — | Pending |
-| ACT-02 | — | Pending |
-| ACT-03 | — | Pending |
-| ACT-04 | — | Pending |
-| TOOL-01 | — | Pending |
-| TOOL-02 | — | Pending |
-| TOOL-03 | — | Pending |
-| TOOL-04 | — | Pending |
+| NAT-01 | Phase 6 | Pending |
+| NAT-02 | Phase 6 | Pending |
+| NAT-03 | Phase 6 | Pending |
+| NAT-04 | Phase 6 | Pending |
+| SCAN-01 | Phase 7 | Pending |
+| SCAN-02 | Phase 7 | Pending |
+| SCAN-03 | Phase 7 | Pending |
+| SCAN-04 | Phase 7 | Pending |
+| SCAN-05 | Phase 7 | Pending |
+| GIT-01 | Phase 7 | Pending |
+| GIT-02 | Phase 7 | Pending |
+| GIT-03 | Phase 7 | Pending |
+| LIVE-01 | Phase 8 | Pending |
+| LIVE-02 | Phase 8 | Pending |
+| LIVE-03 | Phase 8 | Pending |
+| UI-04 | Phase 9 | Pending |
+| UI-05 | Phase 9 | Pending |
+| UI-01 | Phase 10 | Pending |
+| UI-02 | Phase 10 | Pending |
+| UI-03 | Phase 10 | Pending |
+| UI-06 | Phase 10 | Pending |
+| ACT-01 | Phase 10 | Pending |
+| ACT-02 | Phase 10 | Pending |
+| ACT-03 | Phase 10 | Pending |
+| ACT-04 | Phase 10 | Pending |
+| TOOL-01 | Phase 11 | Pending |
+| TOOL-02 | Phase 11 | Pending |
+| TOOL-03 | Phase 11 | Pending |
+| TOOL-04 | Phase 11 | Pending |
 
 **Coverage:**
 - v1.1 requirements: 29 total
-- Mapped to phases: 0
-- Unmapped: 29 ⚠️
+- Mapped to phases: 29
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-02-19*
-*Last updated: 2026-02-19 after initial definition*
+*Last updated: 2026-02-19 after roadmap creation*
