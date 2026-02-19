@@ -73,7 +73,10 @@ Plans:
   1. File watcher detects changes to `.planning/STATE.md` or `ROADMAP.md` and fires an event within 350ms debounce window
   2. Editing a `STATE.md` on disk causes the corresponding project's data to change in the running app without a hot reload or restart
   3. Multiple rapid file saves (e.g., auto-save bursts) result in exactly one data refresh, not N refreshes
-**Plans**: TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 08-01-PLAN.md — WatcherService with debounce + dependencies (flutter_riverpod, watcher, stream_transform)
+- [ ] 08-02-PLAN.md — Riverpod provider chain + ProviderScope + ShellScreen live data wiring
 
 ### Phase 9: Theme + UI Shell
 **Goal**: The app renders the n3urala1 dark theme with correct cyan/fuchsia colors, glassmorphism card backgrounds, atmospheric orbs, and a three-tab navigation bar — all before any card content is wired
