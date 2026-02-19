@@ -1,7 +1,7 @@
 'use client'
 
 import { useTransition } from 'react'
-import { Terminal, Folder, Clock, Code, Layers, Eye, EyeOff, Github, ExternalLink } from 'lucide-react'
+import { Terminal, Folder, Clock, Code, Layers, Eye, EyeOff, Github, ExternalLink, GitCommit } from 'lucide-react'
 import {
   Card,
   CardHeader,
@@ -141,6 +141,13 @@ export function CodeProjectCard({
           <p className="line-clamp-2 text-sm text-muted-foreground">
             {project.nextStep}
           </p>
+        )}
+
+        {project.lastCommitMessage && (
+          <div className="flex items-start gap-1.5 font-mono text-xs text-muted-foreground/60">
+            <GitCommit className="size-3 mt-0.5 shrink-0" />
+            <span className="line-clamp-1">{project.lastCommitMessage}</span>
+          </div>
         )}
 
         {project.lastCommitTimestamp && (
