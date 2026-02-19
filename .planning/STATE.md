@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-19)
 ## Current Position
 
 Phase: 7 of 11 (Data Layer) — IN PROGRESS
-Plan: 1 of 4 complete (07-01 complete — drift database, data models, code generation)
-Status: Phase 7 in progress — 07-02 scan service next
-Last activity: 2026-02-19 — Phase 7, Plan 01 complete (data models + drift SQLite DB created)
+Plan: 3 of 4 complete (07-03 complete — git reader service with TDD)
+Status: Phase 7 in progress — 07-04 project repository next
+Last activity: 2026-02-19 — Phase 7, Plan 03 complete (git reader service created)
 
-Progress: [####░░░░░░░░░░░░░░░░] ~20% (v1.1, 4/~20 plans complete)
+Progress: [######░░░░░░░░░░░░░░] ~30% (v1.1, 6/~20 plans complete)
 
 ## Performance Metrics
 
@@ -33,6 +33,7 @@ Progress: [####░░░░░░░░░░░░░░░░] ~20% (v1.1, 4/~
 | 06    | 02   | 7 min    | 2     | 6     |
 | 06    | 03   | ~15 min  | 2     | 0     |
 | 07    | 01   | 2 min    | 2     | 9     |
+| 07    | 03   | 6 min    | 3     | 4     |
 
 *Updated after each plan completion*
 
@@ -51,6 +52,9 @@ v1.0 decisions archived to milestones/v1.0-ROADMAP.md.
 - Phase 9: All OKLCH design tokens must be pre-converted to sRGB hex before Phase 9 begins (use oklch.com)
 
 **v1.1 decisions made during execution:**
+- 07-03: Real temp git repos used in TDD tests (no mocking) — createTempGitRepo() helper creates actual git init + commit in systemTemp
+- 07-03: meta package added as explicit dependency (was transitive-only) — dart analyze requires direct dep for imported packages
+- 07-03: gitBinary parameter on all public git service functions — enables Homebrew git path configuration from AppConfig
 - 07-01: Generated app_database.g.dart committed to git (not gitignored) — avoids build_runner as prerequisite for every build
 - 07-01: AppDatabase accepts optional QueryExecutor — NativeDatabase.memory() injectable for unit tests without filesystem
 - 07-01: getConfig() uses insert-then-select pattern for id=1 default row — ensures row always exists before updateConfig() writes
@@ -75,5 +79,5 @@ v1.0 decisions archived to milestones/v1.0-ROADMAP.md.
 ## Session Continuity
 
 Last session: 2026-02-19
-Stopped at: Completed 07-01-PLAN.md — data models and drift database created
-Resume file: .planning/milestones/v1.1-phases/07-data-layer/07-02-PLAN.md
+Stopped at: Completed 07-03-PLAN.md — git reader service with TDD (14 tests passing)
+Resume file: .planning/milestones/v1.1-phases/07-data-layer/07-04-PLAN.md
