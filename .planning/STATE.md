@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-19)
 ## Current Position
 
 Phase: 6 of 11 (Native Foundation)
-Plan: 2 of N (06-01 complete, continuing Phase 6)
+Plan: 3 of N (06-02 complete, continuing Phase 6)
 Status: Executing
-Last activity: 2026-02-19 — Phase 6, Plan 01 complete (Flutter scaffold + native config)
+Last activity: 2026-02-19 — Phase 6, Plan 02 complete (tray/window behavior + glow border shell)
 
-Progress: [##░░░░░░░░░░░░░░░░░░] ~5% (v1.1, 1/~20 plans complete)
+Progress: [###░░░░░░░░░░░░░░░░░] ~10% (v1.1, 2/~20 plans complete)
 
 ## Performance Metrics
 
@@ -24,12 +24,13 @@ Progress: [##░░░░░░░░░░░░░░░░░░] ~5% (v1.1, 
 - Total execution time: ~0.35 hours
 
 **v1.1 Velocity:**
-- Plans completed: 1
-- Duration: 14 minutes (06-01, includes Flutter SDK setup)
+- Plans completed: 2
+- Average duration: ~10.5 min/plan
 
 | Phase | Plan | Duration | Tasks | Files |
 |-------|------|----------|-------|-------|
 | 06    | 01   | 14 min   | 2     | 40    |
+| 06    | 02   | 7 min    | 2     | 6     |
 
 *Updated after each plan completion*
 
@@ -51,6 +52,9 @@ v1.0 decisions archived to milestones/v1.0-ROADMAP.md.
 - 06-01: Flutter installed via homebrew at `/opt/homebrew/share/flutter` (not `/Users/rob/code/flutter` as .zshrc expected) — update .zshrc or use full path
 - 06-01: Entitlement files are `DebugProfile.entitlements` / `Release.entitlements` (Flutter 3.41.1, no `Runner-` prefix)
 - 06-01: `applicationSupportsSecureRestorableState` must be kept in AppDelegate — Flutter build warns if removed
+- 06-02: `trayManager.ensureInitialized()` does not exist in tray_manager 0.5.2 — TrayService.init() handles all setup
+- 06-02: `MenuItem` imported directly from tray_manager; no need to hide from flutter/material.dart
+- 06-02: `dart:ui` must be imported explicitly for `Size` and `Offset` types in window_geometry_service.dart
 
 ### Pending Todos
 
@@ -64,5 +68,5 @@ v1.0 decisions archived to milestones/v1.0-ROADMAP.md.
 ## Session Continuity
 
 Last session: 2026-02-19
-Stopped at: Phase 6, Plan 01 complete. Next: run /gsd:execute-phase 06 02
-Resume file: .planning/milestones/v1.1-phases/06-native-foundation/06-01-SUMMARY.md
+Stopped at: Phase 6, Plan 02 complete. Next: run /gsd:execute-phase 06 03
+Resume file: .planning/milestones/v1.1-phases/06-native-foundation/06-02-SUMMARY.md
