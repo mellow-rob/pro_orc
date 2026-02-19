@@ -160,7 +160,8 @@ void main() {
         await createPlainProject(scanRoot, 'my-app');
         await createPlainProject(scanRoot, 'node_modules');
 
-        // Override ignore list to include node_modules
+        // Ensure config row exists, then override ignore list
+        await db.getConfig();
         await db.updateConfig(ignoreListJson: '["node_modules"]');
 
         final results = await scanner.scanAll(scanDirOverride: scanRoot.path);
@@ -173,6 +174,8 @@ void main() {
         await createPlainProject(scanRoot, 'build');
         await createPlainProject(scanRoot, 'build-cache');
 
+        // Ensure config row exists, then override ignore list
+        await db.getConfig();
         await db.updateConfig(ignoreListJson: '["build*"]');
 
         final results = await scanner.scanAll(scanDirOverride: scanRoot.path);
