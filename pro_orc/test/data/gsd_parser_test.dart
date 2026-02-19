@@ -26,7 +26,7 @@ void main() {
 
       final result = await parseGsdData(tmp.path);
 
-      expect(result.gsd, equals(GsdData.empty));
+      expect(result.gsd.isEmpty, isTrue);
       expect(result.displayName, isNull);
       expect(result.description, isNull);
       expect(result.hasParseError, isFalse);
@@ -401,7 +401,7 @@ Other content.
 
       final result = await parseGsdData(tmp.path);
 
-      expect(result.gsd, equals(GsdData.empty));
+      expect(result.gsd.isEmpty, isTrue);
       expect(result.displayName, isNull);
       expect(result.description, isNull);
       expect(result.hasParseError, isFalse);
