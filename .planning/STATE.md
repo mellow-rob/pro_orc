@@ -10,9 +10,9 @@ See: .planning/PROJECT.md (updated 2026-02-19)
 ## Current Position
 
 Phase: 8 of 11 (Watcher Service) — IN PROGRESS
-Plan: 1 of 3 complete (08-01 complete — WatcherService with 350ms debounce and integration tests)
-Status: Phase 8 in progress — 08-02 (watcherProvider Riverpod StreamProvider) next
-Last activity: 2026-02-19 — Phase 8, Plan 01 complete (WatcherService created)
+Plan: 2 of 3 complete (08-02 complete — Riverpod provider chain: ProviderScope, watcherProvider, projectsProvider, ConsumerStatefulWidget ShellScreen)
+Status: Phase 8 in progress — all planned plans complete (phase may be done)
+Last activity: 2026-02-19 — Phase 8, Plan 02 complete (full watcher-to-UI chain wired)
 
 Progress: [########░░░░░░░░░░░░] ~40% (v1.1, 8/~20 plans complete)
 
@@ -37,6 +37,7 @@ Progress: [########░░░░░░░░░░░░] ~40% (v1.1, 8/~20 plans
 | 07    | 03   | 6 min    | 3     | 4     |
 | 07    | 04   | 3 min    | 3     | 2     |
 | 08    | 01   | 7 min    | 2     | 4     |
+| 08    | 02   | 3 min    | 2     | 5     |
 
 *Updated after each plan completion*
 
@@ -75,6 +76,8 @@ v1.0 decisions archived to milestones/v1.0-ROADMAP.md.
 - 06-02: `trayManager.ensureInitialized()` does not exist in tray_manager 0.5.2 — TrayService.init() handles all setup
 - 06-02: `MenuItem` imported directly from tray_manager; no need to hide from flutter/material.dart
 - 06-02: `dart:ui` must be imported explicitly for `Size` and `Offset` types in window_geometry_service.dart
+- [Phase 08]: ConsumerStatefulWidget (not ConsumerWidget) for ShellScreen — WindowListener and TrayListener mixins require StatefulWidget lifecycle; ref available directly on ConsumerState
+- [Phase 08]: ref.listen in FutureProvider body for watcher-driven invalidation — listen registers side-effect callback without rebuild dependency; invalidateSelf() on hasValue triggers fresh scanAll()
 
 ### Pending Todos
 
@@ -88,5 +91,5 @@ v1.0 decisions archived to milestones/v1.0-ROADMAP.md.
 ## Session Continuity
 
 Last session: 2026-02-19
-Stopped at: Completed 08-01-PLAN.md — WatcherService with StreamController.broadcast() re-broadcast pattern, 350ms debounce, 4 integration tests
-Resume file: .planning/milestones/v1.1-phases/08-watcher/08-02-PLAN.md
+Stopped at: Completed 08-02-PLAN.md — Riverpod provider chain (ProviderScope, watcherProvider keepAlive, projectsProvider with watcher invalidation, ConsumerStatefulWidget ShellScreen showing live project count)
+Resume file: .planning/milestones/v1.1-phases/08-watcher/ (phase 08 plans complete)
