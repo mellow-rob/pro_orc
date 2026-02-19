@@ -53,7 +53,7 @@ Plans:
 **Depends on**: Phase 6
 **Requirements**: SCAN-01, SCAN-02, SCAN-03, SCAN-04, SCAN-05, GIT-01, GIT-02, GIT-03
 **Success Criteria** (what must be TRUE):
-  1. Scanner discovers all projects in `~/project_orchestration/code/` and `~/project_orchestration/project research/`, correctly classifying each as Code or Research type
+  1. Scanner discovers all projects in a single configurable scan directory (default: `~/project_orchestration/`), listing direct child directories as projects with no recursive scanning
   2. GSD parser extracts status, phase, progress percentage, and next step from a `.planning/` directory
   3. Notion URL and project description are extracted from `PROJECT.md` for any project that has them
   4. Git reader returns last commit message, hash, and timestamp for a code project; concurrent calls complete within 5 seconds with a timeout wrapper in place
