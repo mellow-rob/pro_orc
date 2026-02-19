@@ -2,19 +2,18 @@
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-02-17)
+See: .planning/PROJECT.md (updated 2026-02-19)
 
 **Core value:** Auf einen Blick sehen, wo jedes Projekt steht, was der nächste Schritt ist, und welche Tools zur Verfügung stehen — ohne Terminal-Hopping oder Notion-Suche.
-**Current focus:** Phase 5 COMPLETE — ToolsPanel UI with three-tab dashboard shipped
+**Current focus:** v1.0 MVP shipped — planning next milestone
 
 ## Current Position
 
-Phase: 5 of 5 (Claude Tools) — COMPLETE
-Plan: 2 of 2 in current phase
-Status: Phase 5 Plan 2 complete — ToolsPanel component and Tools tab wired into dashboard
-Last activity: 2026-02-19 - Completed quick task 1: Fix GIT-02: render lastCommitMessage in CodeProjectCard
+Milestone: v1.0 MVP — SHIPPED 2026-02-19
+Status: All 5 phases complete, 42/42 requirements satisfied
+Last activity: 2026-02-19 — v1.0 milestone archived
 
-Progress: [████████████████████] 100%
+Progress: [████████████████████] 100% (v1.0)
 
 ## Performance Metrics
 
@@ -46,42 +45,8 @@ Progress: [████████████████████] 100%
 
 ### Decisions
 
-Decisions are logged in PROJECT.md Key Decisions table.
-Recent decisions affecting current work:
-
-- [Pre-phase]: Use chokidar v3 (not v4) — ESM-only v4 causes bundling friction with Next.js
-- [Pre-phase]: SSE signal-only pattern — events carry `{ type, projectId }`, browser re-fetches `/api/projects/[id]`
-- [Pre-phase]: `<!-- notion: URL -->` comment convention in PROJECT.md for Notion URL parsing
-- [01-01]: Used create-next-app defaults (TypeScript, Tailwind, ESLint, App Router, Turbopack)
-- [01-01]: GsdStatus uses open string union (string & {}) for autocomplete without rigidity
-- [01-02]: Cyan = primary (code/actions), Fuchsia = accent (research/highlights)
-- [01-02]: Card transparency at oklch 0.18/0.6 opacity for glassmorphism readability
-- [01-02]: Kept shadcn/tailwind.css import for component base styles
-- [01-03]: Dark class hardcoded on html — no next-themes, no toggle, no flash
-- [01-03]: Inter (sans) + JetBrains Mono (mono) fonts via next/font/google CSS variables
-- [02-02]: simpleGit constructor inside try-catch — throws synchronously for nonexistent paths
-- [02-02]: Vitest with node environment for testing server-only modules
-- [02-01]: Added non-bold regex variants (Phase: vs **Phase:**) to handle real STATE.md format
-- [02-01]: server-only installed as explicit dependency (not bundled with Next.js 16)
-- [03-01]: Notion link uses <a href> not server action (simpler, no JS required)
-- [03-01]: StatusBadge shared component avoids duplication across card types
-- [03-01]: isStale/formatRelativeTime local to codeProjectCard (single consumer)
-- [03-02]: Type-prefixed React keys to avoid collision when same name in code/ and research/
-- [03-02]: openNotionPage server action unused — research card uses <a href> instead (dead code, minor)
-- [04-01]: No 'server-only' in watcher.ts — dynamic import from instrumentation.ts bypasses normal module graph
-- [04-01]: watcherSubscribers exported as reference to globalThis.__watcherSubscribers — same Set reference survives HMR
-- [04-01]: scanProjectById tries direct path lookup first before full scan — avoids unnecessary directory reads
-- [04-01]: Next.js 16 async route params: { params: Promise<{ id: string }> } must be awaited
-- [04-02]: useCallback with empty deps wraps onUpdate handler — referential stability prevents duplicate EventSource connections on re-render
-- [04-02]: liveData Map updated via functional update (new Map(prev).set(...)) to preserve immutability and trigger re-render
-- [04-02]: Live data merged before isPrivate filter so all downstream logic (counts, rendering, private grouping) reflects live data
-- [Phase 05-01]: Manual regex parsing for YAML frontmatter instead of js-yaml — no new dependencies required
-- [Phase 05-01]: Dirent type imported from 'fs' to fix TypeScript NonSharedBuffer inference in readdir results
-- [Phase 05-01]: ClaudeToolsData splits plugins into mcpPlugins/skillPlugins at scan time for clean UI separation
-- [Phase 05-02]: Deleted orphaned /tools route — Tools feature lives as dashboard tab, not a separate Next.js route
-- [Phase 05-02]: Badge colors use inline className overrides (cyan/fuchsia/secondary) — no new cva variants needed
-- [Phase 05-02]: CategorySection returns null for empty arrays — no dead section headings appear
-- [Phase 05-02]: Promise.all for concurrent scanner execution in page.tsx — scanProjects() + scanClaudeTools() run together
+Full decision log in PROJECT.md Key Decisions table.
+v1.0 decisions archived to milestones/v1.0-ROADMAP.md.
 
 ### Pending Todos
 
@@ -95,11 +60,10 @@ None yet.
 
 ### Blockers/Concerns
 
-- [Phase 1 RESOLVED]: serverExternalPackages added to next.config.ts — chokidar, simple-git, fsevents
-- [Phase 5 RESOLVED]: `~/.claude/` directory structure inspected in research — scanner built with direct filesystem knowledge (skills/, plugins/installed_plugins.json, .mcp.json detection)
+None — v1.0 blockers all resolved.
 
 ## Session Continuity
 
-Last session: 2026-02-17
-Stopped at: Completed 05-02-PLAN.md — ToolsPanel component and Tools tab wired into dashboard. ALL PHASES COMPLETE.
+Last session: 2026-02-19
+Stopped at: v1.0 milestone archived. Ready for /gsd:new-milestone.
 Resume file: None
