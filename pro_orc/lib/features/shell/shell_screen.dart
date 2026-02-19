@@ -1,22 +1,24 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:launch_at_startup/launch_at_startup.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tray_manager/tray_manager.dart';
 import 'package:window_manager/window_manager.dart';
 
+import '../../providers/projects_provider.dart';
 import '../../tray/tray_service.dart';
 import '../../window/window_geometry_service.dart';
 import 'glow_border_shell.dart';
 import 'launch_dialog.dart';
 
-class ShellScreen extends StatefulWidget {
+class ShellScreen extends ConsumerStatefulWidget {
   const ShellScreen({super.key});
 
   @override
-  State<ShellScreen> createState() => _ShellScreenState();
+  ConsumerState<ShellScreen> createState() => _ShellScreenState();
 }
 
-class _ShellScreenState extends State<ShellScreen>
+class _ShellScreenState extends ConsumerState<ShellScreen>
     with WindowListener, TrayListener {
   late final TrayService _trayService;
   final WindowGeometryService _geometryService = WindowGeometryService();
@@ -75,6 +77,8 @@ class _ShellScreenState extends State<ShellScreen>
 
   @override
   Widget build(BuildContext context) {
+    final projectsAsync = ref.watch(projectsProvider);
+
     return GlowBorderShell(
       child: Scaffold(
         backgroundColor: const Color(0xFF0A0A0F),
@@ -97,18 +101,36 @@ class _ShellScreenState extends State<ShellScreen>
                 Text(
                   'Project Orchestration Dashboard',
                   style: TextStyle(
-                    color: Colors.white.withOpacity(0.7),
+                    color: Colors.white.withValues(alpha: 0.7),
                     fontSize: 14,
                   ),
                 ),
                 const SizedBox(height: 4),
-                Text(
-                  'Phase 6 — Native Foundation',
-                  style: TextStyle(
-                    color: Colors.white.withOpacity(0.4),
-                    fontSize: 12,
-                  ),
-                ),
+                // Show live project count from provider
+                switch (projectsAsync) {
+                  AsyncData(:final value) => Text(
+                      '${value.length} projects discovered',
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.4),
+                        fontSize: 12,
+                      ),
+                    ),
+                  AsyncError(:final error) => Text(
+                      'Error: $error',
+                      style: const TextStyle(
+                        color: Color(0xFFFF4081),
+                        fontSize: 12,
+                      ),
+                    ),
+                  _ => const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Color(0xFF00E5FF),
+                      ),
+                    ),
+                },
               ],
             ),
           ),
