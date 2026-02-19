@@ -26,7 +26,7 @@ See: milestones/v1.0-ROADMAP.md for full details
 
 - [ ] **Phase 6: Native Foundation** - Flutter macOS app with tray icon, show/hide window, entitlements, and no Dock icon
 - [ ] **Phase 7: Data Layer** - Pure Dart filesystem scanner, GSD parser, and git reader with unit tests
-- [ ] **Phase 8: Reactive State** - Riverpod providers + file watcher wired end-to-end; edits to STATE.md update the app live
+- [x] **Phase 8: Reactive State** - Riverpod providers + file watcher wired end-to-end; edits to STATE.md update the app live (completed 2026-02-19)
 - [ ] **Phase 9: Theme + UI Shell** - n3urala1 dark theme constants, glassmorphism pattern, and tab navigation scaffold
 - [ ] **Phase 10: Card Widgets + Quick Actions** - All project cards, quick actions, and live-update chain verified end-to-end
 - [ ] **Phase 11: Claude Tools Panel** - Tools tab fully functional with auto-discovered Skills, MCP servers, and Plugins
@@ -73,7 +73,7 @@ Plans:
   1. File watcher detects changes to `.planning/STATE.md` or `ROADMAP.md` and fires an event within 350ms debounce window
   2. Editing a `STATE.md` on disk causes the corresponding project's data to change in the running app without a hot reload or restart
   3. Multiple rapid file saves (e.g., auto-save bursts) result in exactly one data refresh, not N refreshes
-**Plans:** 2 plans
+**Plans:** 2/2 plans complete
 Plans:
 - [ ] 08-01-PLAN.md — WatcherService with debounce + dependencies (flutter_riverpod, watcher, stream_transform)
 - [ ] 08-02-PLAN.md — Riverpod provider chain + ProviderScope + ShellScreen live data wiring
@@ -122,7 +122,7 @@ Plans:
 | 5. Claude Tools | v1.0 | 2/2 | Complete | 2026-02-17 |
 | 6. Native Foundation | v1.1 | 0/3 | Planning complete | - |
 | 7. Data Layer | v1.1 | 0/4 | Planning complete | - |
-| 8. Reactive State | v1.1 | 0/? | Not started | - |
+| 8. Reactive State | v1.1 | Complete    | 2026-02-19 | - |
 | 9. Theme + UI Shell | v1.1 | 0/? | Not started | - |
 | 10. Card Widgets + Quick Actions | v1.1 | 0/? | Not started | - |
 | 11. Claude Tools Panel | v1.1 | 0/? | Not started | - |
