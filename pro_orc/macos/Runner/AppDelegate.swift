@@ -13,4 +13,8 @@ class AppDelegate: FlutterAppDelegate {
     NSApp.setActivationPolicy(.accessory)  // No Dock icon
     super.applicationDidFinishLaunching(notification)
   }
+
+  override func applicationSupportsSecureRestorableState(_ app: NSApplication) -> Bool {
+    return true
+  }
 }
