@@ -12,7 +12,7 @@ See: .planning/PROJECT.md (updated 2026-02-17)
 Phase: 5 of 5 (Claude Tools) — COMPLETE
 Plan: 2 of 2 in current phase
 Status: Phase 5 Plan 2 complete — ToolsPanel component and Tools tab wired into dashboard
-Last activity: 2026-02-17 — Completed Phase 5 Plan 2 (ToolsPanel component, ProjectTabs Tools tab, Promise.all scanner concurrency)
+Last activity: 2026-02-19 - Completed quick task 1: Fix GIT-02: render lastCommitMessage in CodeProjectCard
 
 Progress: [████████████████████] 100%
 
@@ -86,6 +86,12 @@ Recent decisions affecting current work:
 ### Pending Todos
 
 None yet.
+
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 1 | Fix GIT-02: render lastCommitMessage in CodeProjectCard | 2026-02-19 | b65e811 | [1-fix-git-02-render-lastcommitmessage-in-c](./quick/1-fix-git-02-render-lastcommitmessage-in-c/) |
 
 ### Blockers/Concerns
 
