@@ -33,6 +33,7 @@ Progress: [######░░░░░░░░░░░░░░] ~30% (v1.1, 6/~20 p
 | 06    | 02   | 7 min    | 2     | 6     |
 | 06    | 03   | ~15 min  | 2     | 0     |
 | 07    | 01   | 2 min    | 2     | 9     |
+| 07    | 02   | 3 min    | 3     | 2     |
 | 07    | 03   | 6 min    | 3     | 4     |
 
 *Updated after each plan completion*
@@ -52,6 +53,8 @@ v1.0 decisions archived to milestones/v1.0-ROADMAP.md.
 - Phase 9: All OKLCH design tokens must be pre-converted to sRGB hex before Phase 9 begins (use oklch.com)
 
 **v1.1 decisions made during execution:**
+- 07-02: GsdParseResult is a local class in gsd_parser.dart (not a shared model) — belongs to parser's contract, not the data model layer
+- 07-02: Test assertions use result.gsd.isEmpty (semantic) over equals(GsdData.empty) — GsdData lacks == override, semantic check is more appropriate
 - 07-03: Real temp git repos used in TDD tests (no mocking) — createTempGitRepo() helper creates actual git init + commit in systemTemp
 - 07-03: meta package added as explicit dependency (was transitive-only) — dart analyze requires direct dep for imported packages
 - 07-03: gitBinary parameter on all public git service functions — enables Homebrew git path configuration from AppConfig
