@@ -205,13 +205,13 @@ String? _firstMatch(RegExp pattern, String text) {
 /// research | planning | building | paused | done | archived
 String _deriveStatus(String raw) {
   final lower = raw.toLowerCase();
-  if (lower.contains('research')) return 'research';
-  if (lower.contains('plan')) return 'planning';
-  if (lower.contains('build') || lower.contains('progress')) return 'building';
-  if (lower.contains('pause')) return 'paused';
+  if (lower.contains('research')) { return 'research'; }
+  if (lower.contains('plan')) { return 'planning'; }
+  if (lower.contains('build') || lower.contains('progress')) { return 'building'; }
+  if (lower.contains('pause')) { return 'paused'; }
   if (lower.contains('done') ||
       lower.contains('complete') ||
-      lower.contains('finish')) return 'done';
-  if (lower.contains('archive')) return 'archived';
+      lower.contains('finish')) { return 'done'; }
+  if (lower.contains('archive')) { return 'archived'; }
   return lower.trim();
 }
