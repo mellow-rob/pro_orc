@@ -1,36 +1,68 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Pro Orc — Next.js Application
 
-## Getting Started
+The dashboard application for Project Orchestration.
 
-First, run the development server:
+## Development
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Scripts
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Start dev server (Turbopack) |
+| `npm run build` | Production build |
+| `npm run start` | Start production server |
+| `npm run lint` | ESLint |
+| `npm run test` | Vitest tests |
 
-## Learn More
+## Architecture
 
-To learn more about Next.js, take a look at the following resources:
+```
+app/
+├── page.tsx              # Dashboard page (SSR)
+├── layout.tsx            # Root layout
+├── globals.css           # Tailwind + n3urala1 theme
+├── actions.ts            # Server Actions (open Terminal/Finder)
+└── api/
+    ├── projects/[id]/    # Single project endpoint
+    └── events/           # SSE endpoint for live updates
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+components/
+├── codeProjectCard.tsx   # Card for code projects (git, GSD status)
+├── researchProjectCard.tsx # Card for research projects
+├── projectTabs.tsx       # Code / Research / Tools tab switching
+├── toolsPanel.tsx        # Claude tools inventory
+├── statusBadge.tsx       # GSD status badge
+└── ui/                   # shadcn/ui primitives
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+hooks/
+├── usePrivateProjects.ts # Client-side project filtering
+└── useProjectEvents.ts   # SSE EventSource hook
 
-## Deploy on Vercel
+lib/
+├── scanner.ts            # Filesystem project discovery
+├── parser.ts             # GSD/PROJECT.md parser
+├── git-reader.ts         # Git metadata extraction (simple-git)
+├── watcher.ts            # chokidar singleton watcher
+├── tools-scanner.ts      # Claude tools discovery (~/.claude/)
+├── paths.ts              # Base path configuration
+├── types.ts              # TypeScript types
+└── utils.ts              # Utility functions
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Stack
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Next.js 16 (App Router, Turbopack)
+- React 19
+- TypeScript 5
+- Tailwind CSS v4 (OKLCH colors, dark mode)
+- shadcn/ui
+- simple-git
+- chokidar v3 + SSE
+- Vitest

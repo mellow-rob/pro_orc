@@ -1,5 +1,7 @@
 # Pro Orc — Project Orchestration Dashboard
 
+> v1.0 shipped — 3,120 LOC TypeScript/TSX/CSS, discovers 22+ projects
+
 Local Next.js dashboard that scans `~/project_orchestration/` and displays all projects at a glance — GSD status, phase progress, git activity, and quick actions.
 
 ## What it does
@@ -17,7 +19,7 @@ Local Next.js dashboard that scans `~/project_orchestration/` and displays all p
 - **Tailwind CSS v4** (OKLCH colors, dark mode)
 - **shadcn/ui** (Card, Badge, Button, Progress, Tabs)
 - **simple-git** for git data extraction
-- **chokidar** for filesystem watching (planned)
+- **chokidar** for filesystem watching + SSE live updates
 
 ## Getting started
 
