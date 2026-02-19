@@ -58,7 +58,12 @@ Plans:
   3. Notion URL and project description are extracted from `PROJECT.md` for any project that has them
   4. Git reader returns last commit message, hash, and timestamp for a code project; concurrent calls complete within 5 seconds with a timeout wrapper in place
   5. GitHub remote URL is correctly extracted from `git remote get-url origin`
-**Plans**: TBD
+**Plans:** 4 plans
+Plans:
+- [ ] 07-01-PLAN.md — Data models + drift database setup (app config, project settings tables)
+- [ ] 07-02-PLAN.md — GSD parser (TDD): STATE.md, ROADMAP.md, PROJECT.md extraction
+- [ ] 07-03-PLAN.md — Git reader (TDD): last commit, GitHub URL, timeout, concurrency
+- [ ] 07-04-PLAN.md — Project scanner integration: directory scan + data assembly pipeline
 
 ### Phase 8: Reactive State
 **Goal**: Editing any `.planning/` file causes the in-memory project data to update within one second, without restarting the app — the full watcher-to-provider-to-UI invalidation chain works
@@ -113,7 +118,7 @@ Plans:
 | 4. Live Updates | v1.0 | 2/2 | Complete | 2026-02-17 |
 | 5. Claude Tools | v1.0 | 2/2 | Complete | 2026-02-17 |
 | 6. Native Foundation | v1.1 | 0/3 | Planning complete | - |
-| 7. Data Layer | v1.1 | 0/? | Not started | - |
+| 7. Data Layer | v1.1 | 0/4 | Planning complete | - |
 | 8. Reactive State | v1.1 | 0/? | Not started | - |
 | 9. Theme + UI Shell | v1.1 | 0/? | Not started | - |
 | 10. Card Widgets + Quick Actions | v1.1 | 0/? | Not started | - |
