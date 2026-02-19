@@ -81,7 +81,7 @@ Each task was committed atomically:
 1. **Task 1: TrayService, WindowGeometryService, main.dart wiring** - `5a0ab56` (feat)
 2. **Task 2: ShellScreen, GlowBorderShell, LaunchDialog** - `cb7c7c0` (feat)
 
-**Plan metadata:** (docs commit follows)
+**Plan metadata:** `1f71d19` (docs: complete tray/window/shell plan)
 
 ## Files Created/Modified
 
