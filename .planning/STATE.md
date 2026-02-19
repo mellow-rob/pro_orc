@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-19)
 
 **Core value:** Auf einen Blick sehen, wo jedes Projekt steht, was der nächste Schritt ist, und welche Tools zur Verfügung stehen — ohne Terminal-Hopping oder Notion-Suche.
-**Current focus:** Phase 7 — Data Layer (v1.1)
+**Current focus:** Phase 8 — Reactive State / Watcher Service (v1.1)
 
 ## Current Position
 
-Phase: 7 of 11 (Data Layer) — COMPLETE
-Plan: 4 of 4 complete (07-04 complete — project scanner service with TDD)
-Status: Phase 7 complete — Phase 8 (watcher service) next
-Last activity: 2026-02-19 — Phase 7, Plan 04 complete (project scanner service created)
+Phase: 8 of 11 (Watcher Service) — IN PROGRESS
+Plan: 1 of 3 complete (08-01 complete — WatcherService with 350ms debounce and integration tests)
+Status: Phase 8 in progress — 08-02 (watcherProvider Riverpod StreamProvider) next
+Last activity: 2026-02-19 — Phase 8, Plan 01 complete (WatcherService created)
 
-Progress: [#######░░░░░░░░░░░░░] ~35% (v1.1, 7/~20 plans complete)
+Progress: [########░░░░░░░░░░░░] ~40% (v1.1, 8/~20 plans complete)
 
 ## Performance Metrics
 
@@ -36,6 +36,7 @@ Progress: [#######░░░░░░░░░░░░░] ~35% (v1.1, 7/~20 pla
 | 07    | 02   | 3 min    | 3     | 2     |
 | 07    | 03   | 6 min    | 3     | 4     |
 | 07    | 04   | 3 min    | 3     | 2     |
+| 08    | 01   | 7 min    | 2     | 4     |
 
 *Updated after each plan completion*
 
@@ -51,6 +52,8 @@ v1.0 decisions archived to milestones/v1.0-ROADMAP.md.
 - Phase 6: AppDelegate.swift must return false from `applicationShouldTerminateAfterLastWindowClosed` or closing window quits app
 - Phase 7: Use `runInShell: true` on all `Process.run` calls — GUI app PATH does not include Homebrew git
 - Phase 8: `watcherProvider` uses `ref.keepAlive()` — never disposed; `projectsProvider` invalidates on watcher events
+- 08-01: WatcherService uses StreamController.broadcast() with permanent internal subscription — DirectoryWatcher.ready hangs without active listener; eager construction ensures ready is safely awaitable
+- 08-01: Debounce applied on StreamController broadcast stream, not directly on DirectoryWatcher.events — allows independent debounced subscriptions per caller
 - Phase 9: All OKLCH design tokens must be pre-converted to sRGB hex before Phase 9 begins (use oklch.com)
 
 **v1.1 decisions made during execution:**
@@ -80,10 +83,10 @@ v1.0 decisions archived to milestones/v1.0-ROADMAP.md.
 ### Blockers/Concerns
 
 - ~~Phase 6: `tray_manager` + `window_manager` version compatibility~~ — RESOLVED: tray_manager 0.5.2 + window_manager 0.5.1 both installed, flutter build macos succeeds
-- Phase 8: dart-lang/watcher#79 (isDirectory assertion crash) — check if fixed in current package version before building watcher service
+- ~~Phase 8: dart-lang/watcher#79 (isDirectory assertion crash)~~ — RESOLVED: Fixed in watcher 1.2.1; WatcherService also adds handleError defensive guard per locked decision
 
 ## Session Continuity
 
 Last session: 2026-02-19
-Stopped at: Completed 07-04-PLAN.md — project scanner service with TDD (27 tests passing, Phase 7 complete)
-Resume file: .planning/milestones/v1.1-phases/08-watcher/08-01-PLAN.md
+Stopped at: Completed 08-01-PLAN.md — WatcherService with StreamController.broadcast() re-broadcast pattern, 350ms debounce, 4 integration tests
+Resume file: .planning/milestones/v1.1-phases/08-watcher/08-02-PLAN.md
