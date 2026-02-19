@@ -9,12 +9,12 @@ See: .planning/PROJECT.md (updated 2026-02-19)
 
 ## Current Position
 
-Phase: 6 of 11 (Native Foundation)
-Plan: 3 of N (06-02 complete, continuing Phase 6)
-Status: Executing
-Last activity: 2026-02-19 — Phase 6, Plan 02 complete (tray/window behavior + glow border shell)
+Phase: 6 of 11 (Native Foundation) — COMPLETE
+Plan: 3 of 3 complete (06-03 complete — all NAT requirements verified in release .app)
+Status: Phase 6 complete — ready for Phase 7
+Last activity: 2026-02-19 — Phase 6, Plan 03 complete (release .app built and all NAT requirements human-verified)
 
-Progress: [###░░░░░░░░░░░░░░░░░] ~10% (v1.1, 2/~20 plans complete)
+Progress: [####░░░░░░░░░░░░░░░░] ~15% (v1.1, 3/~20 plans complete)
 
 ## Performance Metrics
 
@@ -24,13 +24,14 @@ Progress: [###░░░░░░░░░░░░░░░░░] ~10% (v1.1, 2
 - Total execution time: ~0.35 hours
 
 **v1.1 Velocity:**
-- Plans completed: 2
-- Average duration: ~10.5 min/plan
+- Plans completed: 3
+- Average duration: ~12 min/plan
 
 | Phase | Plan | Duration | Tasks | Files |
 |-------|------|----------|-------|-------|
 | 06    | 01   | 14 min   | 2     | 40    |
 | 06    | 02   | 7 min    | 2     | 6     |
+| 06    | 03   | ~15 min  | 2     | 0     |
 
 *Updated after each plan completion*
 
@@ -49,6 +50,8 @@ v1.0 decisions archived to milestones/v1.0-ROADMAP.md.
 - Phase 9: All OKLCH design tokens must be pre-converted to sRGB hex before Phase 9 begins (use oklch.com)
 
 **v1.1 decisions made during execution:**
+- 06-03: Release .app confirmed passing all NAT-01 through NAT-04 requirements — Phase 6 complete
+- 06-03: Both entitlement files verified sandbox=false in codesigned binary — two-entitlements-file trap successfully avoided
 - 06-01: Flutter installed via homebrew at `/opt/homebrew/share/flutter` (not `/Users/rob/code/flutter` as .zshrc expected) — update .zshrc or use full path
 - 06-01: Entitlement files are `DebugProfile.entitlements` / `Release.entitlements` (Flutter 3.41.1, no `Runner-` prefix)
 - 06-01: `applicationSupportsSecureRestorableState` must be kept in AppDelegate — Flutter build warns if removed
@@ -68,5 +71,5 @@ v1.0 decisions archived to milestones/v1.0-ROADMAP.md.
 ## Session Continuity
 
 Last session: 2026-02-19
-Stopped at: Phase 6, Plan 02 complete. Next: run /gsd:execute-phase 06 03
-Resume file: .planning/milestones/v1.1-phases/06-native-foundation/06-02-SUMMARY.md
+Stopped at: Phase 6, Plan 03 complete. Phase 6 (Native Foundation) fully complete. Next: run /gsd:execute-phase 07
+Resume file: .planning/milestones/v1.1-phases/06-native-foundation/06-03-SUMMARY.md
