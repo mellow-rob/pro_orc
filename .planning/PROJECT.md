@@ -3,7 +3,18 @@
 
 ## What This Is
 
-Lokale Next.js Web-App als persönliches Projekt-Management Dashboard. Scannt automatisch Projektordner (`~/project_orchestration/code/` und `~/project_orchestration/project research/`), zeigt GSD-Status und Fortschritt pro Projekt, listet installierte Claude Code Tools auf, und bietet Quick Actions zum Öffnen in Terminal/Finder/Notion. Echtzeit-Updates via chokidar + SSE. Nur localhost, kein Netzwerk, kein Auth — ein Single-User Power-Dashboard.
+Native macOS Flutter-App als persönliches Projekt-Management Dashboard. Scannt automatisch Projektordner (`~/project_orchestration/code/` und `~/project_orchestration/project research/`), zeigt GSD-Status und Fortschritt pro Projekt, listet installierte Claude Code Tools auf, und bietet Quick Actions zum Öffnen in Terminal/Finder/Notion. Menubar-Icon + Hauptfenster, Echtzeit File-Watching via dart:io. Nur lokal, kein Netzwerk, kein Auth — ein Single-User Power-Dashboard.
+
+## Current Milestone: v1.1 Flutter macOS Rewrite
+
+**Goal:** Kompletter Rewrite der Next.js Web-App als native macOS Flutter-Applikation mit voller v1.0 Feature-Parität.
+
+**Target features:**
+- Native macOS App mit Menubar-Icon + Hauptfenster
+- Komplett Dart-nativ: Filesystem-Scanning, Git-Parsing, File-Watching über dart:io
+- Volle Feature-Parität: Dashboard, Git-Status, GSD-Anzeige, Live-Updates, Tools-Panel, Quick Actions
+- n3urala1 Dark Theme 1:1 (OKLCH Cyan/Fuchsia, Glassmorphism)
+- Entwicklung auf `dev` Branch
 
 ## Core Value
 
@@ -24,7 +35,14 @@ Auf einen Blick sehen, wo jedes Projekt steht, was der nächste Schritt ist, und
 
 ### Active
 
-(Next milestone requirements defined via /gsd:new-milestone)
+- [ ] Native macOS Flutter App mit Menubar-Icon + Hauptfenster — v1.1
+- [ ] Dart-natives Filesystem-Scanning (code/ + project research/) — v1.1
+- [ ] Dart-natives Git-Reading (letzter Commit, Timestamp, Message) — v1.1
+- [ ] Dart-natives File-Watching mit Live-Updates — v1.1
+- [ ] GSD-Parser (STATE.md, ROADMAP.md, PROJECT.md) in Dart — v1.1
+- [ ] Card-Grid Dashboard mit n3urala1 Theme in Flutter — v1.1
+- [ ] Claude Tools Inventory in Flutter — v1.1
+- [ ] Quick Actions: Terminal.app, Finder, GitHub, Notion — v1.1
 
 ### Out of Scope
 
@@ -39,22 +57,25 @@ Auf einen Blick sehen, wo jedes Projekt steht, was der nächste Schritt ist, und
 
 ## Context
 
-- v1.0 shipped: 3,120 LOC TypeScript/TSX/CSS, 97 files
-- Tech stack: Next.js 16.1.6, React 19, TypeScript 5, Tailwind CSS v4, shadcn/ui, chokidar v3, simple-git
+- v1.0 shipped as Next.js web app: 3,120 LOC TypeScript/TSX/CSS, 97 files
+- v1.1 rewrites to Flutter/Dart as native macOS app
+- v1.0 reference implementation in `pro-orc/` (Next.js) — use as feature/logic reference
 - Dashboard discovers 22+ projects across code/ and research/ directories
 - n3urala1 dark theme: OKLCH colors, cyan primary, fuchsia accent, glassmorphism
-- Live updates circuit: chokidar → debounce → SSE → EventSource → re-fetch → card re-render
-- Tools panel: auto-discovers skills, MCP servers, plugins from ~/.claude/
-- Known tech debt: openNotionPage dead code, unused SSE event types (project:added/removed), dead type fields (branch/isDirty)
+- Flutter app lives in new directory (e.g. `pro-orc-flutter/` or `pro_orc/`)
+- Menubar integration via macOS-specific Flutter packages (e.g. tray_manager, macos_window_utils)
+- Git operations: dart process to call git CLI, or libgit2dart package
+- File watching: dart:io FileSystemEntity.watch() or watcher package
 
 ## Constraints
 
-- **Tech Stack**: Next.js 16.1.6 + React 19 + TypeScript 5 + Tailwind CSS v4.0 + shadcn/ui + lucide-react
-- **Deployment**: Nur localhost:3000
-- **Design**: Dark Mode first, kein Toggle in v1
-- **Datenquelle**: Filesystem + Git via simple-git (async), keine Datenbank
-- **Live Updates**: chokidar v3 (Singleton via instrumentation.ts) + SSE (ReadableStream Route Handler)
-- **Notion**: Nur ausgehende Links (kein API-Zugriff)
+- **Tech Stack**: Flutter 3.x + Dart 3.x, macOS target only (v1.1)
+- **Deployment**: Lokale macOS App (.app Bundle), kein App Store
+- **Design**: n3urala1 Dark Mode Theme, kein Toggle in v1.1
+- **Datenquelle**: Filesystem + Git via dart:io / git CLI, keine Datenbank
+- **Live Updates**: dart:io FileSystemEntity.watch() oder watcher package
+- **Notion**: Nur ausgehende Links (url_launcher)
+- **Branch**: Entwicklung auf `dev` Branch
 
 ## Key Decisions
 
@@ -71,5 +92,7 @@ Auf einen Blick sehen, wo jedes Projekt steht, was der nächste Schritt ist, und
 | n3urala1 OKLCH dark theme | Cyan primary, fuchsia accent, glassmorphism | ✓ Good — distinctive aesthetic |
 | SSE signal-only pattern | Events carry `{ type, projectId }`, browser re-fetches | ✓ Good — simple, no stale data |
 
+| Flutter macOS Rewrite statt inkrementelle Web-Features | Native Experience, Menubar, Performance; Flutter als Zukunftsbasis | — Pending |
+
 ---
-*Last updated: 2026-02-19 after v1.0 milestone*
+*Last updated: 2026-02-19 after v1.1 milestone start*

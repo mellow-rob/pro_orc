@@ -5,41 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-19)
 
 **Core value:** Auf einen Blick sehen, wo jedes Projekt steht, was der nächste Schritt ist, und welche Tools zur Verfügung stehen — ohne Terminal-Hopping oder Notion-Suche.
-**Current focus:** v1.0 MVP shipped — planning next milestone
+**Current focus:** v1.1 Flutter macOS Rewrite
 
 ## Current Position
 
-Milestone: v1.0 MVP — SHIPPED 2026-02-19
-Status: All 5 phases complete, 42/42 requirements satisfied
-Last activity: 2026-02-19 — v1.0 milestone archived
-
-Progress: [████████████████████] 100% (v1.0)
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-02-19 — Milestone v1.1 started
 
 ## Performance Metrics
 
-**Velocity:**
+**Velocity (v1.0):**
 - Total plans completed: 11
 - Average duration: 2.1min
 - Total execution time: 0.35 hours
 
-**By Phase:**
-
-| Phase | Plans | Total | Avg/Plan |
-|-------|-------|-------|----------|
-| 01-foundation | 3 | 8min | 2.7min |
-| 02-data-layer | 3 | 8min | 2.7min |
-| 03-static-dashboard | 2 | 3min | 1.5min |
-| 04-live-updates | 2 | 3min | 1.5min |
-
-**Recent Trend:**
-- Last 5 plans: 03-01 (1min), 03-02 (2min), 04-01 (2min), 04-02 (1min)
-- Trend: Consistent ~1-2min per plan
-
 *Updated after each plan completion*
-
-| Phase | Plans | Total | Avg/Plan |
-|-------|-------|-------|----------|
-| 05-claude-tools | 2 | 6min | 3min |
 
 ## Accumulated Context
 
@@ -60,10 +42,10 @@ None yet.
 
 ### Blockers/Concerns
 
-None — v1.0 blockers all resolved.
+None.
 
 ## Session Continuity
 
 Last session: 2026-02-19
-Stopped at: v1.0 milestone archived. Ready for /gsd:new-milestone.
+Stopped at: v1.1 milestone started. Defining requirements.
 Resume file: None
