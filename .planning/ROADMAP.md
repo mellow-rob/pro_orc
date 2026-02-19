@@ -42,7 +42,11 @@ See: milestones/v1.0-ROADMAP.md for full details
   2. Clicking the tray icon shows the main window; clicking again hides it
   3. Window position and size are restored to the previous session's values on next launch
   4. A `flutter build macos` release build can read a file from `~/project_orchestration/` without throwing a FileSystemException (sandbox disabled)
-**Plans**: TBD
+**Plans:** 3 plans
+Plans:
+- [ ] 06-01-PLAN.md — Flutter project scaffold + macOS native config (entitlements, AppDelegate, Info.plist, dependencies)
+- [ ] 06-02-PLAN.md — Tray service, window geometry persistence, glow border shell, launch-at-login
+- [ ] 06-03-PLAN.md — Release build verification + human verification of all NAT requirements
 
 ### Phase 7: Data Layer
 **Goal**: Pure Dart services can scan project directories, parse GSD planning files, and read git history — all verified with unit tests and without running the Flutter app
@@ -108,7 +112,7 @@ See: milestones/v1.0-ROADMAP.md for full details
 | 3. Static Dashboard | v1.0 | 2/2 | Complete | 2026-02-17 |
 | 4. Live Updates | v1.0 | 2/2 | Complete | 2026-02-17 |
 | 5. Claude Tools | v1.0 | 2/2 | Complete | 2026-02-17 |
-| 6. Native Foundation | v1.1 | 0/? | Not started | - |
+| 6. Native Foundation | v1.1 | 0/3 | Planning complete | - |
 | 7. Data Layer | v1.1 | 0/? | Not started | - |
 | 8. Reactive State | v1.1 | 0/? | Not started | - |
 | 9. Theme + UI Shell | v1.1 | 0/? | Not started | - |
