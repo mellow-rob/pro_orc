@@ -9,12 +9,12 @@ See: .planning/PROJECT.md (updated 2026-02-19)
 
 ## Current Position
 
-Phase: 7 of 11 (Data Layer) — IN PROGRESS
-Plan: 3 of 4 complete (07-03 complete — git reader service with TDD)
-Status: Phase 7 in progress — 07-04 project repository next
-Last activity: 2026-02-19 — Phase 7, Plan 03 complete (git reader service created)
+Phase: 7 of 11 (Data Layer) — COMPLETE
+Plan: 4 of 4 complete (07-04 complete — project scanner service with TDD)
+Status: Phase 7 complete — Phase 8 (watcher service) next
+Last activity: 2026-02-19 — Phase 7, Plan 04 complete (project scanner service created)
 
-Progress: [######░░░░░░░░░░░░░░] ~30% (v1.1, 6/~20 plans complete)
+Progress: [#######░░░░░░░░░░░░░] ~35% (v1.1, 7/~20 plans complete)
 
 ## Performance Metrics
 
@@ -35,6 +35,7 @@ Progress: [######░░░░░░░░░░░░░░] ~30% (v1.1, 6/~20 p
 | 07    | 01   | 2 min    | 2     | 9     |
 | 07    | 02   | 3 min    | 3     | 2     |
 | 07    | 03   | 6 min    | 3     | 4     |
+| 07    | 04   | 3 min    | 3     | 2     |
 
 *Updated after each plan completion*
 
@@ -57,6 +58,8 @@ v1.0 decisions archived to milestones/v1.0-ROADMAP.md.
 - 07-02: Test assertions use result.gsd.isEmpty (semantic) over equals(GsdData.empty) — GsdData lacks == override, semantic check is more appropriate
 - 07-03: Real temp git repos used in TDD tests (no mocking) — createTempGitRepo() helper creates actual git init + commit in systemTemp
 - 07-03: meta package added as explicit dependency (was transitive-only) — dart analyze requires direct dep for imported packages
+- 07-04: updateConfig() is a no-op if db row absent — call getConfig() first in tests to trigger insert-on-first-access before writing config
+- 07-04: ProjectScanner reads ignore patterns from DB even when scanDirOverride is provided — full config integration in override mode
 - 07-03: gitBinary parameter on all public git service functions — enables Homebrew git path configuration from AppConfig
 - 07-01: Generated app_database.g.dart committed to git (not gitignored) — avoids build_runner as prerequisite for every build
 - 07-01: AppDatabase accepts optional QueryExecutor — NativeDatabase.memory() injectable for unit tests without filesystem
@@ -82,5 +85,5 @@ v1.0 decisions archived to milestones/v1.0-ROADMAP.md.
 ## Session Continuity
 
 Last session: 2026-02-19
-Stopped at: Completed 07-03-PLAN.md — git reader service with TDD (14 tests passing)
-Resume file: .planning/milestones/v1.1-phases/07-data-layer/07-04-PLAN.md
+Stopped at: Completed 07-04-PLAN.md — project scanner service with TDD (27 tests passing, Phase 7 complete)
+Resume file: .planning/milestones/v1.1-phases/08-watcher/08-01-PLAN.md
