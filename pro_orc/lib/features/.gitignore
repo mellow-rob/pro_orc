@@ -1,0 +1,4 @@
+# Un-ignore the 'code' subdirectory — the root .gitignore has `code/` which
+# would otherwise match pro_orc/lib/features/code/
+!code/
+!code/**
