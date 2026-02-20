@@ -5,14 +5,14 @@
 See: .planning/PROJECT.md (updated 2026-02-19)
 
 **Core value:** Auf einen Blick sehen, wo jedes Projekt steht, was der nächste Schritt ist, und welche Tools zur Verfügung stehen — ohne Terminal-Hopping oder Notion-Suche.
-**Current focus:** Phase 9 — Theme + UI Shell (v1.1)
+**Current focus:** Phase 10 — Card Widgets + Quick Actions (v1.1)
 
 ## Current Position
 
-Phase: 9 of 11 (Theme + UI Shell) — IN PROGRESS
-Plan: 2 of N complete (09-02 complete — OrbBackground, GlassCard, NavigationRail shell, three tab placeholders, human-verified)
-Status: Phase 9 in progress
-Last activity: 2026-02-20 — Phase 9, Plan 02 complete (animated orbs, glassmorphism cards, three-tab NavigationRail, visual shell approved)
+Phase: 10 of 11 (Card Widgets + Quick Actions) — IN PROGRESS
+Plan: 1 of 4 complete (10-01 complete — Drift v2 schema, GsdData extensions, PhaseInfo, QuickActionsService, HiddenProjectsProvider)
+Status: Phase 10 in progress
+Last activity: 2026-02-20 — Phase 10, Plan 01 complete (data-layer foundations: schema migration, parser extensions, service, provider)
 
 Progress: [#########░░░░░░░░░░░] ~45% (v1.1, 9/~20 plans complete)
 
@@ -40,6 +40,7 @@ Progress: [#########░░░░░░░░░░░] ~45% (v1.1, 9/~20 plans c
 | 08    | 02   | 3 min    | 2     | 5     |
 | 09    | 01   | ~3 min   | 2     | 4     |
 | 09    | 02   | ~20 min  | 3     | 6     |
+| 10    | 01   | 4 min    | 2     | 10    |
 
 *Updated after each plan completion*
 
@@ -87,6 +88,10 @@ v1.0 decisions archived to milestones/v1.0-ROADMAP.md.
 - 06-02: `dart:ui` must be imported explicitly for `Size` and `Offset` types in window_geometry_service.dart
 - [Phase 08]: ConsumerStatefulWidget (not ConsumerWidget) for ShellScreen — WindowListener and TrayListener mixins require StatefulWidget lifecycle; ref available directly on ConsumerState
 - [Phase 08]: ref.listen in FutureProvider body for watcher-driven invalidation — listen registers side-effect callback without rebuild dependency; invalidateSelf() on hasValue triggers fresh scanAll()
+- 10-01: withDefault(const Constant(false)) for isHidden column — ensures server-side default in Drift migration, not clientDefault
+- 10-01: HiddenProjectsNotifier synchronous build() returning {} then async _loadFromDb() — sub-50ms flicker acceptable with local SQLite
+- 10-01: QuickActionsService is a flat class, no abstraction layer — extensible via new methods as needed (Claude Code, VS Code planned)
+- 10-01: GsdParser version regex matches first vN.N in STATE.md content — picks up milestone version from top of file
 
 ### Pending Todos
 
@@ -101,5 +106,5 @@ v1.0 decisions archived to milestones/v1.0-ROADMAP.md.
 ## Session Continuity
 
 Last session: 2026-02-20
-Stopped at: Completed 09-02-PLAN.md — OrbBackground (3 animated orbs, CustomPainter), GlassCard (BackdropFilter + BlendMode.src), ShellScreen rebuilt with NavigationRail + IndexedStack, human-verified visual shell
-Resume file: .planning/phases/09-theme-ui-shell/ (plan 09-02 complete, next: 09-03)
+Stopped at: Completed 10-01-PLAN.md — Drift v2 schema (isHidden), GsdData.version/phases/decisions, PhaseInfo model, GsdParser extended for ROADMAP.md phases + STATE.md decisions, QuickActionsService, HiddenProjectsProvider
+Resume file: .planning/phases/10-card-widgets-quick-actions/ (plan 10-01 complete, next: 10-02)
