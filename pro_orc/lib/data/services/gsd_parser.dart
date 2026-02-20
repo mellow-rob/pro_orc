@@ -245,28 +245,81 @@ Future<GsdParseResult> parseGsdData(String projectPath) async {
     }
   }
 
-  // Fallback: extract progress from STATE.md "Progress:" line
-  if (phaseProgress == null && stateContent != null) {
-    final progressLine = RegExp(r'^Progress:\s*(.+)$', multiLine: true)
-        .firstMatch(stateContent);
-    if (progressLine != null) {
-      final line = progressLine.group(1) ?? '';
-      // Try "N/M plans complete"
-      final fracMatch = _rProgressFraction.firstMatch(line);
-      if (fracMatch != null) {
-        plansCompleted = int.tryParse(fracMatch.group(1) ?? '');
-        plansTotal = int.tryParse(fracMatch.group(2) ?? '');
-        if (plansCompleted != null && plansTotal != null && plansTotal! > 0) {
-          phaseProgress = (plansCompleted! / plansTotal! * 100).round();
+  // Derive phasesCompleted/phasesTotal from phases list
+  int? phasesCompleted;
+  int? phasesTotal;
+  if (phases != null && phases.isNotEmpty) {
+    phasesTotal = phases.length;
+    phasesCompleted = phases.where((p) => p.status == 'complete').length;
+
+    // Derive phaseProgress from phases if still null
+    if (phaseProgress == null && phasesCompleted! > 0) {
+      phaseProgress = (phasesCompleted! / phasesTotal! * 100).round();
+    }
+  }
+
+  // Fallback: scan STATE.md for progress data
+  if (stateContent != null) {
+    // Try Progress/Fortschritt/Overall Progress lines
+    if (phaseProgress == null) {
+      final progressLine = RegExp(
+        r'^(?:\*\*)?(?:Overall )?(?:Progress|Fortschritt)(?:\*\*)?:?\s*(.+)$',
+        multiLine: true,
+        caseSensitive: false,
+      ).firstMatch(stateContent);
+      if (progressLine != null) {
+        final line = progressLine.group(1) ?? '';
+        // Try "N/M plans complete"
+        final fracMatch = _rProgressFraction.firstMatch(line);
+        if (fracMatch != null) {
+          plansCompleted ??= int.tryParse(fracMatch.group(1) ?? '');
+          plansTotal ??= int.tryParse(fracMatch.group(2) ?? '');
+          if (plansCompleted != null && plansTotal != null && plansTotal! > 0) {
+            phaseProgress = (plansCompleted! / plansTotal! * 100).round();
+          }
+        }
+        // Try "N/N phases" or "N/N Phasen"
+        if (phasesCompleted == null) {
+          final phasesFrac = RegExp(r'(\d+)/(\d+)\s+(?:phases?|Phasen)', caseSensitive: false)
+              .firstMatch(line);
+          if (phasesFrac != null) {
+            phasesCompleted = int.tryParse(phasesFrac.group(1) ?? '');
+            phasesTotal = int.tryParse(phasesFrac.group(2) ?? '');
+          }
+        }
+        // Try "~55%" or "100%"
+        if (phaseProgress == null) {
+          final pctMatch = _rProgressPercent.firstMatch(line);
+          if (pctMatch != null) {
+            phaseProgress = int.tryParse(pctMatch.group(1) ?? '');
+          }
         }
       }
-      // Try "~55%"
-      if (phaseProgress == null) {
-        final pctMatch = _rProgressPercent.firstMatch(line);
-        if (pctMatch != null) {
-          phaseProgress = int.tryParse(pctMatch.group(1) ?? '');
+    }
+
+    // Try "N of N" from currentPhase for phasesCompleted/Total
+    if (phasesCompleted == null && currentPhase != null) {
+      final ofMatch = RegExp(r'(\d+)\s+of\s+(\d+)', caseSensitive: false)
+          .firstMatch(currentPhase!);
+      if (ofMatch != null) {
+        final current = int.tryParse(ofMatch.group(1) ?? '');
+        final total = int.tryParse(ofMatch.group(2) ?? '');
+        if (current != null && total != null) {
+          phasesTotal = total;
+          // If status indicates complete, all phases done
+          if (status == 'done') {
+            phasesCompleted = total;
+          } else {
+            // Current phase is in progress, so completed = current - 1
+            phasesCompleted = (current - 1).clamp(0, total);
+          }
         }
       }
+    }
+
+    // Final fallback: if status is done/complete, assume 100%
+    if (phaseProgress == null && status == 'done') {
+      phaseProgress = 100;
     }
   }
 
@@ -313,6 +366,8 @@ Future<GsdParseResult> parseGsdData(String projectPath) async {
     phaseProgress: phaseProgress,
     notionUrl: notionUrl,
     description: description,
+    phasesCompleted: phasesCompleted,
+    phasesTotal: phasesTotal,
     plansCompleted: plansCompleted,
     plansTotal: plansTotal,
     version: version,
@@ -356,7 +411,8 @@ String _deriveStatus(String raw) {
   if (lower.contains('pause')) { return 'paused'; }
   if (lower.contains('done') ||
       lower.contains('complete') ||
-      lower.contains('finish')) { return 'done'; }
+      lower.contains('finish') ||
+      lower.contains('shipped')) { return 'done'; }
   if (lower.contains('archive')) { return 'archived'; }
   return lower.trim();
 }

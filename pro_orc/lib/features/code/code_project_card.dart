@@ -86,22 +86,15 @@ class _CodeProjectCardState extends ConsumerState<CodeProjectCard> {
       children: [
         // --- Title row ---
         _buildTitleRow(colors, isHidden),
-        const SizedBox(height: 8),
+        const SizedBox(height: 6),
 
-        // --- Status badge row ---
-        _buildStatusRow(colors),
-        const SizedBox(height: 10),
-
-        // --- Progress bar (conditional) ---
-        if (widget.project.gsd?.phaseProgress != null) ...[
-          _buildProgressBar(colors, widget.project.gsd!.phaseProgress!),
-          const SizedBox(height: 10),
-        ],
+        // --- GSD progress block (3 lines: status+%, bar, phases+plans) ---
+        _buildGsdBlock(colors),
 
         // --- Next step (conditional) ---
         if (widget.project.gsd?.nextStep != null) ...[
           _buildNextStep(colors, widget.project.gsd!.nextStep!),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
         ],
 
         // --- Description (conditional) ---
@@ -112,7 +105,6 @@ class _CodeProjectCardState extends ConsumerState<CodeProjectCard> {
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
           ),
-          const SizedBox(height: 8),
         ],
 
         const Spacer(),
@@ -174,34 +166,44 @@ class _CodeProjectCardState extends ConsumerState<CodeProjectCard> {
     );
   }
 
-  Widget _buildStatusRow(AppColors colors) {
-    return Row(
-      children: [
-        GsdStatusBadge(status: widget.project.gsd?.status),
-        if (widget.project.hasParseError) ...[
-          const SizedBox(width: 8),
-          Tooltip(
-            message: 'Parse error',
-            child: Icon(Icons.warning_amber, color: const Color(0xFFF59E0B), size: 14),
-          ),
-        ],
-      ],
-    );
-  }
+  Widget _buildGsdBlock(AppColors colors) {
+    final gsd = widget.project.gsd;
+    final progress = gsd?.phaseProgress;
 
-  Widget _buildProgressBar(AppColors colors, int progress) {
-    final clampedProgress = progress.clamp(0, 100);
-    return Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Expanded(
-          child: ClipRRect(
+        // Line 1: Status badge (left) + percent (right)
+        Row(
+          children: [
+            GsdStatusBadge(status: gsd?.status),
+            if (widget.project.hasParseError) ...[
+              const SizedBox(width: 8),
+              Tooltip(
+                message: 'Parse error',
+                child: Icon(Icons.warning_amber, color: const Color(0xFFF59E0B), size: 14),
+              ),
+            ],
+            const Spacer(),
+            if (progress != null)
+              Text(
+                '${progress.clamp(0, 100)}%',
+                style: TextStyle(color: colors.textSec, fontSize: 11),
+              ),
+          ],
+        ),
+
+        // Line 2: Progress bar
+        if (progress != null) ...[
+          const SizedBox(height: 6),
+          ClipRRect(
             borderRadius: BorderRadius.circular(4),
             child: Container(
               height: 6,
               color: colors.bgElev,
               child: FractionallySizedBox(
                 alignment: Alignment.centerLeft,
-                widthFactor: clampedProgress / 100.0,
+                widthFactor: progress.clamp(0, 100) / 100.0,
                 child: Container(
                   decoration: BoxDecoration(
                     color: colors.cyan,
@@ -211,12 +213,37 @@ class _CodeProjectCardState extends ConsumerState<CodeProjectCard> {
               ),
             ),
           ),
-        ),
-        const SizedBox(width: 8),
-        Text(
-          '$clampedProgress%',
-          style: TextStyle(color: colors.textSec, fontSize: 11),
-        ),
+        ],
+
+        // Line 3: Phases (left) + Plans (right)
+        if (gsd != null && !gsd.isEmpty) ...[
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              // Phases
+              if (gsd.phasesCompleted != null && gsd.phasesTotal != null)
+                Text(
+                  'Phasen ${gsd.phasesCompleted}/${gsd.phasesTotal}',
+                  style: TextStyle(color: colors.textSec, fontSize: 11),
+                )
+              else if (gsd.currentPhase != null)
+                Flexible(
+                  child: Text(
+                    gsd.currentPhase!,
+                    style: TextStyle(color: colors.textSec, fontSize: 11),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              const Spacer(),
+              // Plans
+              if (gsd.plansCompleted != null && gsd.plansTotal != null)
+                Text(
+                  'Plans ${gsd.plansCompleted}/${gsd.plansTotal}',
+                  style: TextStyle(color: colors.textSec, fontSize: 11),
+                ),
+            ],
+          ),
+        ],
       ],
     );
   }
