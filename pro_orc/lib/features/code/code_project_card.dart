@@ -1,10 +1,13 @@
+import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:pro_orc/data/db/app_database.dart';
 import 'package:pro_orc/data/models/project_model.dart';
 import 'package:pro_orc/features/shared/status_badge.dart';
 import 'package:pro_orc/features/shell/glass_card.dart';
 import 'package:pro_orc/providers/database_provider.dart';
 import 'package:pro_orc/providers/hidden_projects_provider.dart';
+import 'package:pro_orc/providers/projects_provider.dart';
 import 'package:pro_orc/theme/n3_colors.dart';
 
 /// Card widget for a single code project.
@@ -161,7 +164,7 @@ class _CodeProjectCardState extends ConsumerState<CodeProjectCard> {
               isHidden ? Icons.visibility_off : Icons.visibility,
               color: colors.textDim,
             ),
-            tooltip: isHidden ? 'Einblenden' : 'Ausblenden',
+            tooltip: isHidden ? 'Oeffentlich' : 'Privat',
             onPressed: () {
               ref.read(hiddenProjectsProvider.notifier).toggle(widget.project.folderId);
             },
@@ -305,14 +308,43 @@ class _CodeProjectCardState extends ConsumerState<CodeProjectCard> {
       items: [
         PopupMenuItem(
           value: 'toggle_hidden',
-          child: Text(isHidden ? 'Einblenden' : 'Ausblenden'),
+          child: Text(isHidden ? 'Oeffentlich' : 'Privat'),
+        ),
+        const PopupMenuItem(
+          value: 'move_research',
+          child: Text('Verschieben nach Research'),
+        ),
+        const PopupMenuItem(
+          value: 'ignore',
+          child: Text('Ignorieren'),
         ),
       ],
     ).then((value) {
       if (value == 'toggle_hidden') {
         ref.read(hiddenProjectsProvider.notifier).toggle(widget.project.folderId);
+      } else if (value == 'move_research') {
+        _setProjectType('research');
+      } else if (value == 'ignore') {
+        _ignoreProject();
       }
     });
+  }
+
+  Future<void> _setProjectType(String type) async {
+    final db = ref.read(appDatabaseProvider);
+    await db.upsertProjectSettings(
+      ProjectSettingsTableCompanion(
+        folderId: Value(widget.project.folderId),
+        projectType: Value(type),
+      ),
+    );
+    ref.invalidate(projectsProvider);
+  }
+
+  Future<void> _ignoreProject() async {
+    final db = ref.read(appDatabaseProvider);
+    await db.addIgnorePattern(widget.project.folderId);
+    ref.invalidate(projectsProvider);
   }
 }
 

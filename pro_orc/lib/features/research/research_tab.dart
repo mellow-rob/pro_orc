@@ -94,7 +94,6 @@ class _ResearchTabState extends ConsumerState<ResearchTab> {
 
     return Column(
       children: [
-        // --- Responsive grid ---
         Expanded(
           child: LayoutBuilder(
             builder: (context, constraints) {
@@ -104,39 +103,61 @@ class _ResearchTabState extends ConsumerState<ResearchTab> {
                 _ => 2,
               };
 
-              final gridItems = <Widget>[
-                ...visible.map(
-                  (p) => ResearchProjectCard(
-                    project: p,
-                    onTap: () => _showDetail(context, p),
-                  ),
-                ),
-                if (_showHidden)
-                  ...hidden.map(
-                    (p) => ResearchProjectCard(
-                      project: p,
-                      isHiddenCard: true,
-                      onTap: () => _showDetail(context, p),
+              final gridDelegate = SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: columns,
+                crossAxisSpacing: 12,
+                mainAxisSpacing: 12,
+                mainAxisExtent: 220,
+              );
+
+              if (_showHidden && hidden.isNotEmpty) {
+                return CustomScrollView(
+                  slivers: [
+                    SliverPadding(
+                      padding: const EdgeInsets.all(16),
+                      sliver: SliverGrid(
+                        delegate: SliverChildBuilderDelegate(
+                          (context, index) => ResearchProjectCard(
+                            project: visible[index],
+                            onTap: () => _showDetail(context, visible[index]),
+                          ),
+                          childCount: visible.length,
+                        ),
+                        gridDelegate: gridDelegate,
+                      ),
                     ),
-                  ),
-              ];
+                    SliverPadding(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                      sliver: SliverGrid(
+                        delegate: SliverChildBuilderDelegate(
+                          (context, index) => ResearchProjectCard(
+                            project: hidden[index],
+                            isHiddenCard: true,
+                            onTap: () => _showDetail(context, hidden[index]),
+                          ),
+                          childCount: hidden.length,
+                        ),
+                        gridDelegate: gridDelegate,
+                      ),
+                    ),
+                  ],
+                );
+              }
 
               return GridView.builder(
                 padding: const EdgeInsets.all(16),
-                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: columns,
-                  crossAxisSpacing: 12,
-                  mainAxisSpacing: 12,
-                  mainAxisExtent: 220,
+                gridDelegate: gridDelegate,
+                itemCount: visible.length,
+                itemBuilder: (context, index) => ResearchProjectCard(
+                  project: visible[index],
+                  onTap: () => _showDetail(context, visible[index]),
                 ),
-                itemCount: gridItems.length,
-                itemBuilder: (context, index) => gridItems[index],
               );
             },
           ),
         ),
 
-        // --- Hidden projects banner ---
+        // --- Private projects banner (always pinned at bottom) ---
         if (hidden.isNotEmpty)
           _buildHiddenBanner(colors, hidden.length),
       ],
@@ -160,12 +181,12 @@ class _ResearchTabState extends ConsumerState<ResearchTab> {
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  '$hiddenCount ${hiddenCount == 1 ? 'Projekt' : 'Projekte'} ausgeblendet',
+                  '$hiddenCount private ${hiddenCount == 1 ? 'Projekt' : 'Projekte'}',
                   style: TextStyle(color: colors.textSec, fontSize: 13),
                 ),
                 const Spacer(),
                 Text(
-                  _showHidden ? 'Ausblenden' : 'Alle zeigen',
+                  _showHidden ? 'Verbergen' : 'Anzeigen',
                   style: TextStyle(
                     color: colors.fuch,
                     fontSize: 13,

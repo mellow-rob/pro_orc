@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
 import 'package:path_provider/path_provider.dart';
@@ -33,19 +36,64 @@ class AppDatabase extends _$AppDatabase {
     );
   }
 
+  /// Default scan directory: ~/project_orchestration
+  static String get _defaultScanDir {
+    final home = Platform.environment['HOME'] ?? '/Users/rob';
+    return '$home/project_orchestration';
+  }
+
   /// Returns the single app config row (id=1), inserting defaults on first access.
+  /// If scanDir is empty, auto-populates with ~/project_orchestration.
   Future<AppConfigTableData> getConfig() async {
     final existing = await (select(appConfigTable)
           ..where((t) => t.id.equals(1)))
         .getSingleOrNull();
 
-    if (existing != null) return existing;
+    if (existing != null) {
+      // Auto-populate empty scanDir with default
+      if (existing.scanDir.isEmpty) {
+        await updateConfig(scanDir: _defaultScanDir);
+        return existing.copyWith(scanDir: _defaultScanDir);
+      }
+      return existing;
+    }
 
     await into(appConfigTable).insert(
-      const AppConfigTableCompanion(),
+      AppConfigTableCompanion(
+        scanDir: Value(_defaultScanDir),
+      ),
     );
 
     return (select(appConfigTable)..where((t) => t.id.equals(1))).getSingle();
+  }
+
+  /// Returns the list of scan directories from scanDir field.
+  /// Supports both legacy single-path strings and JSON arrays.
+  Future<List<String>> getScanDirs() async {
+    final config = await getConfig();
+    final raw = config.scanDir;
+    if (raw.isEmpty) return [_defaultScanDir];
+
+    // Try JSON array first
+    if (raw.startsWith('[')) {
+      try {
+        final decoded = jsonDecode(raw);
+        if (decoded is List) {
+          final dirs = decoded.whereType<String>().where((s) => s.isNotEmpty).toList();
+          return dirs.isEmpty ? [_defaultScanDir] : dirs;
+        }
+      } catch (_) {
+        // Fall through to single path
+      }
+    }
+
+    // Legacy single path
+    return [raw];
+  }
+
+  /// Saves the list of scan directories as a JSON array.
+  Future<void> setScanDirs(List<String> dirs) async {
+    await updateConfig(scanDir: jsonEncode(dirs));
   }
 
   /// Updates app config fields on id=1 row.
@@ -65,6 +113,22 @@ class AppDatabase extends _$AppDatabase {
             : const Value.absent(),
       ),
     );
+  }
+
+  /// Adds a pattern to the ignore list (if not already present).
+  Future<void> addIgnorePattern(String pattern) async {
+    final config = await getConfig();
+    List<String> patterns = [];
+    try {
+      final decoded = jsonDecode(config.ignoreListJson);
+      if (decoded is List) {
+        patterns = decoded.whereType<String>().toList();
+      }
+    } catch (_) {}
+    if (!patterns.contains(pattern)) {
+      patterns.add(pattern);
+      await updateConfig(ignoreListJson: jsonEncode(patterns));
+    }
   }
 
   /// Returns the set of folderIds marked as hidden.

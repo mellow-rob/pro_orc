@@ -91,24 +91,24 @@ class ProjectScanner {
   /// Throws [ScanDirectoryNotFoundError] when the scan directory does not
   /// exist or is configured as an empty string.
   Future<List<ProjectModel>> scanAll({String? scanDirOverride}) async {
-    // --- 1. Resolve scan directory ---
-    String scanDir;
+    // --- 1. Resolve scan directories ---
+    List<String> scanDirs;
     String gitBinary = 'git';
     List<String> ignorePatterns = [];
 
     if (scanDirOverride != null) {
-      scanDir = scanDirOverride;
+      scanDirs = [scanDirOverride];
     } else {
+      scanDirs = await _db.getScanDirs();
       final config = await _db.getConfig();
-      scanDir = config.scanDir;
       gitBinary = config.gitBinaryPath;
       ignorePatterns = _parseIgnoreList(config.ignoreListJson);
     }
 
-    if (scanDir.isEmpty) {
+    if (scanDirs.isEmpty) {
       throw ScanDirectoryNotFoundError(
-        path: scanDir,
-        message: 'Scan directory is not configured',
+        path: '',
+        message: 'No scan directories configured',
       );
     }
 
@@ -123,8 +123,16 @@ class ProjectScanner {
       }
     }
 
-    // --- 2. List project directories ---
-    final projectPaths = await _listProjectPaths(scanDir, ignorePatterns);
+    // --- 2. List project directories from all scan dirs ---
+    final projectPaths = <String>[];
+    for (final scanDir in scanDirs) {
+      try {
+        final paths = await _listProjectPaths(scanDir, ignorePatterns);
+        projectPaths.addAll(paths);
+      } catch (_) {
+        // Skip non-existent scan dirs gracefully
+      }
+    }
 
     if (projectPaths.isEmpty) {
       return [];
@@ -147,9 +155,9 @@ class ProjectScanner {
       final gsdResult = gsdResults[i];
       final gitData = gitResults[i];
 
-      // Resolve project type from DB
+      // Resolve project type: DB override > content heuristic
       final settings = await _db.getProjectSettings(folderId);
-      final projectType = settings?.projectType;
+      final projectType = settings?.projectType ?? await _inferType(path);
 
       // Nullify empty GSD/git data
       final gsd = (gsdResult.gsd.isEmpty) ? null : gsdResult.gsd;
@@ -181,6 +189,47 @@ class ProjectScanner {
   // Private helpers
   // ---------------------------------------------------------------------------
 
+  /// Code project marker files — if any exist, it's a code project.
+  static const _codeMarkers = [
+    'pubspec.yaml',
+    'package.json',
+    'Cargo.toml',
+    'go.mod',
+    'pom.xml',
+    'build.gradle',
+    'CMakeLists.txt',
+    'Makefile',
+    'requirements.txt',
+    'pyproject.toml',
+    'setup.py',
+    'Gemfile',
+    'mix.exs',
+    'composer.json',
+    'tsconfig.json',
+    'eslint.config.mjs',
+    'next.config.js',
+    'next.config.ts',
+    'vite.config.ts',
+    'vite.config.js',
+  ];
+
+  /// Infers project type from folder contents.
+  ///
+  /// Checks for common build/config files that indicate a code project.
+  /// If none are found, the project is classified as 'research'.
+  Future<String> _inferType(String projectPath) async {
+    for (final marker in _codeMarkers) {
+      final file = File(p.join(projectPath, marker));
+      if (await file.exists()) return 'code';
+    }
+    // Also check for common code subdirectories
+    for (final dir in ['lib', 'src', 'app', 'bin']) {
+      final d = Directory(p.join(projectPath, dir));
+      if (await d.exists()) return 'code';
+    }
+    return 'research';
+  }
+
   /// Lists all direct child directories of [scanDir], filtering out hidden
   /// directories and those matching [ignorePatterns].
   ///
@@ -200,21 +249,38 @@ class ProjectScanner {
     final paths = <String>[];
 
     await for (final entity in dir.list(recursive: false, followLinks: false)) {
-      // Directories only
       if (entity is! Directory) continue;
 
       final name = p.basename(entity.path);
-
-      // Skip hidden directories
       if (name.startsWith('.')) continue;
-
-      // Skip directories matching ignore patterns
       if (_matchesAnyIgnorePattern(name, ignorePatterns)) continue;
 
-      paths.add(entity.path);
+      // Check if this directory is itself a project (has .planning/ or .git/)
+      final isProject = await _isProjectDir(entity.path);
+      if (isProject) {
+        paths.add(entity.path);
+      } else {
+        // Not a project — scan its children one level deeper
+        await for (final child
+            in entity.list(recursive: false, followLinks: false)) {
+          if (child is! Directory) continue;
+          final childName = p.basename(child.path);
+          if (childName.startsWith('.')) continue;
+          if (_matchesAnyIgnorePattern(childName, ignorePatterns)) continue;
+          paths.add(child.path);
+        }
+      }
     }
 
     return paths;
+  }
+
+  /// Returns true if [path] looks like a project directory
+  /// (has .planning/ or .git/ subdirectory).
+  Future<bool> _isProjectDir(String path) async {
+    final planning = Directory(p.join(path, '.planning'));
+    final git = Directory(p.join(path, '.git'));
+    return await planning.exists() || await git.exists();
   }
 
   /// Returns true if [name] matches any of the [patterns].

@@ -109,7 +109,6 @@ class _CodeTabState extends ConsumerState<CodeTab> {
 
     return Column(
       children: [
-        // --- Responsive grid ---
         Expanded(
           child: LayoutBuilder(
             builder: (context, constraints) {
@@ -119,39 +118,62 @@ class _CodeTabState extends ConsumerState<CodeTab> {
                 _ => 2,
               };
 
-              final gridItems = <Widget>[
-                ...visible.map(
-                  (p) => CodeProjectCard(
-                    project: p,
-                    onTap: () => _showDetail(context, p),
-                  ),
-                ),
-                if (_showHidden)
-                  ...hidden.map(
-                    (p) => CodeProjectCard(
-                      project: p,
-                      isHiddenCard: true,
-                      onTap: () => _showDetail(context, p),
+              final gridDelegate = SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: columns,
+                crossAxisSpacing: 12,
+                mainAxisSpacing: 12,
+                mainAxisExtent: 300,
+              );
+
+              // If showing private projects, use CustomScrollView with both grids
+              if (_showHidden && hidden.isNotEmpty) {
+                return CustomScrollView(
+                  slivers: [
+                    SliverPadding(
+                      padding: const EdgeInsets.all(16),
+                      sliver: SliverGrid(
+                        delegate: SliverChildBuilderDelegate(
+                          (context, index) => CodeProjectCard(
+                            project: visible[index],
+                            onTap: () => _showDetail(context, visible[index]),
+                          ),
+                          childCount: visible.length,
+                        ),
+                        gridDelegate: gridDelegate,
+                      ),
                     ),
-                  ),
-              ];
+                    SliverPadding(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                      sliver: SliverGrid(
+                        delegate: SliverChildBuilderDelegate(
+                          (context, index) => CodeProjectCard(
+                            project: hidden[index],
+                            isHiddenCard: true,
+                            onTap: () => _showDetail(context, hidden[index]),
+                          ),
+                          childCount: hidden.length,
+                        ),
+                        gridDelegate: gridDelegate,
+                      ),
+                    ),
+                  ],
+                );
+              }
 
               return GridView.builder(
                 padding: const EdgeInsets.all(16),
-                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: columns,
-                  crossAxisSpacing: 12,
-                  mainAxisSpacing: 12,
-                  mainAxisExtent: 300,
+                gridDelegate: gridDelegate,
+                itemCount: visible.length,
+                itemBuilder: (context, index) => CodeProjectCard(
+                  project: visible[index],
+                  onTap: () => _showDetail(context, visible[index]),
                 ),
-                itemCount: gridItems.length,
-                itemBuilder: (context, index) => gridItems[index],
               );
             },
           ),
         ),
 
-        // --- Hidden projects banner ---
+        // --- Private projects banner (always pinned at bottom) ---
         if (hidden.isNotEmpty)
           _buildHiddenBanner(colors, hidden.length),
       ],
@@ -175,12 +197,12 @@ class _CodeTabState extends ConsumerState<CodeTab> {
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  '$hiddenCount ${hiddenCount == 1 ? 'Projekt' : 'Projekte'} ausgeblendet',
+                  '$hiddenCount private ${hiddenCount == 1 ? 'Projekt' : 'Projekte'}',
                   style: TextStyle(color: colors.textSec, fontSize: 13),
                 ),
                 const Spacer(),
                 Text(
-                  _showHidden ? 'Ausblenden' : 'Alle zeigen',
+                  _showHidden ? 'Verbergen' : 'Anzeigen',
                   style: TextStyle(
                     color: colors.cyan,
                     fontSize: 13,

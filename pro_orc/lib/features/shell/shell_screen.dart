@@ -12,6 +12,7 @@ import '../../window/window_geometry_service.dart';
 import '../claude_tools/claude_tools_tab.dart';
 import '../code/code_tab.dart';
 import '../research/research_tab.dart';
+import '../settings/settings_tab.dart';
 import 'glow_border_shell.dart';
 import 'launch_dialog.dart';
 import 'orb_background.dart';
@@ -48,10 +49,14 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
       await Future.delayed(const Duration(milliseconds: 500));
       if (!mounted) return;
       final enable = await showLaunchAtLoginDialog(context);
-      if (enable) {
-        await launchAtStartup.enable();
-      } else {
-        await launchAtStartup.disable();
+      try {
+        if (enable) {
+          await launchAtStartup.enable();
+        } else {
+          await launchAtStartup.disable();
+        }
+      } catch (_) {
+        // launch_at_startup plugin may fail in debug mode
       }
       await prefs.setBool('launch_at_login_asked', true);
     }
@@ -101,7 +106,9 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
                 children: [
                   NavigationRail(
                     backgroundColor: Colors.transparent,
-                    selectedIndex: _selectedIndex,
+                    // Settings (index 3) is in trailing, not in destinations
+                    selectedIndex:
+                        _selectedIndex < 3 ? _selectedIndex : null,
                     onDestinationSelected: (i) =>
                         setState(() => _selectedIndex = i),
                     labelType: NavigationRailLabelType.selected,
@@ -111,6 +118,27 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
                     unselectedIconTheme: IconThemeData(color: colors.textDim),
                     unselectedLabelTextStyle:
                         TextStyle(color: colors.textDim),
+                    trailing: Expanded(
+                      child: Align(
+                        alignment: Alignment.bottomCenter,
+                        child: Padding(
+                          padding: const EdgeInsets.only(bottom: 16),
+                          child: IconButton(
+                            icon: Icon(
+                              _selectedIndex == 3
+                                  ? Icons.settings
+                                  : Icons.settings_outlined,
+                              color: _selectedIndex == 3
+                                  ? colors.cyan
+                                  : colors.textDim,
+                              size: 24,
+                            ),
+                            onPressed: () =>
+                                setState(() => _selectedIndex = 3),
+                          ),
+                        ),
+                      ),
+                    ),
                     destinations: const [
                       NavigationRailDestination(
                         icon: Icon(Icons.code_outlined),
@@ -136,6 +164,7 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
                         CodeTab(),
                         ResearchTab(),
                         ClaudeToolsTab(),
+                        SettingsTab(),
                       ],
                     ),
                   ),
