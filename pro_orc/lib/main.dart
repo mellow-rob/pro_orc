@@ -7,6 +7,7 @@ import 'package:macos_window_utils/macos_window_utils.dart';
 import 'package:window_manager/window_manager.dart';
 
 import 'features/shell/shell_screen.dart';
+import 'theme/app_theme.dart';
 import 'window/window_geometry_service.dart';
 
 void main() async {
@@ -54,9 +55,7 @@ class ProOrcApp extends StatelessWidget {
     return MaterialApp(
       title: 'Pro Orc',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData.dark().copyWith(
-        scaffoldBackgroundColor: const Color(0xFF0A0A0F),
-      ),
+      theme: buildAppTheme(),
       home: const ShellScreen(),
     );
   }
