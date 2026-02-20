@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-19)
 ## Current Position
 
 Phase: 10 of 11 (Card Widgets + Quick Actions) — IN PROGRESS
-Plan: 2 of 4 complete (10-02 complete — GsdStatusBadge, CodeProjectCard, CodeTab responsive grid, EmptyState)
+Plan: 3 of 4 complete (10-03 complete — ResearchProjectCard, ResearchTab, ProjectDetailPanel modal)
 Status: Phase 10 in progress
-Last activity: 2026-02-20 — Phase 10, Plan 02 complete (card widgets + responsive grid: GsdStatusBadge, CodeProjectCard, CodeTab, EmptyState)
+Last activity: 2026-02-20 — Phase 10, Plan 03 complete (research tab + detail panel: ResearchProjectCard, ResearchTab, ProjectDetailPanel)
 
-Progress: [##########░░░░░░░░░░] ~50% (v1.1, 10/~20 plans complete)
+Progress: [###########░░░░░░░░░] ~55% (v1.1, 11/~20 plans complete)
 
 ## Performance Metrics
 
@@ -44,6 +44,7 @@ Progress: [##########░░░░░░░░░░] ~50% (v1.1, 10/~20 plans co
 
 *Updated after each plan completion*
 | 10    | 02   | 3 min    | 2     | 5     |
+| 10    | 03   | 4 min    | 2     | 4     |
 
 ## Accumulated Context
 
@@ -97,6 +98,9 @@ v1.0 decisions archived to milestones/v1.0-ROADMAP.md.
 - 10-02: CodeProjectCard is ConsumerStatefulWidget — _isHovered hover state requires StatefulWidget lifecycle
 - 10-02: GridView.builder with mainAxisExtent=300 (fixed height) — avoids overflow from multiline nextStep text in cards
 - 10-02: Sort executed at CodeTab level only, not in projectsProvider — preserves provider's sorting-agnostic contract
+- 10-03: Notion guard uses `gsd != null && gsd.notionUrl != null` (not `gsd?.notionUrl != null`) — avoids unnecessary_non_null_assertion analyzer warning
+- 10-03: ProjectDetailPanel uses showGeneralDialog (not showDialog) — enables custom slide-up + fade transitionBuilder
+- 10-03: ResearchTab mainAxisExtent=220 (vs CodeTab 300) — research cards have less content (no progress bar, no next step)
 
 ### Pending Todos
 
@@ -111,5 +115,5 @@ v1.0 decisions archived to milestones/v1.0-ROADMAP.md.
 ## Session Continuity
 
 Last session: 2026-02-20
-Stopped at: Completed 10-02-PLAN.md — GsdStatusBadge, CodeProjectCard (hover glow, right-click menu, quick actions), CodeTab responsive grid (2-4 cols, sort, hidden banner), EmptyState with scan-dir picker
-Resume file: .planning/phases/10-card-widgets-quick-actions/ (plan 10-02 complete, next: 10-03)
+Stopped at: Completed 10-03-PLAN.md — ResearchProjectCard (fuchsia, science icon), ResearchTab (responsive grid, alphabetical sort, hidden banner), ProjectDetailPanel (showGeneralDialog slide+fade, phases list, decisions list)
+Resume file: .planning/phases/10-card-widgets-quick-actions/ (plan 10-03 complete, next: 10-04)
