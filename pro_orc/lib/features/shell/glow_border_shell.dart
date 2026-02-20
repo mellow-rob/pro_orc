@@ -1,5 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:pro_orc/theme/n3_colors.dart';
 
+/// Full-window shell with outer glow shadows and no border.
+///
+/// Uses [AppColors] tokens from the ThemeExtension for all color references.
+/// No border is rendered (locked decision: no borders on cards/shells).
+/// All alpha values use `withValues(alpha:)` — `withOpacity` is deprecated.
 class GlowBorderShell extends StatelessWidget {
   const GlowBorderShell({super.key, required this.child});
 
@@ -7,21 +13,20 @@ class GlowBorderShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).extension<AppColors>()!;
+
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFF0A0A0F),
+        color: colors.bgBase,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(
-          color: const Color(0xFF00E5FF).withOpacity(0.1),
-        ),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF00E5FF).withOpacity(0.15),
+            color: colors.cyan.withValues(alpha: 0.15),
             blurRadius: 20,
             spreadRadius: 2,
           ),
           BoxShadow(
-            color: const Color(0xFFFF00FF).withOpacity(0.08),
+            color: colors.fuch.withValues(alpha: 0.08),
             blurRadius: 40,
             spreadRadius: 0,
           ),
