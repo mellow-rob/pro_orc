@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-19)
 
 **Core value:** Auf einen Blick sehen, wo jedes Projekt steht, was der nächste Schritt ist, und welche Tools zur Verfügung stehen — ohne Terminal-Hopping oder Notion-Suche.
-**Current focus:** Phase 8 — Reactive State / Watcher Service (v1.1)
+**Current focus:** Phase 9 — Theme + UI Shell (v1.1)
 
 ## Current Position
 
-Phase: 8 of 11 (Watcher Service) — IN PROGRESS
-Plan: 2 of 3 complete (08-02 complete — Riverpod provider chain: ProviderScope, watcherProvider, projectsProvider, ConsumerStatefulWidget ShellScreen)
-Status: Phase 8 in progress — all planned plans complete (phase may be done)
-Last activity: 2026-02-19 — Phase 8, Plan 02 complete (full watcher-to-UI chain wired)
+Phase: 9 of 11 (Theme + UI Shell) — IN PROGRESS
+Plan: 1 of N complete (09-01 complete — AppColors ThemeExtension, buildAppTheme factory, GlowBorderShell updated)
+Status: Phase 9 in progress
+Last activity: 2026-02-20 — Phase 9, Plan 01 complete (n3urala1 color token system, ThemeData factory, GlowBorderShell cleanup)
 
-Progress: [########░░░░░░░░░░░░] ~40% (v1.1, 8/~20 plans complete)
+Progress: [#########░░░░░░░░░░░] ~45% (v1.1, 9/~20 plans complete)
 
 ## Performance Metrics
 
@@ -24,8 +24,8 @@ Progress: [########░░░░░░░░░░░░] ~40% (v1.1, 8/~20 plans
 - Total execution time: ~0.35 hours
 
 **v1.1 Velocity:**
-- Plans completed: 3
-- Average duration: ~12 min/plan
+- Plans completed: 4
+- Average duration: ~10 min/plan
 
 | Phase | Plan | Duration | Tasks | Files |
 |-------|------|----------|-------|-------|
@@ -38,6 +38,7 @@ Progress: [########░░░░░░░░░░░░] ~40% (v1.1, 8/~20 plans
 | 07    | 04   | 3 min    | 3     | 2     |
 | 08    | 01   | 7 min    | 2     | 4     |
 | 08    | 02   | 3 min    | 2     | 5     |
+| 09    | 01   | ~3 min   | 2     | 4     |
 
 *Updated after each plan completion*
 
@@ -58,6 +59,9 @@ v1.0 decisions archived to milestones/v1.0-ROADMAP.md.
 - Phase 9: All OKLCH design tokens must be pre-converted to sRGB hex before Phase 9 begins (use oklch.com)
 
 **v1.1 decisions made during execution:**
+- 09-01: AppColors uses static const dark instance — avoids runtime allocation, const-propagates into ThemeData.extensions
+- 09-01: No border on GlowBorderShell (locked decision) — Border.all removed, only glow BoxShadow remains
+- 09-01: withValues(alpha:) replaces withOpacity() in all touched files — Flutter 3.38+ compliance
 - 07-02: GsdParseResult is a local class in gsd_parser.dart (not a shared model) — belongs to parser's contract, not the data model layer
 - 07-02: Test assertions use result.gsd.isEmpty (semantic) over equals(GsdData.empty) — GsdData lacks == override, semantic check is more appropriate
 - 07-03: Real temp git repos used in TDD tests (no mocking) — createTempGitRepo() helper creates actual git init + commit in systemTemp
@@ -82,6 +86,7 @@ v1.0 decisions archived to milestones/v1.0-ROADMAP.md.
 ### Pending Todos
 
 - Update ~/.zshrc to add `/opt/homebrew/share/flutter/bin` to PATH (or symlink to expected `/Users/rob/code/flutter`)
+- Fix pre-existing withOpacity() in launch_dialog.dart:12 (deferred from 09-01, see deferred-items.md)
 
 ### Blockers/Concerns
 
@@ -90,6 +95,6 @@ v1.0 decisions archived to milestones/v1.0-ROADMAP.md.
 
 ## Session Continuity
 
-Last session: 2026-02-19
-Stopped at: Completed 08-02-PLAN.md — Riverpod provider chain (ProviderScope, watcherProvider keepAlive, projectsProvider with watcher invalidation, ConsumerStatefulWidget ShellScreen showing live project count)
-Resume file: .planning/milestones/v1.1-phases/08-watcher/ (phase 08 plans complete)
+Last session: 2026-02-20
+Stopped at: Completed 09-01-PLAN.md — AppColors ThemeExtension (16 n3urala1 sRGB tokens), buildAppTheme() factory, GlowBorderShell using AppColors with no border and no withOpacity
+Resume file: .planning/phases/09-theme-ui-shell/ (plan 09-01 complete, next: 09-02)
