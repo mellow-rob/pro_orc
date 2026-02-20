@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-19)
 ## Current Position
 
 Phase: 10 of 11 (Card Widgets + Quick Actions) — IN PROGRESS
-Plan: 1 of 4 complete (10-01 complete — Drift v2 schema, GsdData extensions, PhaseInfo, QuickActionsService, HiddenProjectsProvider)
+Plan: 2 of 4 complete (10-02 complete — GsdStatusBadge, CodeProjectCard, CodeTab responsive grid, EmptyState)
 Status: Phase 10 in progress
-Last activity: 2026-02-20 — Phase 10, Plan 01 complete (data-layer foundations: schema migration, parser extensions, service, provider)
+Last activity: 2026-02-20 — Phase 10, Plan 02 complete (card widgets + responsive grid: GsdStatusBadge, CodeProjectCard, CodeTab, EmptyState)
 
-Progress: [#########░░░░░░░░░░░] ~45% (v1.1, 9/~20 plans complete)
+Progress: [##########░░░░░░░░░░] ~50% (v1.1, 10/~20 plans complete)
 
 ## Performance Metrics
 
@@ -43,6 +43,7 @@ Progress: [#########░░░░░░░░░░░] ~45% (v1.1, 9/~20 plans c
 | 10    | 01   | 4 min    | 2     | 10    |
 
 *Updated after each plan completion*
+| 10    | 02   | 3 min    | 2     | 5     |
 
 ## Accumulated Context
 
@@ -92,6 +93,10 @@ v1.0 decisions archived to milestones/v1.0-ROADMAP.md.
 - 10-01: HiddenProjectsNotifier synchronous build() returning {} then async _loadFromDb() — sub-50ms flicker acceptable with local SQLite
 - 10-01: QuickActionsService is a flat class, no abstraction layer — extensible via new methods as needed (Claude Code, VS Code planned)
 - 10-01: GsdParser version regex matches first vN.N in STATE.md content — picks up milestone version from top of file
+- 10-02: features/.gitignore with !code/ negation required — root .gitignore 'code/' pattern silently ignored features/code/ directory
+- 10-02: CodeProjectCard is ConsumerStatefulWidget — _isHovered hover state requires StatefulWidget lifecycle
+- 10-02: GridView.builder with mainAxisExtent=300 (fixed height) — avoids overflow from multiline nextStep text in cards
+- 10-02: Sort executed at CodeTab level only, not in projectsProvider — preserves provider's sorting-agnostic contract
 
 ### Pending Todos
 
@@ -106,5 +111,5 @@ v1.0 decisions archived to milestones/v1.0-ROADMAP.md.
 ## Session Continuity
 
 Last session: 2026-02-20
-Stopped at: Completed 10-01-PLAN.md — Drift v2 schema (isHidden), GsdData.version/phases/decisions, PhaseInfo model, GsdParser extended for ROADMAP.md phases + STATE.md decisions, QuickActionsService, HiddenProjectsProvider
-Resume file: .planning/phases/10-card-widgets-quick-actions/ (plan 10-01 complete, next: 10-02)
+Stopped at: Completed 10-02-PLAN.md — GsdStatusBadge, CodeProjectCard (hover glow, right-click menu, quick actions), CodeTab responsive grid (2-4 cols, sort, hidden banner), EmptyState with scan-dir picker
+Resume file: .planning/phases/10-card-widgets-quick-actions/ (plan 10-02 complete, next: 10-03)
