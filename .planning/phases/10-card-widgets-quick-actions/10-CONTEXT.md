@@ -52,7 +52,7 @@ Live-Projekt-Karten mit allen v1.0-Datenfeldern im Code- und Research-Tab, Quick
 - Nur vorhandene Links anzeigen (kein GitHub-Button wenn kein Remote)
 - Darstellungsart und Position: Claude's Discretion (passend zum Karten-Design und Platz)
 - Erweiterbar designen — später kommen weitere Actions hinzu
-- System-Standard-Terminal öffnen (nicht hardcoded Terminal.app)
+- Terminal.app öffnen (user approved — kein System-Standard, hardcoded Terminal.app)
 
 ### Karten-Interaktionen
 - Klick auf Karte öffnet Detail-Ansicht mit allen GSD-Daten (volle Beschreibung, alle Phasen, Roadmap-Übersicht, Decisions)
