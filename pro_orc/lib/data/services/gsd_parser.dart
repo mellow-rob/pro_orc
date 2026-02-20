@@ -44,6 +44,10 @@ final _rNextStepPlain = RegExp(r'^Next Step:\s*(.+)$', multiLine: true);
 // STATE.md — Version (first vN.N or vN.N.N occurrence)
 final _rVersion = RegExp(r'v(\d+\.\d+(?:\.\d+)?)', caseSensitive: false);
 
+// STATE.md — Progress line: "Progress: ... ~55%" or "N/~M plans complete"
+final _rProgressPercent = RegExp(r'~?(\d+)%');
+final _rProgressFraction = RegExp(r'(\d+)/~?(\d+)\s+plans?\s+complete', caseSensitive: false);
+
 // STATE.md — Decisions section
 final _rDecisionSection = RegExp(
   r'### Decisions\s*\n([\s\S]*?)(?:\n### |\n## |$)',
@@ -155,13 +159,28 @@ Future<GsdParseResult> parseGsdData(String projectPath) async {
 
   if (roadmapContent != null) {
     try {
+      // Try plan checkboxes first: - [x] NN-NN-PLAN
       final done = _rPlanDone.allMatches(roadmapContent).length;
       final pending = _rPlanPending.allMatches(roadmapContent).length;
       final total = done + pending;
-      if (total > 0) {
+      if (total > 0 && done > 0) {
         plansCompleted = done;
         plansTotal = total;
         phaseProgress = (done / total * 100).round();
+      }
+
+      // Fallback: count phase-level checkboxes - [x] **Phase N:
+      if (phaseProgress == null) {
+        final phaseDone = RegExp(r'^- \[[xX]\]\s+\*?\*?Phase\s+\d+', multiLine: true)
+            .allMatches(roadmapContent).length;
+        final phasePending = RegExp(r'^- \[ \]\s+\*?\*?Phase\s+\d+', multiLine: true)
+            .allMatches(roadmapContent).length;
+        final phaseTotal = phaseDone + phasePending;
+        if (phaseTotal > 0 && phaseDone > 0) {
+          plansCompleted = phaseDone;
+          plansTotal = phaseTotal;
+          phaseProgress = (phaseDone / phaseTotal * 100).round();
+        }
       }
 
       // Extract phase list from ### Phase N: Name headings
@@ -223,6 +242,31 @@ Future<GsdParseResult> parseGsdData(String projectPath) async {
       }
     } catch (_) {
       hasParseError = true;
+    }
+  }
+
+  // Fallback: extract progress from STATE.md "Progress:" line
+  if (phaseProgress == null && stateContent != null) {
+    final progressLine = RegExp(r'^Progress:\s*(.+)$', multiLine: true)
+        .firstMatch(stateContent);
+    if (progressLine != null) {
+      final line = progressLine.group(1) ?? '';
+      // Try "N/M plans complete"
+      final fracMatch = _rProgressFraction.firstMatch(line);
+      if (fracMatch != null) {
+        plansCompleted = int.tryParse(fracMatch.group(1) ?? '');
+        plansTotal = int.tryParse(fracMatch.group(2) ?? '');
+        if (plansCompleted != null && plansTotal != null && plansTotal! > 0) {
+          phaseProgress = (plansCompleted! / plansTotal! * 100).round();
+        }
+      }
+      // Try "~55%"
+      if (phaseProgress == null) {
+        final pctMatch = _rProgressPercent.firstMatch(line);
+        if (pctMatch != null) {
+          phaseProgress = int.tryParse(pctMatch.group(1) ?? '');
+        }
+      }
     }
   }
 
