@@ -10,9 +10,9 @@ See: .planning/PROJECT.md (updated 2026-02-19)
 ## Current Position
 
 Phase: 9 of 11 (Theme + UI Shell) — IN PROGRESS
-Plan: 1 of N complete (09-01 complete — AppColors ThemeExtension, buildAppTheme factory, GlowBorderShell updated)
+Plan: 2 of N complete (09-02 complete — OrbBackground, GlassCard, NavigationRail shell, three tab placeholders, human-verified)
 Status: Phase 9 in progress
-Last activity: 2026-02-20 — Phase 9, Plan 01 complete (n3urala1 color token system, ThemeData factory, GlowBorderShell cleanup)
+Last activity: 2026-02-20 — Phase 9, Plan 02 complete (animated orbs, glassmorphism cards, three-tab NavigationRail, visual shell approved)
 
 Progress: [#########░░░░░░░░░░░] ~45% (v1.1, 9/~20 plans complete)
 
@@ -39,6 +39,7 @@ Progress: [#########░░░░░░░░░░░] ~45% (v1.1, 9/~20 plans c
 | 08    | 01   | 7 min    | 2     | 4     |
 | 08    | 02   | 3 min    | 2     | 5     |
 | 09    | 01   | ~3 min   | 2     | 4     |
+| 09    | 02   | ~20 min  | 3     | 6     |
 
 *Updated after each plan completion*
 
@@ -62,6 +63,10 @@ v1.0 decisions archived to milestones/v1.0-ROADMAP.md.
 - 09-01: AppColors uses static const dark instance — avoids runtime allocation, const-propagates into ThemeData.extensions
 - 09-01: No border on GlowBorderShell (locked decision) — Border.all removed, only glow BoxShadow remains
 - 09-01: withValues(alpha:) replaces withOpacity() in all touched files — Flutter 3.38+ compliance
+- 09-02: OrbBackground placed as Positioned.fill OUTSIDE Scaffold in Stack — orbs bleed behind NavigationRail and all tabs
+- 09-02: BackdropFilter blendMode: BlendMode.src eliminates white halo artifact on dark glassmorphism cards
+- 09-02: Three AnimationControllers with different durations (18s/23s/28s) create natural desync without explicit phase offsets
+- 09-02: RepaintBoundary wraps CustomPaint — isolates orb animation repaints from parent widget tree
 - 07-02: GsdParseResult is a local class in gsd_parser.dart (not a shared model) — belongs to parser's contract, not the data model layer
 - 07-02: Test assertions use result.gsd.isEmpty (semantic) over equals(GsdData.empty) — GsdData lacks == override, semantic check is more appropriate
 - 07-03: Real temp git repos used in TDD tests (no mocking) — createTempGitRepo() helper creates actual git init + commit in systemTemp
@@ -96,5 +101,5 @@ v1.0 decisions archived to milestones/v1.0-ROADMAP.md.
 ## Session Continuity
 
 Last session: 2026-02-20
-Stopped at: Completed 09-01-PLAN.md — AppColors ThemeExtension (16 n3urala1 sRGB tokens), buildAppTheme() factory, GlowBorderShell using AppColors with no border and no withOpacity
-Resume file: .planning/phases/09-theme-ui-shell/ (plan 09-01 complete, next: 09-02)
+Stopped at: Completed 09-02-PLAN.md — OrbBackground (3 animated orbs, CustomPainter), GlassCard (BackdropFilter + BlendMode.src), ShellScreen rebuilt with NavigationRail + IndexedStack, human-verified visual shell
+Resume file: .planning/phases/09-theme-ui-shell/ (plan 09-02 complete, next: 09-03)
