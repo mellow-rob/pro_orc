@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import '../models/gsd_data.dart';
+import '../models/phase_info.dart';
 
 export '../models/gsd_data.dart';
 
@@ -40,9 +41,29 @@ final _rNextStep = RegExp(r'^\*\*Next Step:\*\*\s*(.+)$', multiLine: true);
 final _rNextStepDE = RegExp(r'^\*\*Nächster Schritt:\*\*\s*(.+)$', multiLine: true);
 final _rNextStepPlain = RegExp(r'^Next Step:\s*(.+)$', multiLine: true);
 
+// STATE.md — Version (first vN.N or vN.N.N occurrence)
+final _rVersion = RegExp(r'v(\d+\.\d+(?:\.\d+)?)', caseSensitive: false);
+
+// STATE.md — Decisions section
+final _rDecisionSection = RegExp(
+  r'### Decisions\s*\n([\s\S]*?)(?:\n### |\n## |$)',
+  multiLine: true,
+);
+final _rDecisionBullet = RegExp(r'^- (.+)$', multiLine: true);
+
 // ROADMAP.md — Plan checkboxes
 final _rPlanDone = RegExp(r'^- \[[xX]\]\s+\d+-\d+-PLAN', multiLine: true);
 final _rPlanPending = RegExp(r'^- \[ \]\s+\d+-\d+-PLAN', multiLine: true);
+
+// ROADMAP.md — Phase headings: "### Phase N: Name"
+final _rPhaseEntry = RegExp(
+  r'###\s+Phase\s+(\d+):\s+(.+?)$',
+  multiLine: true,
+);
+// Matches "N/N plans complete" in a phase block
+final _rPhaseComplete = RegExp(r'\b(\d+)/(\d+)\s+plans?\s+complete', caseSensitive: false);
+// Matches "**Plans:** N plans" in a phase block
+final _rPhasePlanCount = RegExp(r'\*\*Plans:\*\*\s*(\d+)\s+plans?', caseSensitive: false);
 
 // PROJECT.md — Notion URL
 final _rNotion = RegExp(r'<!--\s*notion:\s*(https?://[^\s>]+)\s*-->', caseSensitive: false);
@@ -91,6 +112,8 @@ Future<GsdParseResult> parseGsdData(String projectPath) async {
   String? currentPhase;
   String? status;
   String? nextStep;
+  String? version;
+  List<String>? decisions;
 
   if (stateContent != null) {
     try {
@@ -103,6 +126,22 @@ Future<GsdParseResult> parseGsdData(String projectPath) async {
           _firstMatch(_rNextStep, stateContent) ??
           _firstMatch(_rNextStepDE, stateContent) ??
           _firstMatch(_rNextStepPlain, stateContent);
+
+      // Extract version (first vN.N occurrence)
+      final vMatch = _rVersion.firstMatch(stateContent);
+      version = vMatch != null ? 'v${vMatch.group(1)}' : null;
+
+      // Extract decisions from ### Decisions section
+      final sectionMatch = _rDecisionSection.firstMatch(stateContent);
+      if (sectionMatch != null) {
+        final sectionText = sectionMatch.group(1) ?? '';
+        final bullets = _rDecisionBullet
+            .allMatches(sectionText)
+            .map((m) => m.group(1)!.trim())
+            .where((s) => s.isNotEmpty)
+            .toList();
+        if (bullets.isNotEmpty) decisions = bullets;
+      }
     } catch (_) {
       hasParseError = true;
     }
@@ -112,6 +151,7 @@ Future<GsdParseResult> parseGsdData(String projectPath) async {
   int? plansCompleted;
   int? plansTotal;
   int? phaseProgress;
+  List<PhaseInfo>? phases;
 
   if (roadmapContent != null) {
     try {
@@ -122,6 +162,64 @@ Future<GsdParseResult> parseGsdData(String projectPath) async {
         plansCompleted = done;
         plansTotal = total;
         phaseProgress = (done / total * 100).round();
+      }
+
+      // Extract phase list from ### Phase N: Name headings
+      final phaseMatches = _rPhaseEntry.allMatches(roadmapContent).toList();
+      if (phaseMatches.isNotEmpty) {
+        final phaseList = <PhaseInfo>[];
+        for (var i = 0; i < phaseMatches.length; i++) {
+          final match = phaseMatches[i];
+          final number = int.tryParse(match.group(1) ?? '') ?? 0;
+          final name = match.group(2)?.trim() ?? '';
+
+          // Extract the text block between this phase heading and the next
+          final start = match.end;
+          final end = (i + 1 < phaseMatches.length)
+              ? phaseMatches[i + 1].start
+              : roadmapContent.length;
+          final block = roadmapContent.substring(start, end);
+
+          // Determine plan counts from block
+          int pc = 0, pt = 0;
+          final completeMatch = _rPhaseComplete.firstMatch(block);
+          if (completeMatch != null) {
+            pc = int.tryParse(completeMatch.group(1) ?? '') ?? 0;
+            pt = int.tryParse(completeMatch.group(2) ?? '') ?? 0;
+          } else {
+            // Count checkboxes within block
+            final doneCount = _rPlanDone.allMatches(block).length;
+            final pendingCount = _rPlanPending.allMatches(block).length;
+            pc = doneCount;
+            pt = doneCount + pendingCount;
+            // Fallback: check "**Plans:** N plans" line
+            if (pt == 0) {
+              final countMatch = _rPhasePlanCount.firstMatch(block);
+              if (countMatch != null) {
+                pt = int.tryParse(countMatch.group(1) ?? '') ?? 0;
+              }
+            }
+          }
+
+          // Determine status
+          String phaseStatus;
+          if (pc > 0 && pc >= pt && pt > 0) {
+            phaseStatus = 'complete';
+          } else if (pc > 0 || block.toLowerCase().contains('in progress')) {
+            phaseStatus = 'in_progress';
+          } else {
+            phaseStatus = 'not_started';
+          }
+
+          phaseList.add(PhaseInfo(
+            number: number,
+            name: name,
+            status: phaseStatus,
+            plansCompleted: pc,
+            plansTotal: pt,
+          ));
+        }
+        if (phaseList.isNotEmpty) phases = phaseList;
       }
     } catch (_) {
       hasParseError = true;
@@ -173,6 +271,9 @@ Future<GsdParseResult> parseGsdData(String projectPath) async {
     description: description,
     plansCompleted: plansCompleted,
     plansTotal: plansTotal,
+    version: version,
+    phases: phases,
+    decisions: decisions,
   );
 
   return GsdParseResult(

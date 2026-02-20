@@ -364,12 +364,28 @@ class $ProjectSettingsTableTable extends ProjectSettingsTable
     type: DriftSqlType.dateTime,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _isHiddenMeta = const VerificationMeta(
+    'isHidden',
+  );
+  @override
+  late final GeneratedColumn<bool> isHidden = GeneratedColumn<bool>(
+    'is_hidden',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_hidden" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     folderId,
     projectType,
     displayName,
     typeSetAt,
+    isHidden,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -415,6 +431,12 @@ class $ProjectSettingsTableTable extends ProjectSettingsTable
         typeSetAt.isAcceptableOrUnknown(data['type_set_at']!, _typeSetAtMeta),
       );
     }
+    if (data.containsKey('is_hidden')) {
+      context.handle(
+        _isHiddenMeta,
+        isHidden.isAcceptableOrUnknown(data['is_hidden']!, _isHiddenMeta),
+      );
+    }
     return context;
   }
 
@@ -443,6 +465,10 @@ class $ProjectSettingsTableTable extends ProjectSettingsTable
         DriftSqlType.dateTime,
         data['${effectivePrefix}type_set_at'],
       ),
+      isHidden: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_hidden'],
+      )!,
     );
   }
 
@@ -458,11 +484,13 @@ class ProjectSettingsTableData extends DataClass
   final String? projectType;
   final String? displayName;
   final DateTime? typeSetAt;
+  final bool isHidden;
   const ProjectSettingsTableData({
     required this.folderId,
     this.projectType,
     this.displayName,
     this.typeSetAt,
+    required this.isHidden,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -477,6 +505,7 @@ class ProjectSettingsTableData extends DataClass
     if (!nullToAbsent || typeSetAt != null) {
       map['type_set_at'] = Variable<DateTime>(typeSetAt);
     }
+    map['is_hidden'] = Variable<bool>(isHidden);
     return map;
   }
 
@@ -492,6 +521,7 @@ class ProjectSettingsTableData extends DataClass
       typeSetAt: typeSetAt == null && nullToAbsent
           ? const Value.absent()
           : Value(typeSetAt),
+      isHidden: Value(isHidden),
     );
   }
 
@@ -505,6 +535,7 @@ class ProjectSettingsTableData extends DataClass
       projectType: serializer.fromJson<String?>(json['projectType']),
       displayName: serializer.fromJson<String?>(json['displayName']),
       typeSetAt: serializer.fromJson<DateTime?>(json['typeSetAt']),
+      isHidden: serializer.fromJson<bool>(json['isHidden']),
     );
   }
   @override
@@ -515,6 +546,7 @@ class ProjectSettingsTableData extends DataClass
       'projectType': serializer.toJson<String?>(projectType),
       'displayName': serializer.toJson<String?>(displayName),
       'typeSetAt': serializer.toJson<DateTime?>(typeSetAt),
+      'isHidden': serializer.toJson<bool>(isHidden),
     };
   }
 
@@ -523,11 +555,13 @@ class ProjectSettingsTableData extends DataClass
     Value<String?> projectType = const Value.absent(),
     Value<String?> displayName = const Value.absent(),
     Value<DateTime?> typeSetAt = const Value.absent(),
+    bool? isHidden,
   }) => ProjectSettingsTableData(
     folderId: folderId ?? this.folderId,
     projectType: projectType.present ? projectType.value : this.projectType,
     displayName: displayName.present ? displayName.value : this.displayName,
     typeSetAt: typeSetAt.present ? typeSetAt.value : this.typeSetAt,
+    isHidden: isHidden ?? this.isHidden,
   );
   ProjectSettingsTableData copyWithCompanion(
     ProjectSettingsTableCompanion data,
@@ -541,6 +575,7 @@ class ProjectSettingsTableData extends DataClass
           ? data.displayName.value
           : this.displayName,
       typeSetAt: data.typeSetAt.present ? data.typeSetAt.value : this.typeSetAt,
+      isHidden: data.isHidden.present ? data.isHidden.value : this.isHidden,
     );
   }
 
@@ -550,14 +585,15 @@ class ProjectSettingsTableData extends DataClass
           ..write('folderId: $folderId, ')
           ..write('projectType: $projectType, ')
           ..write('displayName: $displayName, ')
-          ..write('typeSetAt: $typeSetAt')
+          ..write('typeSetAt: $typeSetAt, ')
+          ..write('isHidden: $isHidden')
           ..write(')'))
         .toString();
   }
 
   @override
   int get hashCode =>
-      Object.hash(folderId, projectType, displayName, typeSetAt);
+      Object.hash(folderId, projectType, displayName, typeSetAt, isHidden);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -565,7 +601,8 @@ class ProjectSettingsTableData extends DataClass
           other.folderId == this.folderId &&
           other.projectType == this.projectType &&
           other.displayName == this.displayName &&
-          other.typeSetAt == this.typeSetAt);
+          other.typeSetAt == this.typeSetAt &&
+          other.isHidden == this.isHidden);
 }
 
 class ProjectSettingsTableCompanion
@@ -574,12 +611,14 @@ class ProjectSettingsTableCompanion
   final Value<String?> projectType;
   final Value<String?> displayName;
   final Value<DateTime?> typeSetAt;
+  final Value<bool> isHidden;
   final Value<int> rowid;
   const ProjectSettingsTableCompanion({
     this.folderId = const Value.absent(),
     this.projectType = const Value.absent(),
     this.displayName = const Value.absent(),
     this.typeSetAt = const Value.absent(),
+    this.isHidden = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   ProjectSettingsTableCompanion.insert({
@@ -587,6 +626,7 @@ class ProjectSettingsTableCompanion
     this.projectType = const Value.absent(),
     this.displayName = const Value.absent(),
     this.typeSetAt = const Value.absent(),
+    this.isHidden = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : folderId = Value(folderId);
   static Insertable<ProjectSettingsTableData> custom({
@@ -594,6 +634,7 @@ class ProjectSettingsTableCompanion
     Expression<String>? projectType,
     Expression<String>? displayName,
     Expression<DateTime>? typeSetAt,
+    Expression<bool>? isHidden,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -601,6 +642,7 @@ class ProjectSettingsTableCompanion
       if (projectType != null) 'project_type': projectType,
       if (displayName != null) 'display_name': displayName,
       if (typeSetAt != null) 'type_set_at': typeSetAt,
+      if (isHidden != null) 'is_hidden': isHidden,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -610,6 +652,7 @@ class ProjectSettingsTableCompanion
     Value<String?>? projectType,
     Value<String?>? displayName,
     Value<DateTime?>? typeSetAt,
+    Value<bool>? isHidden,
     Value<int>? rowid,
   }) {
     return ProjectSettingsTableCompanion(
@@ -617,6 +660,7 @@ class ProjectSettingsTableCompanion
       projectType: projectType ?? this.projectType,
       displayName: displayName ?? this.displayName,
       typeSetAt: typeSetAt ?? this.typeSetAt,
+      isHidden: isHidden ?? this.isHidden,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -636,6 +680,9 @@ class ProjectSettingsTableCompanion
     if (typeSetAt.present) {
       map['type_set_at'] = Variable<DateTime>(typeSetAt.value);
     }
+    if (isHidden.present) {
+      map['is_hidden'] = Variable<bool>(isHidden.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -649,6 +696,7 @@ class ProjectSettingsTableCompanion
           ..write('projectType: $projectType, ')
           ..write('displayName: $displayName, ')
           ..write('typeSetAt: $typeSetAt, ')
+          ..write('isHidden: $isHidden, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -862,6 +910,7 @@ typedef $$ProjectSettingsTableTableCreateCompanionBuilder =
       Value<String?> projectType,
       Value<String?> displayName,
       Value<DateTime?> typeSetAt,
+      Value<bool> isHidden,
       Value<int> rowid,
     });
 typedef $$ProjectSettingsTableTableUpdateCompanionBuilder =
@@ -870,6 +919,7 @@ typedef $$ProjectSettingsTableTableUpdateCompanionBuilder =
       Value<String?> projectType,
       Value<String?> displayName,
       Value<DateTime?> typeSetAt,
+      Value<bool> isHidden,
       Value<int> rowid,
     });
 
@@ -899,6 +949,11 @@ class $$ProjectSettingsTableTableFilterComposer
 
   ColumnFilters<DateTime> get typeSetAt => $composableBuilder(
     column: $table.typeSetAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isHidden => $composableBuilder(
+    column: $table.isHidden,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -931,6 +986,11 @@ class $$ProjectSettingsTableTableOrderingComposer
     column: $table.typeSetAt,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<bool> get isHidden => $composableBuilder(
+    column: $table.isHidden,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$ProjectSettingsTableTableAnnotationComposer
@@ -957,6 +1017,9 @@ class $$ProjectSettingsTableTableAnnotationComposer
 
   GeneratedColumn<DateTime> get typeSetAt =>
       $composableBuilder(column: $table.typeSetAt, builder: (column) => column);
+
+  GeneratedColumn<bool> get isHidden =>
+      $composableBuilder(column: $table.isHidden, builder: (column) => column);
 }
 
 class $$ProjectSettingsTableTableTableManager
@@ -1006,12 +1069,14 @@ class $$ProjectSettingsTableTableTableManager
                 Value<String?> projectType = const Value.absent(),
                 Value<String?> displayName = const Value.absent(),
                 Value<DateTime?> typeSetAt = const Value.absent(),
+                Value<bool> isHidden = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ProjectSettingsTableCompanion(
                 folderId: folderId,
                 projectType: projectType,
                 displayName: displayName,
                 typeSetAt: typeSetAt,
+                isHidden: isHidden,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -1020,12 +1085,14 @@ class $$ProjectSettingsTableTableTableManager
                 Value<String?> projectType = const Value.absent(),
                 Value<String?> displayName = const Value.absent(),
                 Value<DateTime?> typeSetAt = const Value.absent(),
+                Value<bool> isHidden = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ProjectSettingsTableCompanion.insert(
                 folderId: folderId,
                 projectType: projectType,
                 displayName: displayName,
                 typeSetAt: typeSetAt,
+                isHidden: isHidden,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

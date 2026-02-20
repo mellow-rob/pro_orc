@@ -1,3 +1,5 @@
+import 'package:pro_orc/data/models/phase_info.dart';
+
 class GsdData {
   final String? status; // 'research'|'planning'|'building'|'paused'|'done'|'archived'
   final String? currentPhase; // e.g. "3 of 5 (API Layer)"
@@ -9,6 +11,9 @@ class GsdData {
   final int? phasesTotal;
   final int? plansCompleted;
   final int? plansTotal;
+  final String? version;
+  final List<PhaseInfo>? phases;
+  final List<String>? decisions;
 
   const GsdData({
     this.status,
@@ -21,6 +26,9 @@ class GsdData {
     this.phasesTotal,
     this.plansCompleted,
     this.plansTotal,
+    this.version,
+    this.phases,
+    this.decisions,
   });
 
   static const empty = GsdData();

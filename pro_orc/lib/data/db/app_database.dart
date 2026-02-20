@@ -12,7 +12,16 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? e]) : super(e ?? _connect());
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
+
+  @override
+  MigrationStrategy get migration => MigrationStrategy(
+    onUpgrade: (m, from, to) async {
+      if (from < 2) {
+        await m.addColumn(projectSettingsTable, projectSettingsTable.isHidden);
+      }
+    },
+  );
 
   static QueryExecutor _connect() {
     return driftDatabase(
@@ -56,6 +65,14 @@ class AppDatabase extends _$AppDatabase {
             : const Value.absent(),
       ),
     );
+  }
+
+  /// Returns the set of folderIds marked as hidden.
+  Future<Set<String>> getHiddenProjectIds() async {
+    final rows = await (select(projectSettingsTable)
+          ..where((t) => t.isHidden.equals(true)))
+        .get();
+    return rows.map((r) => r.folderId).toSet();
   }
 
   /// Returns project settings for a given folderId, or null if not found.
