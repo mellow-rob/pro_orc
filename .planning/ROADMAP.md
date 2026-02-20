@@ -102,7 +102,12 @@ Plans:
   3. Quick action buttons open the correct app: Terminal.app opens to the project path, Finder reveals the folder, GitHub URL opens in the default browser, Notion URL opens in the default browser
   4. Private/visible toggle on a card hides it from the grid for the session without affecting other cards
   5. Editing a project's `STATE.md` causes its card to update within one second without restarting the app
-**Plans**: TBD
+**Plans:** 4 plans
+Plans:
+- [ ] 10-01-PLAN.md — Data foundation: Drift migration (isHidden), GsdData version field, QuickActionsService, HiddenProjectsProvider, url_launcher + file_selector deps
+- [ ] 10-02-PLAN.md — Code tab: CodeProjectCard, GsdStatusBadge, responsive grid, sort, hidden filter, banner, empty state
+- [ ] 10-03-PLAN.md — Research tab: ResearchProjectCard, ResearchTab grid, ProjectDetailPanel modal
+- [ ] 10-04-PLAN.md — Human verification of all Phase 10 features
 
 ### Phase 11: Claude Tools Panel
 **Goal**: The Claude Tools tab displays auto-discovered Skills, MCP servers, and Plugins from `~/.claude/` with name, type, and description for each tool
@@ -127,5 +132,5 @@ Plans:
 | 7. Data Layer | v1.1 | 0/4 | Planning complete | - |
 | 8. Reactive State | v1.1 | Complete    | 2026-02-19 | - |
 | 9. Theme + UI Shell | v1.1 | 0/2 | Planning complete | - |
-| 10. Card Widgets + Quick Actions | v1.1 | 0/? | Not started | - |
+| 10. Card Widgets + Quick Actions | v1.1 | 0/4 | Planning complete | - |
 | 11. Claude Tools Panel | v1.1 | 0/? | Not started | - |
