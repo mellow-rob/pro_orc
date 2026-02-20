@@ -6,10 +6,15 @@ import 'package:tray_manager/tray_manager.dart';
 import 'package:window_manager/window_manager.dart';
 
 import '../../providers/projects_provider.dart';
+import '../../theme/n3_colors.dart';
 import '../../tray/tray_service.dart';
 import '../../window/window_geometry_service.dart';
+import '../claude_tools/claude_tools_tab.dart';
+import '../code/code_tab.dart';
+import '../research/research_tab.dart';
 import 'glow_border_shell.dart';
 import 'launch_dialog.dart';
+import 'orb_background.dart';
 
 class ShellScreen extends ConsumerStatefulWidget {
   const ShellScreen({super.key});
@@ -22,6 +27,7 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
     with WindowListener, TrayListener {
   late final TrayService _trayService;
   final WindowGeometryService _geometryService = WindowGeometryService();
+  int _selectedIndex = 0;
 
   @override
   void initState() {
@@ -77,64 +83,67 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
 
   @override
   Widget build(BuildContext context) {
-    final projectsAsync = ref.watch(projectsProvider);
+    // Keep projectsProvider alive for the reactive watcher chain.
+    // Unused local variable intentional — provider must be watched.
+    ref.watch(projectsProvider);
+
+    final colors = Theme.of(context).extension<AppColors>()!;
 
     return GlowBorderShell(
-      child: Scaffold(
-        backgroundColor: const Color(0xFF0A0A0F),
-        body: Padding(
-          padding: const EdgeInsets.only(top: 30),
-          child: Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text(
-                  'Pro Orc',
-                  style: TextStyle(
-                    color: Color(0xFF00E5FF),
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 1.2,
+      child: Stack(
+        children: [
+          const Positioned.fill(child: OrbBackground()),
+          Scaffold(
+            backgroundColor: Colors.transparent,
+            body: Padding(
+              padding: const EdgeInsets.only(top: 30),
+              child: Row(
+                children: [
+                  NavigationRail(
+                    backgroundColor: Colors.transparent,
+                    selectedIndex: _selectedIndex,
+                    onDestinationSelected: (i) =>
+                        setState(() => _selectedIndex = i),
+                    labelType: NavigationRailLabelType.selected,
+                    minWidth: 80,
+                    selectedIconTheme: IconThemeData(color: colors.cyan),
+                    selectedLabelTextStyle: TextStyle(color: colors.cyan),
+                    unselectedIconTheme: IconThemeData(color: colors.textDim),
+                    unselectedLabelTextStyle:
+                        TextStyle(color: colors.textDim),
+                    destinations: const [
+                      NavigationRailDestination(
+                        icon: Icon(Icons.code_outlined),
+                        selectedIcon: Icon(Icons.code),
+                        label: Text('Code'),
+                      ),
+                      NavigationRailDestination(
+                        icon: Icon(Icons.science_outlined),
+                        selectedIcon: Icon(Icons.science),
+                        label: Text('Research'),
+                      ),
+                      NavigationRailDestination(
+                        icon: Icon(Icons.smart_toy_outlined),
+                        selectedIcon: Icon(Icons.smart_toy),
+                        label: Text('Claude Tools'),
+                      ),
+                    ],
                   ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Project Orchestration Dashboard',
-                  style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.7),
-                    fontSize: 14,
+                  Expanded(
+                    child: IndexedStack(
+                      index: _selectedIndex,
+                      children: const [
+                        CodeTab(),
+                        ResearchTab(),
+                        ClaudeToolsTab(),
+                      ],
+                    ),
                   ),
-                ),
-                const SizedBox(height: 4),
-                // Show live project count from provider
-                switch (projectsAsync) {
-                  AsyncData(:final value) => Text(
-                      '${value.length} projects discovered',
-                      style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.4),
-                        fontSize: 12,
-                      ),
-                    ),
-                  AsyncError(:final error) => Text(
-                      'Error: $error',
-                      style: const TextStyle(
-                        color: Color(0xFFFF4081),
-                        fontSize: 12,
-                      ),
-                    ),
-                  _ => const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Color(0xFF00E5FF),
-                      ),
-                    ),
-                },
-              ],
+                ],
+              ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }
