@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pro_orc/data/models/project_model.dart';
 import 'package:pro_orc/features/code/code_project_card.dart';
 import 'package:pro_orc/features/shared/empty_state.dart';
+import 'package:pro_orc/features/shared/project_detail_panel.dart';
 import 'package:pro_orc/features/shell/glass_card.dart';
 import 'package:pro_orc/providers/database_provider.dart';
 import 'package:pro_orc/providers/hidden_projects_provider.dart';
@@ -210,6 +211,6 @@ class _CodeTabState extends ConsumerState<CodeTab> {
   }
 
   void _showDetail(BuildContext context, ProjectModel project) {
-    // TODO(10-03): wire showProjectDetail once project_detail_panel.dart is created
+    showProjectDetail(context, project);
   }
 }

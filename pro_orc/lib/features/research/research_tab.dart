@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pro_orc/data/models/project_model.dart';
 import 'package:pro_orc/features/research/research_project_card.dart';
 import 'package:pro_orc/features/shared/empty_state.dart';
+import 'package:pro_orc/features/shared/project_detail_panel.dart';
 import 'package:pro_orc/features/shell/glass_card.dart';
 import 'package:pro_orc/providers/hidden_projects_provider.dart';
 import 'package:pro_orc/providers/projects_provider.dart';
@@ -186,6 +187,6 @@ class _ResearchTabState extends ConsumerState<ResearchTab> {
   }
 
   void _showDetail(BuildContext context, ProjectModel project) {
-    // Wired in Task 2 — project detail panel will be imported here
+    showProjectDetail(context, project);
   }
 }
