@@ -117,7 +117,11 @@ Plans:
   1. Claude Tools tab lists all Skills found in `~/.claude/` with correct name and description
   2. MCP servers and Plugins are discovered and displayed in distinct sections with their type labeled
   3. Adding a new skill file to `~/.claude/` and refreshing the app causes it to appear in the Tools tab
-**Plans**: TBD
+**Plans:** 3 plans
+Plans:
+- [ ] 11-01-PLAN.md — Data models, ClaudeToolsScanner service, AppColors amber/emerald/violet tokens
+- [ ] 11-02-PLAN.md — Riverpod providers (watcher + data) + ClaudeToolsTab UI with card widgets
+- [ ] 11-03-PLAN.md — Human verification of all Phase 11 features
 
 ## Progress
 
@@ -133,4 +137,4 @@ Plans:
 | 8. Reactive State | v1.1 | Complete    | 2026-02-19 | - |
 | 9. Theme + UI Shell | v1.1 | 0/2 | Planning complete | - |
 | 10. Card Widgets + Quick Actions | v1.1 | Complete    | 2026-02-23 | - |
-| 11. Claude Tools Panel | v1.1 | 0/? | Not started | - |
+| 11. Claude Tools Panel | v1.1 | 0/3 | Planning complete | - |
