@@ -22,6 +22,15 @@ class AppColors extends ThemeExtension<AppColors> {
     required this.textSec,
     required this.textDim,
     required this.textDis,
+    required this.amberHi,
+    required this.amber,
+    required this.amberLo,
+    required this.emeraldHi,
+    required this.emerald,
+    required this.emeraldLo,
+    required this.violetHi,
+    required this.violet,
+    required this.violetLo,
   });
 
   // Background layers
@@ -48,6 +57,21 @@ class AppColors extends ThemeExtension<AppColors> {
   final Color textDim; // oklch(0.50 0.010 255)
   final Color textDis; // oklch(0.38 0.008 255)
 
+  // Amber (Skills accent)
+  final Color amberHi; // oklch(0.85 0.17 85) bright
+  final Color amber; // oklch(0.78 0.17 85) mid
+  final Color amberLo; // oklch(0.65 0.15 85) dim
+
+  // Emerald (Plugins accent)
+  final Color emeraldHi; // oklch(0.80 0.17 160) bright
+  final Color emerald; // oklch(0.72 0.19 155) mid
+  final Color emeraldLo; // oklch(0.60 0.17 155) dim
+
+  // Violet (MCP accent)
+  final Color violetHi; // oklch(0.75 0.20 290) bright
+  final Color violet; // oklch(0.68 0.24 290) mid
+  final Color violetLo; // oklch(0.55 0.22 290) dim
+
   /// Canonical dark theme instance with all 16 pre-computed sRGB tokens.
   static const AppColors dark = AppColors(
     // Background layers
@@ -73,6 +97,21 @@ class AppColors extends ThemeExtension<AppColors> {
     textSec: Color(0xFF9399A0),
     textDim: Color(0xFF5F6469),
     textDis: Color(0xFF404347),
+
+    // Amber (Skills accent)
+    amberHi: Color(0xFFFFCA28),
+    amber: Color(0xFFF5B800),
+    amberLo: Color(0xFFC49000),
+
+    // Emerald (Plugins accent)
+    emeraldHi: Color(0xFF34D399),
+    emerald: Color(0xFF00C97A),
+    emeraldLo: Color(0xFF009E5E),
+
+    // Violet (MCP accent)
+    violetHi: Color(0xFFB28DF5),
+    violet: Color(0xFF9D68F0),
+    violetLo: Color(0xFF7C42D4),
   );
 
   @override
@@ -93,6 +132,15 @@ class AppColors extends ThemeExtension<AppColors> {
     Color? textSec,
     Color? textDim,
     Color? textDis,
+    Color? amberHi,
+    Color? amber,
+    Color? amberLo,
+    Color? emeraldHi,
+    Color? emerald,
+    Color? emeraldLo,
+    Color? violetHi,
+    Color? violet,
+    Color? violetLo,
   }) {
     return AppColors(
       bgBase: bgBase ?? this.bgBase,
@@ -111,6 +159,15 @@ class AppColors extends ThemeExtension<AppColors> {
       textSec: textSec ?? this.textSec,
       textDim: textDim ?? this.textDim,
       textDis: textDis ?? this.textDis,
+      amberHi: amberHi ?? this.amberHi,
+      amber: amber ?? this.amber,
+      amberLo: amberLo ?? this.amberLo,
+      emeraldHi: emeraldHi ?? this.emeraldHi,
+      emerald: emerald ?? this.emerald,
+      emeraldLo: emeraldLo ?? this.emeraldLo,
+      violetHi: violetHi ?? this.violetHi,
+      violet: violet ?? this.violet,
+      violetLo: violetLo ?? this.violetLo,
     );
   }
 
@@ -134,6 +191,15 @@ class AppColors extends ThemeExtension<AppColors> {
       textSec: Color.lerp(textSec, other.textSec, t)!,
       textDim: Color.lerp(textDim, other.textDim, t)!,
       textDis: Color.lerp(textDis, other.textDis, t)!,
+      amberHi: Color.lerp(amberHi, other.amberHi, t)!,
+      amber: Color.lerp(amber, other.amber, t)!,
+      amberLo: Color.lerp(amberLo, other.amberLo, t)!,
+      emeraldHi: Color.lerp(emeraldHi, other.emeraldHi, t)!,
+      emerald: Color.lerp(emerald, other.emerald, t)!,
+      emeraldLo: Color.lerp(emeraldLo, other.emeraldLo, t)!,
+      violetHi: Color.lerp(violetHi, other.violetHi, t)!,
+      violet: Color.lerp(violet, other.violet, t)!,
+      violetLo: Color.lerp(violetLo, other.violetLo, t)!,
     );
   }
 }
