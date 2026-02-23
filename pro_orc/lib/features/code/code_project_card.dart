@@ -86,25 +86,15 @@ class _CodeProjectCardState extends ConsumerState<CodeProjectCard> {
       children: [
         // --- Title row ---
         _buildTitleRow(colors, isHidden),
-        const SizedBox(height: 6),
+        const SizedBox(height: 10),
 
         // --- GSD progress block (3 lines: status+%, bar, phases+plans) ---
         _buildGsdBlock(colors),
 
         // --- Next step (conditional) ---
         if (widget.project.gsd?.nextStep != null) ...[
+          const SizedBox(height: 10),
           _buildNextStep(colors, widget.project.gsd!.nextStep!),
-          const SizedBox(height: 6),
-        ],
-
-        // --- Description (conditional) ---
-        if (widget.project.description != null) ...[
-          Text(
-            widget.project.description!,
-            style: TextStyle(color: colors.textSec, fontSize: 12),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
         ],
 
         const Spacer(),
@@ -195,7 +185,7 @@ class _CodeProjectCardState extends ConsumerState<CodeProjectCard> {
 
         // Line 2: Progress bar
         if (progress != null) ...[
-          const SizedBox(height: 6),
+          const SizedBox(height: 8),
           ClipRRect(
             borderRadius: BorderRadius.circular(4),
             child: Container(
@@ -215,32 +205,20 @@ class _CodeProjectCardState extends ConsumerState<CodeProjectCard> {
           ),
         ],
 
-        // Line 3: Phases (left) + Plans (right)
-        if (gsd != null && !gsd.isEmpty) ...[
-          const SizedBox(height: 6),
+        // Line 3: Phases (left) + Plans (right) — hidden when complete
+        if (gsd?.status != 'done' && gsd?.status != 'archived') ...[
+          const SizedBox(height: 8),
           Row(
             children: [
-              // Phases
-              if (gsd.phasesCompleted != null && gsd.phasesTotal != null)
-                Text(
-                  'Phasen ${gsd.phasesCompleted}/${gsd.phasesTotal}',
-                  style: TextStyle(color: colors.textSec, fontSize: 11),
-                )
-              else if (gsd.currentPhase != null)
-                Flexible(
-                  child: Text(
-                    gsd.currentPhase!,
-                    style: TextStyle(color: colors.textSec, fontSize: 11),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
+              Text(
+                'Phase ${gsd?.phasesCompleted ?? '–'}/${gsd?.phasesTotal ?? '–'}',
+                style: TextStyle(color: colors.textSec, fontSize: 11),
+              ),
               const Spacer(),
-              // Plans
-              if (gsd.plansCompleted != null && gsd.plansTotal != null)
-                Text(
-                  'Plans ${gsd.plansCompleted}/${gsd.plansTotal}',
-                  style: TextStyle(color: colors.textSec, fontSize: 11),
-                ),
+              Text(
+                'Plans ${gsd?.plansCompleted ?? '–'}/${gsd?.plansTotal ?? '–'}',
+                style: TextStyle(color: colors.textSec, fontSize: 11),
+              ),
             ],
           ),
         ],
@@ -249,19 +227,20 @@ class _CodeProjectCardState extends ConsumerState<CodeProjectCard> {
   }
 
   Widget _buildNextStep(AppColors colors, String nextStep) {
-    return Column(
+    return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Next:',
-          style: TextStyle(color: colors.textSec, fontSize: 11),
+          'Next: ',
+          style: TextStyle(color: colors.textDim, fontSize: 12),
         ),
-        const SizedBox(height: 2),
-        Text(
-          nextStep,
-          style: TextStyle(color: colors.textPri, fontSize: 13),
-          maxLines: 3,
-          overflow: TextOverflow.ellipsis,
+        Expanded(
+          child: Text(
+            nextStep,
+            style: TextStyle(color: colors.textPri, fontSize: 12),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
         ),
       ],
     );

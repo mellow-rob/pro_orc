@@ -33,5 +33,10 @@ class GsdData {
 
   static const empty = GsdData();
 
-  bool get isEmpty => status == null && currentPhase == null;
+  bool get isEmpty =>
+      status == null &&
+      currentPhase == null &&
+      phaseProgress == null &&
+      phasesTotal == null &&
+      plansTotal == null;
 }

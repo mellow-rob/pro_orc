@@ -227,6 +227,23 @@ class ProjectScanner {
       final d = Directory(p.join(projectPath, dir));
       if (await d.exists()) return 'code';
     }
+
+    // Check one level of subdirectories for code markers.
+    // Handles monorepo/umbrella projects (e.g. project_orchestration/pro_orc/).
+    final rootDir = Directory(projectPath);
+    try {
+      await for (final entity in rootDir.list()) {
+        if (entity is Directory) {
+          for (final marker in _codeMarkers) {
+            final file = File(p.join(entity.path, marker));
+            if (await file.exists()) return 'code';
+          }
+        }
+      }
+    } catch (_) {
+      // Ignore errors — fall through to research
+    }
+
     return 'research';
   }
 

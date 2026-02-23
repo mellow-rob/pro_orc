@@ -39,18 +39,6 @@ Future<void> showProjectDetail(BuildContext context, ProjectModel project) async
 
 /// Modal detail panel for a project, showing all available GSD data.
 ///
-/// Content sections:
-/// - Header: project name + version, close button
-/// - Status section: GsdStatusBadge + current phase + progress bar
-/// - Next step (full text, not truncated)
-/// - Description (full text)
-/// - Progress overview: plans completed/total
-/// - Phases list (Roadmap-Uebersicht) from GsdData.phases
-/// - Decisions list from GsdData.decisions
-/// - Git info: last commit, GitHub link
-/// - Notion link
-/// - Quick actions row (Terminal, Finder, GitHub, Notion)
-///
 /// Accent color follows project type: cyan for code, fuchsia for research.
 class ProjectDetailPanel extends ConsumerWidget {
   const ProjectDetailPanel({super.key, required this.project});
@@ -64,26 +52,34 @@ class ProjectDetailPanel extends ConsumerWidget {
     final accent = project.projectType == 'research' ? colors.fuch : colors.cyan;
 
     return Center(
-      child: ConstrainedBox(
-        constraints: BoxConstraints(
-          maxWidth: 600,
-          maxHeight: screenSize.height * 0.80,
-        ),
-        child: GlassCard(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Header (not scrollable)
-              _buildHeader(context, colors, accent),
-              const Divider(height: 1, color: Color(0x20FFFFFF)),
-              // Scrollable content
-              Flexible(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
-                  child: _buildBody(context, ref, colors, accent),
-                ),
+      child: Material(
+        type: MaterialType.transparency,
+        child: DefaultTextStyle(
+          style: TextStyle(
+            color: colors.textPri,
+            fontSize: 14,
+            decoration: TextDecoration.none,
+          ),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: 700,
+              maxHeight: screenSize.height * 0.85,
+            ),
+            child: GlassCard(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildHeader(context, colors, accent),
+                  // Scrollable content
+                  Flexible(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+                      child: _buildBody(context, ref, colors, accent),
+                    ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
       ),
@@ -94,16 +90,35 @@ class ProjectDetailPanel extends ConsumerWidget {
     final gsd = project.gsd;
     final version = gsd?.version;
 
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 16, 12, 16),
+    return Container(
+      padding: const EdgeInsets.fromLTRB(0, 16, 12, 16),
       child: Row(
         children: [
-          Icon(
-            project.projectType == 'research' ? Icons.science : Icons.code,
-            color: accent,
-            size: 20,
+          // Accent left border strip
+          Container(
+            width: 4,
+            height: 48,
+            decoration: BoxDecoration(
+              color: accent,
+              borderRadius: BorderRadius.circular(2),
+            ),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: 16),
+          // Type icon in accent circle
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: accent.withValues(alpha: 0.15),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              project.projectType == 'research' ? Icons.science : Icons.code,
+              color: accent,
+              size: 18,
+            ),
+          ),
+          const SizedBox(width: 12),
           Expanded(
             child: Row(
               children: [
@@ -112,17 +127,28 @@ class ProjectDetailPanel extends ConsumerWidget {
                     project.displayName,
                     style: TextStyle(
                       color: colors.textPri,
-                      fontSize: 18,
+                      fontSize: 20,
                       fontWeight: FontWeight.bold,
                     ),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
                 if (version != null) ...[
-                  const SizedBox(width: 8),
-                  Text(
-                    version,
-                    style: TextStyle(color: colors.textSec, fontSize: 13),
+                  const SizedBox(width: 10),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: accent.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(
+                      version,
+                      style: TextStyle(
+                        color: accent,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
                   ),
                 ],
               ],
@@ -157,13 +183,154 @@ class ProjectDetailPanel extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // --- Status + phase ---
+        // --- Hero: Status + Progress ---
         if (gsd != null && !gsd.isEmpty) ...[
+          _buildHeroSection(colors, accent, gsd),
+          const SizedBox(height: 20),
+        ],
+
+        // --- Naechster Schritt ---
+        if (gsd?.nextStep != null)
+          _SectionCard(
+            colors: colors,
+            accent: accent,
+            title: 'NAECHSTER SCHRITT',
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(Icons.arrow_forward_rounded, color: accent, size: 16),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    gsd!.nextStep!,
+                    style: TextStyle(color: colors.textPri, fontSize: 14),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+        // --- Beschreibung ---
+        if (project.description != null)
+          _SectionCard(
+            colors: colors,
+            accent: accent,
+            title: 'BESCHREIBUNG',
+            child: Text(
+              project.description!,
+              style: TextStyle(color: colors.textSec, fontSize: 14, height: 1.5),
+            ),
+          ),
+
+        // --- Phasen (Roadmap) ---
+        if (gsd?.phases != null && gsd!.phases!.isNotEmpty)
+          _SectionCard(
+            colors: colors,
+            accent: accent,
+            title: 'PHASEN',
+            child: Column(
+              children: [
+                for (int i = 0; i < gsd.phases!.length; i++) ...[
+                  _buildPhaseRow(colors, accent, gsd.phases![i]),
+                  if (i < gsd.phases!.length - 1)
+                    Divider(
+                      height: 1,
+                      color: colors.bgElev.withValues(alpha: 0.8),
+                    ),
+                ],
+              ],
+            ),
+          ),
+
+        // --- Decisions (collapsed by default) ---
+        if (gsd?.decisions != null && gsd!.decisions!.isNotEmpty)
+          _DecisionsSection(
+            colors: colors,
+            accent: accent,
+            decisions: gsd.decisions!,
+          ),
+
+        // --- Git & Links ---
+        if (git != null || (gsd != null && gsd.notionUrl != null))
+          _SectionCard(
+            colors: colors,
+            accent: accent,
+            title: 'LINKS',
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (git?.lastCommitHash != null)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: Row(
+                      children: [
+                        Icon(Icons.commit, color: colors.textDim, size: 16),
+                        const SizedBox(width: 8),
+                        Text(
+                          git!.lastCommitHash!,
+                          style: TextStyle(
+                            color: colors.textSec,
+                            fontSize: 13,
+                            fontFamily: 'monospace',
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          _formatDate(git.lastCommitDate),
+                          style: TextStyle(color: colors.textDim, fontSize: 12),
+                        ),
+                      ],
+                    ),
+                  ),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    if (git?.githubUrl != null)
+                      _LinkChip(
+                        icon: Icons.open_in_new,
+                        label: 'GitHub',
+                        accent: accent,
+                        colors: colors,
+                        onTap: () => qa.openUrl(git!.githubUrl!),
+                      ),
+                    if (gsd?.notionUrl != null)
+                      _LinkChip(
+                        icon: Icons.description_outlined,
+                        label: 'Notion',
+                        accent: accent,
+                        colors: colors,
+                        onTap: () => qa.openUrl(gsd!.notionUrl!),
+                      ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+
+        // --- Quick Actions ---
+        const SizedBox(height: 8),
+        _buildQuickActions(colors, accent, qa),
+      ],
+    );
+  }
+
+  Widget _buildHeroSection(AppColors colors, Color accent, dynamic gsd) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: colors.bgElev.withValues(alpha: 0.6),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Status badge + phase text
           Row(
             children: [
               GsdStatusBadge(status: gsd.status),
               if (gsd.currentPhase != null) ...[
-                const SizedBox(width: 10),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Text(
                     'Phase ${gsd.currentPhase}',
@@ -172,121 +339,32 @@ class ProjectDetailPanel extends ConsumerWidget {
                   ),
                 ),
               ],
+              // Plans counter
+              if (gsd.plansCompleted != null && gsd.plansTotal != null)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: accent.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(
+                    '${gsd.plansCompleted}/${gsd.plansTotal} Plans',
+                    style: TextStyle(
+                      color: accent,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
             ],
           ),
-          const SizedBox(height: 12),
-        ],
-
-        // --- Progress bar (phaseProgress) ---
-        if (gsd?.phaseProgress != null) ...[
-          _buildProgressBar(colors, accent, gsd!.phaseProgress!),
-          const SizedBox(height: 16),
-        ],
-
-        // --- Plans completed/total ---
-        if (gsd?.plansCompleted != null && gsd?.plansTotal != null) ...[
-          _SectionLabel(label: 'Fortschritt:', colors: colors),
-          const SizedBox(height: 4),
-          Text(
-            'Plans: ${gsd!.plansCompleted} / ${gsd.plansTotal} abgeschlossen',
-            style: TextStyle(color: colors.textPri, fontSize: 14),
-          ),
-          const SizedBox(height: 16),
-        ],
-
-        // --- Next step ---
-        if (gsd?.nextStep != null) ...[
-          _SectionLabel(label: 'Naechster Schritt:', colors: colors),
-          const SizedBox(height: 4),
-          Text(
-            gsd!.nextStep!,
-            style: TextStyle(color: colors.textPri, fontSize: 14),
-          ),
-          const SizedBox(height: 16),
-        ],
-
-        // --- Description ---
-        if (project.description != null) ...[
-          _SectionLabel(label: 'Beschreibung:', colors: colors),
-          const SizedBox(height: 4),
-          Text(
-            project.description!,
-            style: TextStyle(color: colors.textPri, fontSize: 14),
-          ),
-          const SizedBox(height: 16),
-        ],
-
-        // --- Phases list (Roadmap-Uebersicht) ---
-        if (gsd?.phases != null && gsd!.phases!.isNotEmpty) ...[
-          _SectionLabel(label: 'Phasen:', colors: colors),
-          const SizedBox(height: 8),
-          ...gsd.phases!.map((phase) => _buildPhaseRow(colors, phase)),
-          const SizedBox(height: 16),
-        ],
-
-        // --- Decisions list ---
-        if (gsd?.decisions != null && gsd!.decisions!.isNotEmpty) ...[
-          _SectionLabel(label: 'Decisions:', colors: colors),
-          const SizedBox(height: 8),
-          ...gsd.decisions!.map((d) => _buildDecisionItem(colors, d)),
-          const SizedBox(height: 16),
-        ],
-
-        // --- Git info ---
-        if (git != null) ...[
-          _SectionLabel(label: 'Git:', colors: colors),
-          const SizedBox(height: 4),
-          if (git.lastCommitHash != null)
-            Text(
-              '${git.lastCommitHash!} — ${_formatDate(git.lastCommitDate)}',
-              style: TextStyle(
-                color: colors.textSec,
-                fontSize: 13,
-                fontFamily: 'monospace',
-              ),
-            ),
-          if (git.githubUrl != null) ...[
-            const SizedBox(height: 4),
-            GestureDetector(
-              onTap: () => qa.openUrl(git.githubUrl!),
-              child: Text(
-                git.githubUrl!,
-                style: TextStyle(
-                  color: accent,
-                  fontSize: 13,
-                  decoration: TextDecoration.underline,
-                  decorationColor: accent,
-                ),
-              ),
-            ),
+          // Progress bar
+          if (gsd.phaseProgress != null) ...[
+            const SizedBox(height: 14),
+            _buildProgressBar(colors, accent, gsd.phaseProgress!),
           ],
-          const SizedBox(height: 16),
         ],
-
-        // --- Notion link ---
-        if (gsd != null && gsd.notionUrl != null) ...[
-          _SectionLabel(label: 'Notion:', colors: colors),
-          const SizedBox(height: 4),
-          GestureDetector(
-            onTap: () => qa.openUrl(gsd.notionUrl!),
-            child: Text(
-              gsd.notionUrl!,
-              style: TextStyle(
-                color: accent,
-                fontSize: 13,
-                decoration: TextDecoration.underline,
-                decorationColor: accent,
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-        ],
-
-        // --- Quick actions row ---
-        const Divider(height: 1, color: Color(0x20FFFFFF)),
-        const SizedBox(height: 12),
-        _buildQuickActions(colors, accent, qa),
-      ],
+      ),
     );
   }
 
@@ -299,7 +377,7 @@ class ProjectDetailPanel extends ConsumerWidget {
             borderRadius: BorderRadius.circular(4),
             child: Container(
               height: 6,
-              color: colors.bgElev,
+              color: colors.bgSurf,
               child: FractionallySizedBox(
                 alignment: Alignment.centerLeft,
                 widthFactor: clamped / 100.0,
@@ -313,68 +391,62 @@ class ProjectDetailPanel extends ConsumerWidget {
             ),
           ),
         ),
-        const SizedBox(width: 8),
+        const SizedBox(width: 10),
         Text(
           '$clamped%',
-          style: TextStyle(color: colors.textSec, fontSize: 11),
+          style: TextStyle(
+            color: accent,
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+          ),
         ),
       ],
     );
   }
 
-  Widget _buildPhaseRow(AppColors colors, PhaseInfo phase) {
+  Widget _buildPhaseRow(AppColors colors, Color accent, PhaseInfo phase) {
     final (icon, iconColor) = switch (phase.status) {
       'complete' => (Icons.check_circle_outline, const Color(0xFF22C55E)),
-      'in_progress' => (Icons.arrow_circle_right_outlined, colors.cyan),
+      'in_progress' => (Icons.arrow_circle_right_outlined, accent),
       _ => (Icons.radio_button_unchecked, colors.textDim),
     };
 
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
+    final isCurrent = phase.status == 'in_progress';
+
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
+      decoration: isCurrent
+          ? BoxDecoration(
+              color: accent.withValues(alpha: 0.06),
+              borderRadius: BorderRadius.circular(6),
+            )
+          : null,
       child: Row(
         children: [
-          Icon(icon, color: iconColor, size: 16),
-          const SizedBox(width: 8),
+          Icon(icon, color: iconColor, size: 18),
+          const SizedBox(width: 10),
           Expanded(
             child: Text(
               'Phase ${phase.number}: ${phase.name}',
-              style: TextStyle(color: colors.textPri, fontSize: 13),
-            ),
-          ),
-          if (phase.plansTotal > 0)
-            Text(
-              '${phase.plansCompleted}/${phase.plansTotal} Plans',
-              style: TextStyle(color: colors.textDim, fontSize: 12),
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDecisionItem(AppColors colors, String decision) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.only(top: 5),
-            child: Container(
-              width: 4,
-              height: 4,
-              decoration: BoxDecoration(
-                color: colors.textDim,
-                shape: BoxShape.circle,
+              style: TextStyle(
+                color: isCurrent ? colors.textPri : colors.textSec,
+                fontSize: 13,
+                fontWeight: isCurrent ? FontWeight.w600 : FontWeight.normal,
               ),
             ),
           ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              decision,
-              style: TextStyle(color: colors.textPri, fontSize: 12),
+          if (phase.plansTotal > 0)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: colors.bgElev,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                '${phase.plansCompleted}/${phase.plansTotal}',
+                style: TextStyle(color: colors.textDim, fontSize: 11),
+              ),
             ),
-          ),
         ],
       ),
     );
@@ -384,43 +456,36 @@ class ProjectDetailPanel extends ConsumerWidget {
     final actions = <_QuickAction>[
       _QuickAction(
         icon: Icons.terminal,
-        tooltip: 'Terminal',
+        label: 'Terminal',
         onPressed: () => qa.openInTerminal(project.path),
       ),
       _QuickAction(
         icon: Icons.folder_open,
-        tooltip: 'Finder',
+        label: 'Finder',
         onPressed: () => qa.openInFinder(project.path),
       ),
       if (project.git?.githubUrl != null)
         _QuickAction(
           icon: Icons.open_in_new,
-          tooltip: 'GitHub',
+          label: 'GitHub',
           onPressed: () => qa.openUrl(project.git!.githubUrl!),
         ),
       if (project.gsd?.notionUrl != null)
         _QuickAction(
           icon: Icons.description_outlined,
-          tooltip: 'Notion',
+          label: 'Notion',
           onPressed: () => qa.openUrl(project.gsd!.notionUrl!),
         ),
     ];
 
     return Row(
+      mainAxisAlignment: MainAxisAlignment.start,
       children: actions
-          .map(
-            (a) => SizedBox(
-              width: 40,
-              height: 40,
-              child: IconButton(
-                padding: EdgeInsets.zero,
-                iconSize: 24,
-                icon: Icon(a.icon, color: colors.textDim),
-                tooltip: a.tooltip,
-                onPressed: a.onPressed,
-              ),
-            ),
-          )
+          .map((a) => _QuickActionButton(
+                action: a,
+                accent: accent,
+                colors: colors,
+              ))
           .toList(),
     );
   }
@@ -431,21 +496,273 @@ class ProjectDetailPanel extends ConsumerWidget {
   }
 }
 
-/// Small label text for detail panel sections.
-class _SectionLabel extends StatelessWidget {
-  const _SectionLabel({required this.label, required this.colors});
+/// Section card wrapper — subtle container with accent top border.
+class _SectionCard extends StatelessWidget {
+  const _SectionCard({
+    required this.colors,
+    required this.accent,
+    required this.title,
+    required this.child,
+  });
 
-  final String label;
   final AppColors colors;
+  final Color accent;
+  final String title;
+  final Widget child;
 
   @override
   Widget build(BuildContext context) {
-    return Text(
-      label,
-      style: TextStyle(
-        color: colors.textSec,
-        fontSize: 12,
-        fontWeight: FontWeight.w500,
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Container(
+        width: double.infinity,
+        decoration: BoxDecoration(
+          color: colors.bgSurf.withValues(alpha: 0.5),
+          borderRadius: BorderRadius.circular(12),
+          border: Border(
+            top: BorderSide(color: accent.withValues(alpha: 0.3), width: 1),
+          ),
+        ),
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: TextStyle(
+                color: accent.withValues(alpha: 0.7),
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 1.2,
+              ),
+            ),
+            const SizedBox(height: 10),
+            child,
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Expandable decisions section — collapsed by default.
+class _DecisionsSection extends StatefulWidget {
+  const _DecisionsSection({
+    required this.colors,
+    required this.accent,
+    required this.decisions,
+  });
+
+  final AppColors colors;
+  final Color accent;
+  final List<String> decisions;
+
+  @override
+  State<_DecisionsSection> createState() => _DecisionsSectionState();
+}
+
+class _DecisionsSectionState extends State<_DecisionsSection> {
+  bool _expanded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Container(
+        width: double.infinity,
+        decoration: BoxDecoration(
+          color: widget.colors.bgSurf.withValues(alpha: 0.5),
+          borderRadius: BorderRadius.circular(12),
+          border: Border(
+            top: BorderSide(
+              color: widget.accent.withValues(alpha: 0.3),
+              width: 1,
+            ),
+          ),
+        ),
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            GestureDetector(
+              onTap: () => setState(() => _expanded = !_expanded),
+              child: Row(
+                children: [
+                  Text(
+                    'DECISIONS',
+                    style: TextStyle(
+                      color: widget.accent.withValues(alpha: 0.7),
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 1.2,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    '(${widget.decisions.length})',
+                    style: TextStyle(
+                      color: widget.colors.textDim,
+                      fontSize: 11,
+                    ),
+                  ),
+                  const Spacer(),
+                  Icon(
+                    _expanded
+                        ? Icons.keyboard_arrow_up
+                        : Icons.keyboard_arrow_down,
+                    color: widget.colors.textDim,
+                    size: 18,
+                  ),
+                ],
+              ),
+            ),
+            if (_expanded) ...[
+              const SizedBox(height: 10),
+              ...widget.decisions.map(
+                (d) => Padding(
+                  padding: const EdgeInsets.only(bottom: 6),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.only(top: 6),
+                        child: Container(
+                          width: 4,
+                          height: 4,
+                          decoration: BoxDecoration(
+                            color: widget.colors.textDim,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          d,
+                          style: TextStyle(
+                            color: widget.colors.textSec,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Styled link chip with icon.
+class _LinkChip extends StatelessWidget {
+  const _LinkChip({
+    required this.icon,
+    required this.label,
+    required this.accent,
+    required this.colors,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final Color accent;
+  final AppColors colors;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: accent.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: accent.withValues(alpha: 0.2)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, color: accent, size: 14),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: TextStyle(
+                color: accent,
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Quick action button with icon + label.
+class _QuickActionButton extends StatefulWidget {
+  const _QuickActionButton({
+    required this.action,
+    required this.accent,
+    required this.colors,
+  });
+
+  final _QuickAction action;
+  final Color accent;
+  final AppColors colors;
+
+  @override
+  State<_QuickActionButton> createState() => _QuickActionButtonState();
+}
+
+class _QuickActionButtonState extends State<_QuickActionButton> {
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: MouseRegion(
+        onEnter: (_) => setState(() => _hovered = true),
+        onExit: (_) => setState(() => _hovered = false),
+        cursor: SystemMouseCursors.click,
+        child: GestureDetector(
+          onTap: widget.action.onPressed,
+          child: Container(
+            width: 64,
+            height: 52,
+            decoration: BoxDecoration(
+              color: _hovered
+                  ? widget.accent.withValues(alpha: 0.1)
+                  : Colors.transparent,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  widget.action.icon,
+                  color: _hovered ? widget.accent : widget.colors.textDim,
+                  size: 20,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  widget.action.label,
+                  style: TextStyle(
+                    color: _hovered ? widget.accent : widget.colors.textDim,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -455,11 +772,11 @@ class _SectionLabel extends StatelessWidget {
 class _QuickAction {
   const _QuickAction({
     required this.icon,
-    required this.tooltip,
+    required this.label,
     required this.onPressed,
   });
 
   final IconData icon;
-  final String tooltip;
+  final String label;
   final VoidCallback onPressed;
 }

@@ -122,7 +122,7 @@ class _CodeTabState extends ConsumerState<CodeTab> {
                 crossAxisCount: columns,
                 crossAxisSpacing: 12,
                 mainAxisSpacing: 12,
-                mainAxisExtent: 320,
+                mainAxisExtent: 240,
               );
 
               // If showing private projects, use CustomScrollView with both grids
