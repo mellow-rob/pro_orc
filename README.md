@@ -2,8 +2,6 @@
 
 Native macOS menubar app that auto-discovers your projects, displays GSD planning status, git activity, and Claude Code tools inventory — all in a glassmorphism dark UI.
 
-![Pro Orc Screenshot](img/watermarked-99246c46-ae22-4b23-81a3-303ddab54c43.jpg)
-
 ## Features
 
 - **Auto-scan** configurable directories for projects (code and research)
