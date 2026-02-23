@@ -1,62 +1,96 @@
 # Pro Orc — Project Orchestration Dashboard
 
-> v1.0 shipped — 3,120 LOC TypeScript/TSX/CSS, discovers 22+ projects
+Native macOS menubar app that auto-discovers your projects, displays GSD planning status, git activity, and Claude Code tools inventory — all in a glassmorphism dark UI.
 
-Local Next.js dashboard that scans `~/project_orchestration/` and displays all projects at a glance — GSD status, phase progress, git activity, and quick actions.
+![Pro Orc Screenshot](img/watermarked-99246c46-ae22-4b23-81a3-303ddab54c43.jpg)
 
-## What it does
+## Features
 
-- **Auto-scans** `code/` and `project research/` subdirectories
-- **Parses GSD data** from `.planning/` files (STATE.md, ROADMAP.md, PROJECT.md)
-- **Reads git history** for code projects (last commit, branch, dirty state, GitHub URL)
-- **Extracts descriptions** from PROJECT.md or CLAUDE.md
-- **Links to Notion** via `<!-- notion: URL -->` comments in PROJECT.md
-- **Quick actions**: Open in Terminal, Finder, GitHub, Notion
+- **Auto-scan** configurable directories for projects (code and research)
+- **GSD status** at a glance — phase progress, completion percentage, next steps
+- **Git integration** — last commit, branch, dirty state, GitHub links
+- **Claude Tools inventory** — discovers installed Skills, Plugins, and MCP servers from `~/.claude/`
+- **Quick actions** — open in Terminal, Finder, GitHub; right-click context menus
+- **Menubar-only** — lives in the macOS menubar, no Dock icon
+- **Reactive** — file watcher auto-refreshes when projects change on disk
+- **Private projects** — hide projects from the main view, toggle visibility
+
+## Installation
+
+### Homebrew (recommended)
+
+```bash
+brew tap mellow-rob/tap
+brew install --cask pro-orc
+```
+
+### GitHub Release
+
+Download the latest DMG from [Releases](https://github.com/mellow-rob/pro_orc/releases), open it, and drag **pro_orc.app** to Applications.
+
+> **Note:** Pro Orc is ad-hoc signed (no Apple Developer certificate). On first launch, right-click the app and select "Open", or run `xattr -cr /Applications/pro_orc.app` in Terminal.
+
+### From Source
+
+```bash
+git clone https://github.com/mellow-rob/pro_orc.git
+cd pro_orc/pro_orc
+flutter build macos --release
+# App bundle at build/macos/Build/Products/Release/pro_orc.app
+```
+
+## Getting Started
+
+1. Launch Pro Orc — a menubar icon appears
+2. Open **Settings** (gear icon in the navigation rail)
+3. Add your project directories (e.g. `~/code`, `~/research`)
+4. Projects appear automatically in the **Code** and **Research** tabs
+5. Browse installed Claude tools in the **Claude Tools** tab
 
 ## Stack
 
-- **Next.js 16** (App Router, Turbopack)
-- **Tailwind CSS v4** (OKLCH colors, dark mode)
-- **shadcn/ui** (Card, Badge, Button, Progress, Tabs)
-- **simple-git** for git data extraction
-- **chokidar** for filesystem watching + SSE live updates
+- **Flutter** (macOS native) with **Dart**
+- **Riverpod 3.x** for reactive state management
+- **Drift** (SQLite) for app configuration and per-project settings
+- **tray_manager** + **window_manager** for menubar integration
+- Glassmorphism dark theme with animated gradient background
 
-## Getting started
+## Development
 
 ```bash
-cd pro-orc
-npm install
-npm run dev
+cd pro_orc
+flutter run -d macos          # Debug run
+flutter build macos            # Release build
+flutter test                   # Run tests
+flutter analyze                # Static analysis
 ```
 
-Open [localhost:3000](http://localhost:3000).
+### Building a DMG
 
-## Project structure
-
-```
-.planning/          # GSD workflow files (roadmap, state, phases)
-pro-orc/            # Next.js application
-├── app/            # App Router pages & API routes
-├── components/     # UI components (cards, tabs, badges)
-├── hooks/          # Client-side hooks (usePrivateProjects)
-├── lib/            # Server-side logic (scanner, parser, git-reader)
-└── public/         # Static assets
+```bash
+brew install create-dmg
+./scripts/build-dmg.sh
+# Output: dist/ProOrc-<version>-macOS.dmg
 ```
 
-## Branching
+## Project Structure
 
-| Branch | Purpose |
-|--------|---------|
-| `main` | Stable, working state. All GSD phases merge here. |
-| `dev` | Integration branch for in-progress work. |
-| `feature/<name>` | Feature branches off `dev` for new capabilities. |
-| `fix/<name>` | Bugfix branches off `main` for hotfixes. |
-
-**Flow:** `feature/*` → `dev` → `main`
+```
+pro_orc/                    # Flutter macOS app
+  lib/
+    features/               # UI: code/, research/, claude_tools/, settings/, shell/
+    providers/              # Riverpod providers (projects, watcher, database)
+    data/models/            # ProjectModel, GsdData, GitData, ClaudeToolModel
+    data/services/          # ProjectScanner, GsdParser, GitReader, WatcherService
+    data/db/                # Drift database (SQLite v2)
+    theme/                  # N3 color system
+  test/                     # Unit tests (real temp dirs, no mocks)
+.planning/                  # GSD planning docs
+```
 
 ## GSD Workflow
 
-This project uses the [GSD (Get Shit Done)](https://github.com/coleam00/get-shit-done) framework for planning and execution. Phase artifacts live in `.planning/`.
+This project uses the GSD (Get Shit Done) framework for structured planning and execution. Phase artifacts live in `.planning/` — see `ROADMAP.md` for the full phase breakdown.
 
 ## License
 

@@ -1,0 +1,58 @@
+name: Build & Release DMG
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Build macOS release
+        working-directory: pro_orc
+        run: flutter build macos --release
+
+      - name: Ad-hoc codesign
+        working-directory: pro_orc
+        run: codesign --deep --force -s - build/macos/Build/Products/Release/pro_orc.app
+
+      - name: Install create-dmg
+        run: brew install create-dmg
+
+      - name: Extract version
+        id: version
+        run: |
+          VERSION=$(grep 'version:' pro_orc/pubspec.yaml | head -1 | awk '{print $2}' | cut -d'+' -f1)
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Create DMG
+        working-directory: pro_orc
+        run: |
+          mkdir -p ../dist
+          create-dmg \
+            --volname "Pro Orc" \
+            --volicon "macos/Runner/Assets.xcassets/AppIcon.appiconset/app_icon_512.png" \
+            --window-pos 200 120 \
+            --window-size 600 400 \
+            --icon-size 100 \
+            --icon "pro_orc.app" 175 190 \
+            --app-drop-link 425 190 \
+            --hide-extension "pro_orc.app" \
+            "../dist/ProOrc-${{ steps.version.outputs.version }}-macOS.dmg" \
+            "build/macos/Build/Products/Release/pro_orc.app"
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "${{ github.ref_name }}" \
+            "dist/ProOrc-${{ steps.version.outputs.version }}-macOS.dmg" \
+            --title "Pro Orc ${{ steps.version.outputs.version }}" \
+            --generate-notes
