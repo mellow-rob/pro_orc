@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-19)
 ## Current Position
 
 Phase: 11 of 11 (Claude Tools Panel) — IN PROGRESS
-Plan: 1 of 3 complete (11-01 complete — data models, scanner service, AppColors extended)
-Status: Phase 11 in progress — Plan 02 (provider layer + watcher) next
-Last activity: 2026-02-23 — 11-01 complete: ClaudeToolsScanner + models (pure Dart), AppColors +9 tokens (amber/emerald/violet)
+Plan: 2 of 3 complete (11-02 complete — provider chain + full tab UI, 3 card types)
+Status: Phase 11 in progress — Plan 03 (if exists) or phase complete
+Last activity: 2026-02-23 — 11-02 complete: claudeToolsWatcherProvider + claudeToolsProvider + ClaudeToolsTab + SkillCard + PluginCard + McpServerCard
 
-Progress: [#############░░░░░░░] ~65% (v1.1, 13/~20 plans complete)
+Progress: [##############░░░░░░] ~70% (v1.1, 14/~20 plans complete)
 
 ## Performance Metrics
 
@@ -47,6 +47,7 @@ Progress: [#############░░░░░░░] ~65% (v1.1, 13/~20 plans complete
 | 10    | 03   | 4 min    | 2     | 4     |
 | 10    | 04   | ~2 min   | 1     | 0     |
 | 11    | 01   | 3 min    | 2     | 3     |
+| 11    | 02   | 2 min    | 2     | 6     |
 
 ## Accumulated Context
 
@@ -106,6 +107,10 @@ v1.0 decisions archived to milestones/v1.0-ROADMAP.md.
 - 11-01: ClaudeToolsScanner uses claudeDirOverride constructor param — injectable temp-dir for tests, mirrors ProjectScanner pattern
 - 11-01: Skills without SKILL.md use folder name as display name, null description — forgiving fallback, no skills silently dropped
 - 11-01: Amber/Emerald/Violet for Skills/Plugins/MCP accents — warm/green/purple semantics, distinct from existing cyan/fuchsia
+- 11-02: claudeToolsWatcherProvider mirrors watcherProvider exactly — keepAlive, WatcherService single-dir, yield* events
+- 11-02: claudeToolsProvider mirrors projectsProvider exactly — ref.listen hasValue before invalidateSelf, direct ClaudeToolsScanner().scanAll()
+- 11-02: ClaudeToolsTab is ConsumerStatefulWidget — TextEditingController requires initState/dispose lifecycle
+- 11-02: Wrap widget for mini card grid — natural flow, no fixed height constraint vs GridView.builder
 
 ### Pending Todos
 
@@ -120,5 +125,5 @@ v1.0 decisions archived to milestones/v1.0-ROADMAP.md.
 ## Session Continuity
 
 Last session: 2026-02-23
-Stopped at: Completed 11-01-PLAN.md (data models, scanner, AppColors)
-Resume file: .planning/phases/11-claude-tools-panel/11-01-SUMMARY.md
+Stopped at: Completed 11-02-PLAN.md (provider chain + Claude Tools tab UI + 3 card types)
+Resume file: .planning/phases/11-claude-tools-panel/11-02-SUMMARY.md
