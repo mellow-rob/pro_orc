@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-19)
 
 **Core value:** Auf einen Blick sehen, wo jedes Projekt steht, was der nächste Schritt ist, und welche Tools zur Verfügung stehen — ohne Terminal-Hopping oder Notion-Suche.
-**Current focus:** Phase 10 — Card Widgets + Quick Actions (v1.1)
+**Current focus:** Phase 11 — Claude Tools Panel (v1.1)
 
 ## Current Position
 
-Phase: 10 of 11 (Card Widgets + Quick Actions) — COMPLETE
-Plan: 4 of 4 complete (10-04 complete — Human verification of all Phase 10 features approved)
-Status: Phase 10 complete — Phase 11 (Claude Tools tab) next
-Last activity: 2026-02-23 — Phase 10 complete — all 8 verification areas approved: cards, quick actions, hidden toggle persistence, live update, detail panel, responsive grid
+Phase: 11 of 11 (Claude Tools Panel) — IN PROGRESS
+Plan: 1 of 3 complete (11-01 complete — data models, scanner service, AppColors extended)
+Status: Phase 11 in progress — Plan 02 (provider layer + watcher) next
+Last activity: 2026-02-23 — 11-01 complete: ClaudeToolsScanner + models (pure Dart), AppColors +9 tokens (amber/emerald/violet)
 
-Progress: [############░░░░░░░░] ~60% (v1.1, 12/~20 plans complete)
+Progress: [#############░░░░░░░] ~65% (v1.1, 13/~20 plans complete)
 
 ## Performance Metrics
 
@@ -46,6 +46,7 @@ Progress: [############░░░░░░░░] ~60% (v1.1, 12/~20 plans comple
 | 10    | 02   | 3 min    | 2     | 5     |
 | 10    | 03   | 4 min    | 2     | 4     |
 | 10    | 04   | ~2 min   | 1     | 0     |
+| 11    | 01   | 3 min    | 2     | 3     |
 
 ## Accumulated Context
 
@@ -102,6 +103,9 @@ v1.0 decisions archived to milestones/v1.0-ROADMAP.md.
 - 10-03: Notion guard uses `gsd != null && gsd.notionUrl != null` (not `gsd?.notionUrl != null`) — avoids unnecessary_non_null_assertion analyzer warning
 - 10-03: ProjectDetailPanel uses showGeneralDialog (not showDialog) — enables custom slide-up + fade transitionBuilder
 - 10-03: ResearchTab mainAxisExtent=220 (vs CodeTab 300) — research cards have less content (no progress bar, no next step)
+- 11-01: ClaudeToolsScanner uses claudeDirOverride constructor param — injectable temp-dir for tests, mirrors ProjectScanner pattern
+- 11-01: Skills without SKILL.md use folder name as display name, null description — forgiving fallback, no skills silently dropped
+- 11-01: Amber/Emerald/Violet for Skills/Plugins/MCP accents — warm/green/purple semantics, distinct from existing cyan/fuchsia
 
 ### Pending Todos
 
@@ -116,5 +120,5 @@ v1.0 decisions archived to milestones/v1.0-ROADMAP.md.
 ## Session Continuity
 
 Last session: 2026-02-23
-Stopped at: Phase 11 context gathered
-Resume file: .planning/phases/11-claude-tools-panel/11-CONTEXT.md
+Stopped at: Completed 11-01-PLAN.md (data models, scanner, AppColors)
+Resume file: .planning/phases/11-claude-tools-panel/11-01-SUMMARY.md
