@@ -3,7 +3,7 @@
 ## Milestones
 
 - ✅ **v1.0 MVP** — Phases 1-5 (shipped 2026-02-19)
-- 🚧 **v1.1 Flutter macOS Rewrite** — Phases 6-11 (in progress)
+- ✅ **v1.1 Flutter macOS Rewrite** — Phases 6-11 (completed 2026-02-23)
 
 ## Phases
 
@@ -20,7 +20,7 @@ See: milestones/v1.0-ROADMAP.md for full details
 
 </details>
 
-### 🚧 v1.1 Flutter macOS Rewrite (In Progress)
+### ✅ v1.1 Flutter macOS Rewrite (Completed 2026-02-23)
 
 **Milestone Goal:** Complete rewrite of the Next.js web dashboard as a native macOS Flutter app with full v1.0 feature parity, menubar tray icon, and reactive file-watching — no browser, no dev server.
 
@@ -132,9 +132,9 @@ Plans:
 | 3. Static Dashboard | v1.0 | 2/2 | Complete | 2026-02-17 |
 | 4. Live Updates | v1.0 | 2/2 | Complete | 2026-02-17 |
 | 5. Claude Tools | v1.0 | 2/2 | Complete | 2026-02-17 |
-| 6. Native Foundation | v1.1 | 0/3 | Planning complete | - |
-| 7. Data Layer | v1.1 | 0/4 | Planning complete | - |
-| 8. Reactive State | v1.1 | Complete    | 2026-02-19 | - |
-| 9. Theme + UI Shell | v1.1 | 0/2 | Planning complete | - |
-| 10. Card Widgets + Quick Actions | v1.1 | Complete    | 2026-02-23 | - |
-| 11. Claude Tools Panel | v1.1 | 0/3 | Planning complete | - |
+| 6. Native Foundation | v1.1 | 3/3 | Complete | 2026-02-19 |
+| 7. Data Layer | v1.1 | 4/4 | Complete | 2026-02-19 |
+| 8. Reactive State | v1.1 | 2/2 | Complete | 2026-02-19 |
+| 9. Theme + UI Shell | v1.1 | 2/2 | Complete | 2026-02-22 |
+| 10. Card Widgets + Quick Actions | v1.1 | 4/4 | Complete | 2026-02-23 |
+| 11. Claude Tools Panel | v1.1 | 3/3 | Complete | 2026-02-23 |
