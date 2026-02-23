@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:pro_orc/data/db/app_database.dart';
 import 'package:pro_orc/data/models/project_model.dart';
 import 'package:pro_orc/features/shell/glass_card.dart';
@@ -111,7 +112,7 @@ class _ResearchProjectCardState extends ConsumerState<ResearchProjectCard> {
   Widget _buildTitleRow(AppColors colors, bool isHidden) {
     return Row(
       children: [
-        Icon(Icons.science, color: colors.fuch, size: 16),
+        Icon(LucideIcons.beaker100, color: colors.fuch, size: 15),
         const SizedBox(width: 6),
         Expanded(
           child: Text(
@@ -119,7 +120,7 @@ class _ResearchProjectCardState extends ConsumerState<ResearchProjectCard> {
             style: TextStyle(
               color: colors.textPri,
               fontSize: 14,
-              fontWeight: FontWeight.bold,
+              fontWeight: FontWeight.w500,
             ),
             overflow: TextOverflow.ellipsis,
           ),
@@ -132,7 +133,7 @@ class _ResearchProjectCardState extends ConsumerState<ResearchProjectCard> {
             padding: EdgeInsets.zero,
             iconSize: 16,
             icon: Icon(
-              isHidden ? Icons.visibility_off : Icons.visibility,
+              isHidden ? LucideIcons.eyeOff100 : LucideIcons.eye100,
               color: colors.textDim,
             ),
             tooltip: isHidden ? 'Oeffentlich' : 'Privat',
@@ -153,24 +154,24 @@ class _ResearchProjectCardState extends ConsumerState<ResearchProjectCard> {
 
     final actions = <_QuickAction>[
       _QuickAction(
-        icon: Icons.terminal,
+        icon: LucideIcons.terminal100,
         tooltip: 'Terminal',
         onPressed: () => qa.openInTerminal(project.path),
       ),
       _QuickAction(
-        icon: Icons.folder_open,
+        icon: LucideIcons.folder100,
         tooltip: 'Finder',
         onPressed: () => qa.openInFinder(project.path),
       ),
       if (project.git?.githubUrl != null)
         _QuickAction(
-          icon: Icons.open_in_new,
+          icon: LucideIcons.externalLink100,
           tooltip: 'GitHub',
           onPressed: () => qa.openUrl(project.git!.githubUrl!),
         ),
       if (project.gsd?.notionUrl != null)
         _QuickAction(
-          icon: Icons.description_outlined,
+          icon: LucideIcons.fileText100,
           tooltip: 'Notion',
           onPressed: () => qa.openUrl(project.gsd!.notionUrl!),
         ),
@@ -185,7 +186,7 @@ class _ResearchProjectCardState extends ConsumerState<ResearchProjectCard> {
               height: 32,
               child: IconButton(
                 padding: EdgeInsets.zero,
-                iconSize: 18,
+                iconSize: 15,
                 icon: Icon(a.icon, color: colors.textDim),
                 tooltip: a.tooltip,
                 splashRadius: 16,

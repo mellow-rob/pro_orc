@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'package:pro_orc/data/models/claude_tool_model.dart';
+import 'package:pro_orc/features/shared/claude_tool_detail_panel.dart';
 import 'package:pro_orc/features/shell/glass_card.dart';
 import 'package:pro_orc/theme/n3_colors.dart';
 
@@ -18,7 +20,9 @@ class PluginCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).extension<AppColors>()!;
 
-    return SizedBox(
+    return GestureDetector(
+      onTap: () => showPluginDetail(context, plugin),
+      child: SizedBox(
       width: 240,
       child: GlassCard(
         child: Padding(
@@ -32,7 +36,7 @@ class PluginCard extends StatelessWidget {
                 plugin.name,
                 style: TextStyle(
                   color: colors.emerald,
-                  fontWeight: FontWeight.bold,
+                  fontWeight: FontWeight.w500,
                   fontSize: 13,
                 ),
                 maxLines: 1,
@@ -91,7 +95,7 @@ class PluginCard extends StatelessWidget {
                 children: [
                   if (plugin.marketplaceUrl != null)
                     _PluginActionButton(
-                      icon: Icons.store,
+                      icon: LucideIcons.store100,
                       tooltip: 'Marketplace',
                       color: colors.emeraldLo,
                       onPressed: () =>
@@ -102,6 +106,7 @@ class PluginCard extends StatelessWidget {
             ],
           ),
         ),
+      ),
       ),
     );
   }

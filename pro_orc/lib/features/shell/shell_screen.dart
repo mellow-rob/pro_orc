@@ -5,10 +5,13 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tray_manager/tray_manager.dart';
 import 'package:window_manager/window_manager.dart';
 
+import 'package:lucide_icons_flutter/lucide_icons.dart';
+
 import '../../providers/projects_provider.dart';
 import '../../theme/n3_colors.dart';
 import '../../tray/tray_service.dart';
 import '../../window/window_geometry_service.dart';
+import '../agents/agents_tab.dart';
 import '../claude_tools/claude_tools_tab.dart';
 import '../code/code_tab.dart';
 import '../research/research_tab.dart';
@@ -104,58 +107,10 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
               padding: const EdgeInsets.only(top: 30),
               child: Row(
                 children: [
-                  NavigationRail(
-                    backgroundColor: Colors.transparent,
-                    // Settings (index 3) is in trailing, not in destinations
-                    selectedIndex:
-                        _selectedIndex < 3 ? _selectedIndex : null,
-                    onDestinationSelected: (i) =>
-                        setState(() => _selectedIndex = i),
-                    labelType: NavigationRailLabelType.selected,
-                    minWidth: 80,
-                    selectedIconTheme: IconThemeData(color: colors.cyan),
-                    selectedLabelTextStyle: TextStyle(color: colors.cyan),
-                    unselectedIconTheme: IconThemeData(color: colors.textDim),
-                    unselectedLabelTextStyle:
-                        TextStyle(color: colors.textDim),
-                    trailing: Expanded(
-                      child: Align(
-                        alignment: Alignment.bottomCenter,
-                        child: Padding(
-                          padding: const EdgeInsets.only(bottom: 16),
-                          child: IconButton(
-                            icon: Icon(
-                              _selectedIndex == 3
-                                  ? Icons.settings
-                                  : Icons.settings_outlined,
-                              color: _selectedIndex == 3
-                                  ? colors.cyan
-                                  : colors.textDim,
-                              size: 24,
-                            ),
-                            onPressed: () =>
-                                setState(() => _selectedIndex = 3),
-                          ),
-                        ),
-                      ),
-                    ),
-                    destinations: const [
-                      NavigationRailDestination(
-                        icon: Icon(Icons.code_outlined),
-                        selectedIcon: Icon(Icons.code),
-                        label: Text('Code'),
-                      ),
-                      NavigationRailDestination(
-                        icon: Icon(Icons.science_outlined),
-                        selectedIcon: Icon(Icons.science),
-                        label: Text('Research'),
-                      ),
-                      NavigationRailDestination(
-                        icon: Icon(Icons.smart_toy_outlined),
-                        selectedIcon: Icon(Icons.smart_toy),
-                        label: Text('Claude Tools'),
-                      ),
-                    ],
+                  _SideNav(
+                    selectedIndex: _selectedIndex,
+                    onSelect: (i) => setState(() => _selectedIndex = i),
+                    colors: colors,
                   ),
                   Expanded(
                     child: IndexedStack(
@@ -164,6 +119,7 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
                         CodeTab(),
                         ResearchTab(),
                         ClaudeToolsTab(),
+                        AgentsTab(),
                         SettingsTab(),
                       ],
                     ),
@@ -173,6 +129,136 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Custom side navigation — full control over icon weight and text style
+// ---------------------------------------------------------------------------
+
+class _SideNav extends StatelessWidget {
+  const _SideNav({
+    required this.selectedIndex,
+    required this.onSelect,
+    required this.colors,
+  });
+
+  final int selectedIndex;
+  final ValueChanged<int> onSelect;
+  final AppColors colors;
+
+  static const _items = <({IconData icon, String label})>[
+    (icon: LucideIcons.codeXml100, label: 'Code'),
+    (icon: LucideIcons.beaker100, label: 'Research'),
+    (icon: LucideIcons.brain100, label: 'Tools'),
+    (icon: LucideIcons.bot100, label: 'Agents'),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 68,
+      child: Column(
+        children: [
+          // Logo
+          Padding(
+            padding: const EdgeInsets.only(top: 4, bottom: 16),
+            child: Image.asset(
+              'assets/images/tray_icon.png',
+              width: 24,
+              height: 24,
+              color: colors.cyan.withValues(alpha: 0.6),
+            ),
+          ),
+          // Nav items
+          for (int i = 0; i < _items.length; i++)
+            _NavItem(
+              icon: _items[i].icon,
+              label: _items[i].label,
+              selected: selectedIndex == i,
+              accent: colors.cyan,
+              dimColor: colors.textDim,
+              onTap: () => onSelect(i),
+            ),
+          const Spacer(),
+          // Settings
+          Padding(
+            padding: const EdgeInsets.only(bottom: 16),
+            child: _NavItem(
+              icon: LucideIcons.settings100,
+              label: 'Settings',
+              selected: selectedIndex == 4,
+              accent: colors.cyan,
+              dimColor: colors.textDim,
+              onTap: () => onSelect(4),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _NavItem extends StatefulWidget {
+  const _NavItem({
+    required this.icon,
+    required this.label,
+    required this.selected,
+    required this.accent,
+    required this.dimColor,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final bool selected;
+  final Color accent;
+  final Color dimColor;
+  final VoidCallback onTap;
+
+  @override
+  State<_NavItem> createState() => _NavItemState();
+}
+
+class _NavItemState extends State<_NavItem> {
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final active = widget.selected || _hovered;
+    final color = active ? widget.accent : widget.dimColor;
+
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: widget.onTap,
+        behavior: HitTestBehavior.opaque,
+        child: SizedBox(
+          width: 68,
+          height: 52,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(widget.icon, color: color, size: 22),
+              if (widget.selected) ...[
+                const SizedBox(height: 4),
+                Text(
+                  widget.label,
+                  style: TextStyle(
+                    color: color,
+                    fontSize: 9,
+                    fontWeight: FontWeight.w300,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
       ),
     );
   }

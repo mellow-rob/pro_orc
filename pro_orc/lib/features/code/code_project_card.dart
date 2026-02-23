@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:pro_orc/data/db/app_database.dart';
 import 'package:pro_orc/data/models/project_model.dart';
 import 'package:pro_orc/features/shared/status_badge.dart';
@@ -109,7 +110,7 @@ class _CodeProjectCardState extends ConsumerState<CodeProjectCard> {
     final version = widget.project.gsd?.version;
     return Row(
       children: [
-        Icon(Icons.code, color: colors.cyan, size: 16),
+        Icon(LucideIcons.codeXml100, color: colors.cyan, size: 15),
         const SizedBox(width: 6),
         Expanded(
           child: Row(
@@ -120,7 +121,7 @@ class _CodeProjectCardState extends ConsumerState<CodeProjectCard> {
                   style: TextStyle(
                     color: colors.textPri,
                     fontSize: 14,
-                    fontWeight: FontWeight.bold,
+                    fontWeight: FontWeight.w500,
                   ),
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -143,7 +144,7 @@ class _CodeProjectCardState extends ConsumerState<CodeProjectCard> {
             padding: EdgeInsets.zero,
             iconSize: 16,
             icon: Icon(
-              isHidden ? Icons.visibility_off : Icons.visibility,
+              isHidden ? LucideIcons.eyeOff100 : LucideIcons.eye100,
               color: colors.textDim,
             ),
             tooltip: isHidden ? 'Oeffentlich' : 'Privat',
@@ -171,7 +172,7 @@ class _CodeProjectCardState extends ConsumerState<CodeProjectCard> {
               const SizedBox(width: 8),
               Tooltip(
                 message: 'Parse error',
-                child: Icon(Icons.warning_amber, color: const Color(0xFFF59E0B), size: 14),
+                child: Icon(LucideIcons.triangleAlert100, color: const Color(0xFFF59E0B), size: 13),
               ),
             ],
             const Spacer(),
@@ -189,7 +190,7 @@ class _CodeProjectCardState extends ConsumerState<CodeProjectCard> {
           ClipRRect(
             borderRadius: BorderRadius.circular(4),
             child: Container(
-              height: 6,
+              height: 4,
               color: colors.bgElev,
               child: FractionallySizedBox(
                 alignment: Alignment.centerLeft,
@@ -253,24 +254,24 @@ class _CodeProjectCardState extends ConsumerState<CodeProjectCard> {
     // Action definitions — extensible list pattern
     final actions = <_QuickAction>[
       _QuickAction(
-        icon: Icons.terminal,
+        icon: LucideIcons.terminal100,
         tooltip: 'Terminal',
         onPressed: () => qa.openInTerminal(project.path),
       ),
       _QuickAction(
-        icon: Icons.folder_open,
+        icon: LucideIcons.folder100,
         tooltip: 'Finder',
         onPressed: () => qa.openInFinder(project.path),
       ),
       if (project.git?.githubUrl != null)
         _QuickAction(
-          icon: Icons.open_in_new,
+          icon: LucideIcons.externalLink100,
           tooltip: 'GitHub',
           onPressed: () => qa.openUrl(project.git!.githubUrl!),
         ),
       if (project.gsd?.notionUrl != null)
         _QuickAction(
-          icon: Icons.description_outlined,
+          icon: LucideIcons.fileText100,
           tooltip: 'Notion',
           onPressed: () => qa.openUrl(project.gsd!.notionUrl!),
         ),
@@ -285,7 +286,7 @@ class _CodeProjectCardState extends ConsumerState<CodeProjectCard> {
               height: 32,
               child: IconButton(
                 padding: EdgeInsets.zero,
-                iconSize: 18,
+                iconSize: 15,
                 icon: Icon(a.icon, color: colors.textDim),
                 tooltip: a.tooltip,
                 splashRadius: 16,

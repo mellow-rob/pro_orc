@@ -1,9 +1,11 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'package:pro_orc/data/models/claude_tool_model.dart';
+import 'package:pro_orc/features/shared/claude_tool_detail_panel.dart';
 import 'package:pro_orc/features/shell/glass_card.dart';
 import 'package:pro_orc/theme/n3_colors.dart';
 
@@ -20,7 +22,9 @@ class SkillCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).extension<AppColors>()!;
 
-    return SizedBox(
+    return GestureDetector(
+      onTap: () => showSkillDetail(context, skill),
+      child: SizedBox(
       width: 240,
       child: GlassCard(
         child: Padding(
@@ -34,7 +38,7 @@ class SkillCard extends StatelessWidget {
                 skill.name,
                 style: TextStyle(
                   color: colors.amber,
-                  fontWeight: FontWeight.bold,
+                  fontWeight: FontWeight.w500,
                   fontSize: 13,
                 ),
                 maxLines: 1,
@@ -67,7 +71,7 @@ class SkillCard extends StatelessWidget {
                 children: [
                   // Finder
                   _ActionButton(
-                    icon: Icons.folder_open,
+                    icon: LucideIcons.folder100,
                     tooltip: 'In Finder öffnen',
                     color: colors.amberLo,
                     onPressed: () => Process.run(
@@ -80,7 +84,7 @@ class SkillCard extends StatelessWidget {
                   // Homepage (only if available)
                   if (skill.homepage != null)
                     _ActionButton(
-                      icon: Icons.open_in_browser,
+                      icon: LucideIcons.globe100,
                       tooltip: 'Homepage',
                       color: colors.amberLo,
                       onPressed: () =>
@@ -91,6 +95,7 @@ class SkillCard extends StatelessWidget {
             ],
           ),
         ),
+      ),
       ),
     );
   }

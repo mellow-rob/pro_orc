@@ -1,9 +1,16 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:path/path.dart' as p;
 import 'package:pro_orc/data/models/phase_info.dart';
 import 'package:pro_orc/data/models/project_model.dart';
+import 'package:pro_orc/features/agents/agent_card.dart';
+import 'package:pro_orc/features/shared/claude_tool_detail_panel.dart';
 import 'package:pro_orc/features/shared/status_badge.dart';
 import 'package:pro_orc/features/shell/glass_card.dart';
+import 'package:pro_orc/providers/claude_tools_provider.dart';
 import 'package:pro_orc/providers/database_provider.dart';
 import 'package:pro_orc/theme/n3_colors.dart';
 
@@ -96,26 +103,28 @@ class ProjectDetailPanel extends ConsumerWidget {
         children: [
           // Accent left border strip
           Container(
-            width: 4,
-            height: 48,
+            width: 2,
+            height: 44,
             decoration: BoxDecoration(
               color: accent,
-              borderRadius: BorderRadius.circular(2),
+              borderRadius: BorderRadius.circular(1),
             ),
           ),
           const SizedBox(width: 16),
           // Type icon in accent circle
           Container(
-            width: 36,
-            height: 36,
+            width: 34,
+            height: 34,
             decoration: BoxDecoration(
-              color: accent.withValues(alpha: 0.15),
+              color: accent.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
             child: Icon(
-              project.projectType == 'research' ? Icons.science : Icons.code,
+              project.projectType == 'research'
+                  ? LucideIcons.beaker100
+                  : LucideIcons.codeXml100,
               color: accent,
-              size: 18,
+              size: 16,
             ),
           ),
           const SizedBox(width: 12),
@@ -127,8 +136,8 @@ class ProjectDetailPanel extends ConsumerWidget {
                     project.displayName,
                     style: TextStyle(
                       color: colors.textPri,
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
+                      fontSize: 19,
+                      fontWeight: FontWeight.w500,
                     ),
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -160,7 +169,7 @@ class ProjectDetailPanel extends ConsumerWidget {
             child: IconButton(
               padding: EdgeInsets.zero,
               iconSize: 18,
-              icon: Icon(Icons.close, color: colors.textDim),
+              icon: Icon(LucideIcons.x100, color: colors.textDim, size: 16),
               tooltip: 'Schliessen',
               onPressed: () => Navigator.of(context).pop(),
             ),
@@ -198,7 +207,7 @@ class ProjectDetailPanel extends ConsumerWidget {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(Icons.arrow_forward_rounded, color: accent, size: 16),
+                Icon(LucideIcons.arrowRight100, color: accent, size: 14),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
@@ -222,6 +231,15 @@ class ProjectDetailPanel extends ConsumerWidget {
             ),
           ),
 
+        // --- Dateien (.md Hierarchie) ---
+        if (project.mdFiles != null && project.mdFiles!.isNotEmpty)
+          _SectionCard(
+            colors: colors,
+            accent: accent,
+            title: 'DATEIEN',
+            child: _buildFilesSection(colors, accent),
+          ),
+
         // --- Phasen (Roadmap) ---
         if (gsd?.phases != null && gsd!.phases!.isNotEmpty)
           _SectionCard(
@@ -241,6 +259,10 @@ class ProjectDetailPanel extends ConsumerWidget {
               ],
             ),
           ),
+
+        // --- Agents ---
+        if (project.usedAgents != null && project.usedAgents!.isNotEmpty)
+          _buildAgentsSection(context, ref, colors, accent),
 
         // --- Decisions (collapsed by default) ---
         if (gsd?.decisions != null && gsd!.decisions!.isNotEmpty)
@@ -264,7 +286,7 @@ class ProjectDetailPanel extends ConsumerWidget {
                     padding: const EdgeInsets.only(bottom: 10),
                     child: Row(
                       children: [
-                        Icon(Icons.commit, color: colors.textDim, size: 16),
+                        Icon(LucideIcons.gitCommitHorizontal100, color: colors.textDim, size: 14),
                         const SizedBox(width: 8),
                         Text(
                           git!.lastCommitHash!,
@@ -288,7 +310,7 @@ class ProjectDetailPanel extends ConsumerWidget {
                   children: [
                     if (git?.githubUrl != null)
                       _LinkChip(
-                        icon: Icons.open_in_new,
+                        icon: LucideIcons.externalLink100,
                         label: 'GitHub',
                         accent: accent,
                         colors: colors,
@@ -296,7 +318,7 @@ class ProjectDetailPanel extends ConsumerWidget {
                       ),
                     if (gsd?.notionUrl != null)
                       _LinkChip(
-                        icon: Icons.description_outlined,
+                        icon: LucideIcons.fileText100,
                         label: 'Notion',
                         accent: accent,
                         colors: colors,
@@ -374,9 +396,9 @@ class ProjectDetailPanel extends ConsumerWidget {
       children: [
         Expanded(
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(4),
+            borderRadius: BorderRadius.circular(2),
             child: Container(
-              height: 6,
+              height: 4,
               color: colors.bgSurf,
               child: FractionallySizedBox(
                 alignment: Alignment.centerLeft,
@@ -384,7 +406,7 @@ class ProjectDetailPanel extends ConsumerWidget {
                 child: Container(
                   decoration: BoxDecoration(
                     color: accent,
-                    borderRadius: BorderRadius.circular(4),
+                    borderRadius: BorderRadius.circular(2),
                   ),
                 ),
               ),
@@ -397,7 +419,7 @@ class ProjectDetailPanel extends ConsumerWidget {
           style: TextStyle(
             color: accent,
             fontSize: 12,
-            fontWeight: FontWeight.w600,
+            fontWeight: FontWeight.w400,
           ),
         ),
       ],
@@ -406,9 +428,9 @@ class ProjectDetailPanel extends ConsumerWidget {
 
   Widget _buildPhaseRow(AppColors colors, Color accent, PhaseInfo phase) {
     final (icon, iconColor) = switch (phase.status) {
-      'complete' => (Icons.check_circle_outline, const Color(0xFF22C55E)),
-      'in_progress' => (Icons.arrow_circle_right_outlined, accent),
-      _ => (Icons.radio_button_unchecked, colors.textDim),
+      'complete' => (LucideIcons.circleCheck100, const Color(0xFF22C55E)),
+      'in_progress' => (LucideIcons.circlePlay100, accent),
+      _ => (LucideIcons.circle100, colors.textDim),
     };
 
     final isCurrent = phase.status == 'in_progress';
@@ -423,7 +445,7 @@ class ProjectDetailPanel extends ConsumerWidget {
           : null,
       child: Row(
         children: [
-          Icon(icon, color: iconColor, size: 18),
+          Icon(icon, color: iconColor, size: 15),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
@@ -431,7 +453,7 @@ class ProjectDetailPanel extends ConsumerWidget {
               style: TextStyle(
                 color: isCurrent ? colors.textPri : colors.textSec,
                 fontSize: 13,
-                fontWeight: isCurrent ? FontWeight.w600 : FontWeight.normal,
+                fontWeight: isCurrent ? FontWeight.w500 : FontWeight.w300,
               ),
             ),
           ),
@@ -452,27 +474,107 @@ class ProjectDetailPanel extends ConsumerWidget {
     );
   }
 
+  Widget _buildAgentsSection(BuildContext context, WidgetRef ref, AppColors colors, Color accent) {
+    final toolsAsync = ref.read(claudeToolsProvider);
+    final allAgents = toolsAsync.value?.agents ?? [];
+
+    return _SectionCard(
+      colors: colors,
+      accent: accent,
+      title: 'AGENTS',
+      child: Wrap(
+        spacing: 6,
+        runSpacing: 6,
+        children: project.usedAgents!.map((name) {
+          final agentData = allAgents
+              .where((a) => a.name == name)
+              .firstOrNull;
+          final chipColor = agentData != null
+              ? agentAccentColor(agentData.color, colors)
+              : colors.textSec;
+
+          return GestureDetector(
+            onTap: agentData != null
+                ? () => showAgentDetail(context, agentData)
+                : null,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              decoration: BoxDecoration(
+                color: chipColor.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: chipColor.withValues(alpha: 0.25)),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 6,
+                    height: 6,
+                    decoration: BoxDecoration(
+                      color: chipColor,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    name,
+                    style: TextStyle(
+                      color: chipColor,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  Widget _buildFilesSection(AppColors colors, Color accent) {
+    final tree = _buildFileTree(project.mdFiles!);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Root-level files (no folder wrapper)
+        for (final file in tree.files)
+          _MdFileRow(file: file, depth: 0, colors: colors, accent: accent),
+        // Root-level subdirectories
+        for (final child in tree.children.entries)
+          _FolderNode(
+            name: child.key,
+            node: child.value,
+            depth: 0,
+            colors: colors,
+            accent: accent,
+          ),
+      ],
+    );
+  }
+
   Widget _buildQuickActions(AppColors colors, Color accent, dynamic qa) {
     final actions = <_QuickAction>[
       _QuickAction(
-        icon: Icons.terminal,
+        icon: LucideIcons.terminal100,
         label: 'Terminal',
         onPressed: () => qa.openInTerminal(project.path),
       ),
       _QuickAction(
-        icon: Icons.folder_open,
+        icon: LucideIcons.folder100,
         label: 'Finder',
         onPressed: () => qa.openInFinder(project.path),
       ),
       if (project.git?.githubUrl != null)
         _QuickAction(
-          icon: Icons.open_in_new,
+          icon: LucideIcons.externalLink100,
           label: 'GitHub',
           onPressed: () => qa.openUrl(project.git!.githubUrl!),
         ),
       if (project.gsd?.notionUrl != null)
         _QuickAction(
-          icon: Icons.description_outlined,
+          icon: LucideIcons.fileText100,
           label: 'Notion',
           onPressed: () => qa.openUrl(project.gsd!.notionUrl!),
         ),
@@ -520,7 +622,7 @@ class _SectionCard extends StatelessWidget {
           color: colors.bgSurf.withValues(alpha: 0.5),
           borderRadius: BorderRadius.circular(12),
           border: Border(
-            top: BorderSide(color: accent.withValues(alpha: 0.3), width: 1),
+            top: BorderSide(color: accent.withValues(alpha: 0.2), width: 0.5),
           ),
         ),
         padding: const EdgeInsets.all(14),
@@ -530,10 +632,10 @@ class _SectionCard extends StatelessWidget {
             Text(
               title,
               style: TextStyle(
-                color: accent.withValues(alpha: 0.7),
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-                letterSpacing: 1.2,
+                color: accent.withValues(alpha: 0.6),
+                fontSize: 10,
+                fontWeight: FontWeight.w400,
+                letterSpacing: 1.5,
               ),
             ),
             const SizedBox(height: 10),
@@ -575,8 +677,8 @@ class _DecisionsSectionState extends State<_DecisionsSection> {
           borderRadius: BorderRadius.circular(12),
           border: Border(
             top: BorderSide(
-              color: widget.accent.withValues(alpha: 0.3),
-              width: 1,
+              color: widget.accent.withValues(alpha: 0.2),
+              width: 0.5,
             ),
           ),
         ),
@@ -591,10 +693,10 @@ class _DecisionsSectionState extends State<_DecisionsSection> {
                   Text(
                     'DECISIONS',
                     style: TextStyle(
-                      color: widget.accent.withValues(alpha: 0.7),
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 1.2,
+                      color: widget.accent.withValues(alpha: 0.6),
+                      fontSize: 10,
+                      fontWeight: FontWeight.w400,
+                      letterSpacing: 1.5,
                     ),
                   ),
                   const SizedBox(width: 6),
@@ -608,10 +710,10 @@ class _DecisionsSectionState extends State<_DecisionsSection> {
                   const Spacer(),
                   Icon(
                     _expanded
-                        ? Icons.keyboard_arrow_up
-                        : Icons.keyboard_arrow_down,
+                        ? LucideIcons.chevronUp100
+                        : LucideIcons.chevronDown100,
                     color: widget.colors.textDim,
-                    size: 18,
+                    size: 14,
                   ),
                 ],
               ),
@@ -680,21 +782,21 @@ class _LinkChip extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
-          color: accent.withValues(alpha: 0.08),
+          color: accent.withValues(alpha: 0.06),
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: accent.withValues(alpha: 0.2)),
+          border: Border.all(color: accent.withValues(alpha: 0.15), width: 0.5),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, color: accent, size: 14),
+            Icon(icon, color: accent, size: 13),
             const SizedBox(width: 6),
             Text(
               label,
               style: TextStyle(
                 color: accent,
                 fontSize: 12,
-                fontWeight: FontWeight.w500,
+                fontWeight: FontWeight.w400,
               ),
             ),
           ],
@@ -748,7 +850,7 @@ class _QuickActionButtonState extends State<_QuickActionButton> {
                 Icon(
                   widget.action.icon,
                   color: _hovered ? widget.accent : widget.colors.textDim,
-                  size: 20,
+                  size: 18,
                 ),
                 const SizedBox(height: 4),
                 Text(
@@ -756,9 +858,200 @@ class _QuickActionButtonState extends State<_QuickActionButton> {
                   style: TextStyle(
                     color: _hovered ? widget.accent : widget.colors.textDim,
                     fontSize: 10,
-                    fontWeight: FontWeight.w500,
+                    fontWeight: FontWeight.w300,
                   ),
                 ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Tree node holding files at this directory level and child directories.
+class _FileTreeNode {
+  final List<MdFileInfo> files = [];
+  final Map<String, _FileTreeNode> children = {};
+}
+
+/// Builds a nested tree from a flat list of [MdFileInfo].
+_FileTreeNode _buildFileTree(List<MdFileInfo> files) {
+  final root = _FileTreeNode();
+  for (final file in files) {
+    final dir = p.dirname(file.relativePath);
+    if (dir == '.') {
+      root.files.add(file);
+    } else {
+      final segments = p.split(dir);
+      var node = root;
+      for (final seg in segments) {
+        node = node.children.putIfAbsent(seg, _FileTreeNode.new);
+      }
+      node.files.add(file);
+    }
+  }
+  return root;
+}
+
+/// Collapsible folder node that renders its files and nested subfolders.
+class _FolderNode extends StatefulWidget {
+  const _FolderNode({
+    required this.name,
+    required this.node,
+    required this.depth,
+    required this.colors,
+    required this.accent,
+  });
+
+  final String name;
+  final _FileTreeNode node;
+  final int depth;
+  final AppColors colors;
+  final Color accent;
+
+  @override
+  State<_FolderNode> createState() => _FolderNodeState();
+}
+
+class _FolderNodeState extends State<_FolderNode> {
+  bool _expanded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final indent = widget.depth * 16.0;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Folder header (clickable to toggle)
+        GestureDetector(
+          onTap: () => setState(() => _expanded = !_expanded),
+          child: MouseRegion(
+            cursor: SystemMouseCursors.click,
+            child: Padding(
+              padding: EdgeInsets.only(left: indent),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 3),
+                child: Row(
+                  children: [
+                    Icon(
+                      _expanded
+                          ? LucideIcons.chevronDown100
+                          : LucideIcons.chevronRight100,
+                      color: widget.colors.textDim,
+                      size: 13,
+                    ),
+                    const SizedBox(width: 2),
+                    Icon(
+                      _expanded
+                          ? LucideIcons.folderOpen100
+                          : LucideIcons.folder100,
+                      color: widget.colors.textDim,
+                      size: 13,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      widget.name,
+                      style: TextStyle(
+                        color: widget.colors.textDim,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+        // Expanded content: files then child folders
+        if (_expanded) ...[
+          for (final file in widget.node.files)
+            _MdFileRow(
+              file: file,
+              depth: widget.depth + 1,
+              colors: widget.colors,
+              accent: widget.accent,
+            ),
+          for (final child in widget.node.children.entries)
+            _FolderNode(
+              name: child.key,
+              node: child.value,
+              depth: widget.depth + 1,
+              colors: widget.colors,
+              accent: widget.accent,
+            ),
+        ],
+      ],
+    );
+  }
+}
+
+/// Clickable .md file row with hover accent and optional role label.
+class _MdFileRow extends StatefulWidget {
+  const _MdFileRow({
+    required this.file,
+    required this.depth,
+    required this.colors,
+    required this.accent,
+  });
+
+  final MdFileInfo file;
+  final int depth;
+  final AppColors colors;
+  final Color accent;
+
+  @override
+  State<_MdFileRow> createState() => _MdFileRowState();
+}
+
+class _MdFileRowState extends State<_MdFileRow> {
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final indent = widget.depth * 16.0;
+
+    return Padding(
+      padding: EdgeInsets.only(left: indent + 18),
+      child: MouseRegion(
+        onEnter: (_) => setState(() => _hovered = true),
+        onExit: (_) => setState(() => _hovered = false),
+        cursor: SystemMouseCursors.click,
+        child: GestureDetector(
+          onTap: () => Process.run('open', [widget.file.path], runInShell: true),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 3),
+            child: Row(
+              children: [
+                Icon(
+                  LucideIcons.fileText100,
+                  color: _hovered ? widget.accent : widget.colors.textDim,
+                  size: 13,
+                ),
+                const SizedBox(width: 6),
+                Flexible(
+                  child: Text(
+                    widget.file.name,
+                    style: TextStyle(
+                      color: _hovered ? widget.accent : widget.colors.textPri,
+                      fontSize: 13,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                if (widget.file.role != null) ...[
+                  const SizedBox(width: 8),
+                  Text(
+                    widget.file.role!,
+                    style: TextStyle(
+                      color: widget.colors.textDim,
+                      fontSize: 11,
+                    ),
+                  ),
+                ],
               ],
             ),
           ),

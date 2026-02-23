@@ -31,10 +31,12 @@ class ClaudeToolsScanner {
       final skills = await _scanSkills();
       final plugins = await _scanPlugins();
       final mcpServers = await _scanMcpServers();
+      final agents = await _scanAgents();
       return ClaudeToolsData(
         skills: skills,
         plugins: plugins,
         mcpServers: mcpServers,
+        agents: agents,
       );
     } catch (_) {
       return const ClaudeToolsData(
@@ -51,22 +53,32 @@ class ClaudeToolsScanner {
   // ---------------------------------------------------------------------------
 
   Future<List<SkillData>> _scanSkills() async {
-    final skillsDir = Directory('$claudeDir/skills');
-    if (!await skillsDir.exists()) return [];
-
+    final seen = <String>{};
     final result = <SkillData>[];
 
-    await for (final entity in skillsDir.list(
-      recursive: false,
-      followLinks: false,
-    )) {
-      if (entity is! Directory) continue;
+    // Scan both ~/.claude/skills/ and ~/.agents/skills/
+    final home = claudeDir.replaceFirst('/.claude', '');
+    final dirs = [
+      Directory('$claudeDir/skills'),
+      Directory('$home/.agents/skills'),
+    ];
 
-      final id = entity.path.split('/').last;
-      if (id.startsWith('.')) continue;
+    for (final skillsDir in dirs) {
+      if (!await skillsDir.exists()) continue;
 
-      final skillData = await _readSkillDir(entity.path, id);
-      result.add(skillData);
+      await for (final entity in skillsDir.list(
+        recursive: false,
+        followLinks: true,
+      )) {
+        if (entity is! Directory) continue;
+
+        final id = entity.path.split('/').last;
+        if (id.startsWith('.') || seen.contains(id)) continue;
+        seen.add(id);
+
+        final skillData = await _readSkillDir(entity.path, id);
+        result.add(skillData);
+      }
     }
 
     result.sort((a, b) => a.name.compareTo(b.name));
@@ -189,45 +201,167 @@ class ClaudeToolsScanner {
   // ---------------------------------------------------------------------------
 
   Future<List<McpServerData>> _scanMcpServers() async {
+    final result = <McpServerData>[];
+
+    // --- Source 1: Global MCP servers from settings.json ---
+    Map<String, dynamic> settings = {};
     try {
       final raw = await File('$claudeDir/settings.json').readAsString();
-      final settings = jsonDecode(raw) as Map<String, dynamic>;
+      settings = jsonDecode(raw) as Map<String, dynamic>;
       final mcpServers =
           (settings['mcpServers'] as Map<String, dynamic>?) ?? {};
 
-      // Handle empty map gracefully
-      if (mcpServers.isEmpty) return [];
+      for (final entry in mcpServers.entries) {
+        result.add(_parseMcpEntry(entry.key, entry.value as Map<String, dynamic>));
+      }
+    } catch (_) {}
 
-      final result = mcpServers.entries.map((entry) {
-        final name = entry.key;
-        final config = entry.value as Map<String, dynamic>;
-        final typeStr = config['type'] as String?;
+    // --- Source 2: Plugin-provided MCP servers from .mcp.json files ---
+    final enabledPlugins =
+        (settings['enabledPlugins'] as Map<String, dynamic>?) ?? {};
 
-        McpServerType type;
-        String command;
+    try {
+      final installedPath = '$claudeDir/plugins/installed_plugins.json';
+      final installedRaw = await File(installedPath).readAsString();
+      final installed = jsonDecode(installedRaw) as Map<String, dynamic>;
+      final pluginsMap =
+          (installed['plugins'] as Map<String, dynamic>?) ?? {};
 
-        if (typeStr == 'http') {
-          type = McpServerType.http;
-          command = config['url'] as String? ?? '';
-        } else if (typeStr == 'sse') {
-          type = McpServerType.sse;
-          command = config['url'] as String? ?? '';
-        } else {
-          type = McpServerType.stdio;
-          final cmd = config['command'] as String? ?? '';
-          final args =
-              (config['args'] as List<dynamic>?)?.join(' ') ?? '';
-          command = args.isNotEmpty ? '$cmd $args' : cmd;
-        }
+      for (final entry in pluginsMap.entries) {
+        final key = entry.key;
+        final installs = entry.value as List<dynamic>;
+        if (installs.isEmpty) continue;
 
-        return McpServerData(name: name, command: command, type: type);
-      }).toList();
+        final first = installs[0] as Map<String, dynamic>;
+        final installPath = first['installPath'] as String? ?? '';
+        if (installPath.isEmpty) continue;
 
-      result.sort((a, b) => a.name.compareTo(b.name));
-      return result;
-    } catch (_) {
-      return [];
+        final atIndex = key.indexOf('@');
+        final pluginName = atIndex >= 0 ? key.substring(0, atIndex) : key;
+        final isEnabled = (enabledPlugins[key] as bool?) ?? false;
+
+        // Read .mcp.json from the plugin install path
+        try {
+          final mcpFile = File('$installPath/.mcp.json');
+          final mcpRaw = await mcpFile.readAsString();
+          final mcpJson = jsonDecode(mcpRaw) as Map<String, dynamic>;
+
+          // Two format variants:
+          // 1) { "mcpServers": { "name": { ... } } }
+          // 2) { "name": { "command": "...", "args": [...] } }
+          final Map<String, dynamic> servers;
+          if (mcpJson.containsKey('mcpServers')) {
+            servers =
+                (mcpJson['mcpServers'] as Map<String, dynamic>?) ?? {};
+          } else {
+            servers = mcpJson;
+          }
+
+          for (final sEntry in servers.entries) {
+            final config = sEntry.value;
+            if (config is! Map<String, dynamic>) continue;
+            result.add(_parseMcpEntry(
+              sEntry.key,
+              config,
+              source: pluginName,
+              enabled: isEnabled,
+            ));
+          }
+        } catch (_) {}
+      }
+    } catch (_) {}
+
+    result.sort((a, b) => a.name.compareTo(b.name));
+    return result;
+  }
+
+  /// Parses a single MCP server config entry into [McpServerData].
+  McpServerData _parseMcpEntry(
+    String name,
+    Map<String, dynamic> config, {
+    String? source,
+    bool enabled = true,
+  }) {
+    final typeStr = config['type'] as String?;
+
+    McpServerType type;
+    String command;
+    List<String>? argsList;
+
+    if (typeStr == 'http') {
+      type = McpServerType.http;
+      command = config['url'] as String? ?? '';
+    } else if (typeStr == 'sse') {
+      type = McpServerType.sse;
+      command = config['url'] as String? ?? '';
+    } else {
+      type = McpServerType.stdio;
+      final cmd = config['command'] as String? ?? '';
+      argsList = (config['args'] as List<dynamic>?)
+          ?.map((a) => a.toString())
+          .toList();
+      final argsStr = argsList?.join(' ') ?? '';
+      command = argsStr.isNotEmpty ? '$cmd $argsStr' : cmd;
     }
+
+    return McpServerData(
+      name: name,
+      command: command,
+      type: type,
+      source: source,
+      enabled: enabled,
+      args: argsList,
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Agents
+  // ---------------------------------------------------------------------------
+
+  Future<List<AgentData>> _scanAgents() async {
+    final agentsDir = Directory('$claudeDir/agents');
+    if (!await agentsDir.exists()) return [];
+
+    final result = <AgentData>[];
+
+    await for (final entity in agentsDir.list(recursive: false)) {
+      if (entity is! File) continue;
+      final filename = entity.path.split('/').last;
+      if (!filename.endsWith('.md')) continue;
+
+      final id = filename.substring(0, filename.length - 3);
+
+      try {
+        final content = await entity.readAsString();
+        final frontmatter = _parseFrontmatter(content);
+
+        final toolsRaw = frontmatter['tools'] ?? '';
+        final tools = toolsRaw
+            .split(',')
+            .map((t) => t.trim())
+            .where((t) => t.isNotEmpty)
+            .toList();
+
+        final name = frontmatter['name'] ?? id;
+        final category = name.startsWith('gsd-') ? 'gsd' : 'general';
+
+        result.add(AgentData(
+          id: id,
+          name: name,
+          description: frontmatter['description'],
+          color: frontmatter['color'] ?? 'cyan',
+          model: frontmatter['model'],
+          tools: tools,
+          path: entity.path,
+          category: category,
+        ));
+      } catch (_) {
+        // Unreadable file — skip
+      }
+    }
+
+    result.sort((a, b) => a.name.compareTo(b.name));
+    return result;
   }
 
   // ---------------------------------------------------------------------------

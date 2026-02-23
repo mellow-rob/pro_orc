@@ -166,6 +166,12 @@ class ProjectScanner {
       // Compute stale
       final isStale = await _computeStale(path, git?.lastCommitDate);
 
+      // Extract used agents from .planning/ VERIFICATION.md files
+      final usedAgents = gsd != null ? await _extractUsedAgents(path) : null;
+
+      // Scan for .md files
+      final mdFiles = await _scanMdFiles(path);
+
       models.add(ProjectModel(
         folderId: folderId,
         displayName: gsdResult.displayName ?? folderId,
@@ -176,6 +182,8 @@ class ProjectScanner {
         git: git,
         hasParseError: gsdResult.hasParseError,
         isStale: isStale,
+        usedAgents: usedAgents,
+        mdFiles: mdFiles,
       ));
     }
 
@@ -357,6 +365,115 @@ class ProjectScanner {
     }
 
     return false;
+  }
+
+  /// Extracts agent names used in a project by scanning `.planning/` for
+  /// VERIFICATION.md files containing `_Verifier: Claude (agent-name)_`
+  /// or `Spawned by` references.
+  Future<List<String>?> _extractUsedAgents(String projectPath) async {
+    final planningDir = Directory(p.join(projectPath, '.planning', 'phases'));
+    if (!await planningDir.exists()) return null;
+
+    final agents = <String>{};
+    final agentPattern = RegExp(r'Claude \(([a-z0-9-]+)\)');
+    final spawnedPattern = RegExp(r'Spawned by.*?([a-z0-9]+-[a-z0-9-]+)');
+
+    try {
+      await for (final entity in planningDir.list(recursive: true)) {
+        if (entity is! File) continue;
+        final name = p.basename(entity.path);
+        if (!name.contains('VERIFICATION') && !name.contains('SUMMARY')) {
+          continue;
+        }
+
+        try {
+          final content = await entity.readAsString();
+          for (final match in agentPattern.allMatches(content)) {
+            agents.add(match.group(1)!);
+          }
+          for (final match in spawnedPattern.allMatches(content)) {
+            agents.add(match.group(1)!);
+          }
+        } catch (_) {}
+      }
+    } catch (_) {}
+
+    if (agents.isEmpty) return null;
+    final sorted = agents.toList()..sort();
+    return sorted;
+  }
+
+  /// Role labels for known .md files in Claude Code / GSD workflows.
+  static const _roleMap = <String, String>{
+    'CLAUDE.md': 'Projekt-Instruktionen',
+    'README.md': 'Dokumentation',
+    'REQUIREMENTS.md': 'Anforderungen',
+    'PROJECT.md': 'Projektvision',
+    'STATE.md': 'Aktueller Stand',
+    'ROADMAP.md': 'Phasen-Uebersicht',
+  };
+
+  /// Suffix-based roles for plan/phase files.
+  static String? _suffixRole(String name) {
+    if (name.endsWith('-PLAN.md')) return 'Ausfuehrungsplan';
+    if (name.endsWith('-SUMMARY.md')) return 'Zusammenfassung';
+    if (name.endsWith('-VERIFICATION.md')) return 'Verifikation';
+    if (name.endsWith('-RESEARCH.md')) return 'Recherche';
+    if (name.endsWith('-CONTEXT.md')) return 'Kontext';
+    return null;
+  }
+
+  /// Scans a project for .md files at root and inside `.planning/` (max depth 3).
+  ///
+  /// Returns null if no .md files are found.
+  Future<List<MdFileInfo>?> _scanMdFiles(String projectPath) async {
+    final results = <MdFileInfo>[];
+
+    // 1. Root-level .md files
+    final rootDir = Directory(projectPath);
+    try {
+      await for (final entity in rootDir.list(followLinks: false)) {
+        if (entity is! File) continue;
+        final name = p.basename(entity.path);
+        if (!name.endsWith('.md')) continue;
+        results.add(MdFileInfo(
+          name: name,
+          relativePath: name,
+          path: entity.path,
+          role: _roleMap[name] ?? _suffixRole(name),
+        ));
+      }
+    } catch (_) {}
+
+    // 2. .planning/ recursive (max depth ~3)
+    final planningDir = Directory(p.join(projectPath, '.planning'));
+    if (await planningDir.exists()) {
+      try {
+        await for (final entity
+            in planningDir.list(recursive: true, followLinks: false)) {
+          if (entity is! File) continue;
+          final name = p.basename(entity.path);
+          if (!name.endsWith('.md')) continue;
+
+          final relativePath =
+              p.relative(entity.path, from: projectPath);
+          // Enforce max depth (~3 levels inside .planning)
+          final segments = p.split(relativePath);
+          if (segments.length > 5) continue; // .planning/a/b/c/file.md = 5
+
+          results.add(MdFileInfo(
+            name: name,
+            relativePath: relativePath,
+            path: entity.path,
+            role: _roleMap[name] ?? _suffixRole(name),
+          ));
+        }
+      } catch (_) {}
+    }
+
+    if (results.isEmpty) return null;
+    results.sort((a, b) => a.relativePath.compareTo(b.relativePath));
+    return results;
   }
 
   /// Parses the JSON ignore list from the DB config string.

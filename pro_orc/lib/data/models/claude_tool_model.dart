@@ -80,7 +80,7 @@ class PluginData {
 // McpServerData
 // ---------------------------------------------------------------------------
 
-/// Represents a single MCP server entry from `~/.claude/settings.json` `mcpServers`.
+/// Represents a single MCP server entry from settings.json or a plugin `.mcp.json`.
 class McpServerData {
   /// Server name — the key from the `mcpServers` map.
   final String name;
@@ -91,10 +91,65 @@ class McpServerData {
   /// Transport type: stdio, http, or sse.
   final McpServerType type;
 
+  /// Source plugin name, or `null` for global (settings.json) servers.
+  final String? source;
+
+  /// Whether the server is enabled. Global servers are always true;
+  /// plugin servers derive from `enabledPlugins` in settings.json.
+  final bool enabled;
+
+  /// Separate args list for display (stdio only).
+  final List<String>? args;
+
   const McpServerData({
     required this.name,
     required this.command,
     required this.type,
+    this.source,
+    this.enabled = true,
+    this.args,
+  });
+}
+
+// ---------------------------------------------------------------------------
+// AgentData
+// ---------------------------------------------------------------------------
+
+/// Represents a single Claude agent discovered in `~/.claude/agents/`.
+class AgentData {
+  /// Filename without `.md` extension — canonical identifier.
+  final String id;
+
+  /// Display name from YAML frontmatter `name:` field.
+  final String name;
+
+  /// Optional description from YAML frontmatter `description:` field.
+  final String? description;
+
+  /// Color string from frontmatter (e.g. "green", "cyan", "orange").
+  final String color;
+
+  /// Optional model preference (e.g. "opus", "haiku").
+  final String? model;
+
+  /// List of allowed tools (e.g. ["Read", "Write", "Bash"]).
+  final List<String> tools;
+
+  /// Absolute path to the `.md` file.
+  final String path;
+
+  /// Category derived from name prefix: `"gsd"` or `"general"`.
+  final String category;
+
+  const AgentData({
+    required this.id,
+    required this.name,
+    this.description,
+    required this.color,
+    this.model,
+    required this.tools,
+    required this.path,
+    required this.category,
   });
 }
 
@@ -107,6 +162,7 @@ class ClaudeToolsData {
   final List<SkillData> skills;
   final List<PluginData> plugins;
   final List<McpServerData> mcpServers;
+  final List<AgentData> agents;
 
   /// True if a top-level error occurred during scanning.
   final bool hasError;
@@ -115,6 +171,7 @@ class ClaudeToolsData {
     required this.skills,
     required this.plugins,
     required this.mcpServers,
+    this.agents = const [],
     this.hasError = false,
   });
 
@@ -123,9 +180,10 @@ class ClaudeToolsData {
     skills: [],
     plugins: [],
     mcpServers: [],
+    agents: [],
   );
 
-  /// True if all three tool lists are empty.
+  /// True if all four tool lists are empty.
   bool get isEmpty =>
-      skills.isEmpty && plugins.isEmpty && mcpServers.isEmpty;
+      skills.isEmpty && plugins.isEmpty && mcpServers.isEmpty && agents.isEmpty;
 }
