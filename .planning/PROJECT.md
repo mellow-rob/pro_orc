@@ -33,9 +33,26 @@ Auf einen Blick sehen, wo jedes Projekt steht, was der nächste Schritt ist, und
 - ✓ Brain+zzz Memory Indicator auf Project Cards (konsolidiert/nicht vorhanden/stale) — v1.2
 - ✓ Quick Action: rem-sleep im Terminal triggern via osascript — v1.2
 
+## Current Milestone: v1.3 Project Creator
+
+**Goal:** Neue Projekte direkt aus Pro Orc erstellen — Add+ Karte, Erstellungs-Dialog mit Code/Research Tab-Switcher, Ordner anlegen, git init, Notion API Integration, rem-sleep Trigger.
+
+**Target features:**
+- Add+ Karte als letzte Karte in Code- und Research-Tab
+- Einheitlicher Erstellungs-Dialog mit Code/Research Tab-Switcher (vorausgewählt je nach Herkunft)
+- Code: Ordner anlegen, optional git init, optional GSD skeleton (.planning/PROJECT.md), Terminal öffnen, optional rem-sleep
+- Research: Ordner anlegen, optional Notion-Seite erstellen (via API), Terminal öffnen, optional rem-sleep
+- Settings: Notion API Key + Parent Page Konfiguration
+- Notion API Integration für automatische Seiten-Erstellung
+
 ### Active
 
-(None — planning next milestone)
+- [ ] Add+ Karte im Code- und Research-Tab Grid — v1.3
+- [ ] Erstellungs-Dialog mit Code/Research Tab-Switcher — v1.3
+- [ ] Code-Projekt erstellen: Ordner + git init + optional GSD skeleton — v1.3
+- [ ] Research-Projekt erstellen: Ordner + optional Notion-Seite via API — v1.3
+- [ ] Terminal öffnen + optional rem-sleep nach Erstellung — v1.3
+- [ ] Notion API Integration (Key + Parent in Settings) — v1.3
 
 ### Out of Scope
 
@@ -49,7 +66,7 @@ Auf einen Blick sehen, wo jedes Projekt steht, was der nächste Schritt ist, und
 - Light Mode — n3urala1 Theme ist intentional dark-only
 - Auto-Update — Single-Developer Tool, `git pull && flutter build macos` reicht
 - Cloud Sync — Nur lokaler Filesystem-Zugriff, kein Remote
-- Notion API Read/Write — Nur ausgehende Links, kein API-Zugriff
+- Notion API Read/Write — Nur Seiten-Erstellung für neue Research-Projekte, kein vollständiger Sync
 
 ## Context
 
@@ -98,4 +115,4 @@ Auf einen Blick sehen, wo jedes Projekt steht, was der nächste Schritt ist, und
 | Watch ~/.claude/projects/ for memory changes | Real-time updates when rem-sleep runs in another terminal | ✓ Good — instant feedback |
 
 ---
-*Last updated: 2026-02-24 after v1.2 milestone*
+*Last updated: 2026-02-24 after v1.3 milestone start*
