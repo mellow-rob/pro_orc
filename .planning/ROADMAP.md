@@ -65,10 +65,10 @@ See: milestones/v1.2-ROADMAP.md for full details
   1. Settings-Tab zeigt zwei neue Felder: Notion API Key (verschleiert) und Notion Parent Page ID
   2. Eingegebene Werte werden nach App-Neustart korrekt geladen (Drift DB Persistenz)
   3. API Key wird als verschluesselter Wert gespeichert, nicht als Klartext in der DB sichtbar
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 14-01: Notion Settings UI + Drift DB schema
+- [ ] 14-01-PLAN.md — Drift DB schema v3 + encryption helper + Notion settings UI
 
 ### Phase 15: Add Card + Dialog
 **Goal**: User sieht Add+ Karte im Code- und Research-Grid und kann daraus einen Erstellungs-Dialog oeffnen, der alle Optionen fuer den neuen Projekttyp zeigt.
