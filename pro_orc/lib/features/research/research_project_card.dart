@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:pro_orc/data/db/app_database.dart';
 import 'package:pro_orc/data/models/project_model.dart';
+import 'package:pro_orc/features/shared/memory_indicator.dart';
 import 'package:pro_orc/features/shell/glass_card.dart';
 import 'package:pro_orc/providers/database_provider.dart';
 import 'package:pro_orc/providers/hidden_projects_provider.dart';
@@ -125,6 +126,8 @@ class _ResearchProjectCardState extends ConsumerState<ResearchProjectCard> {
             overflow: TextOverflow.ellipsis,
           ),
         ),
+        const SizedBox(width: 4),
+        MemoryIndicator(memory: widget.project.memory, colors: colors),
         // Eye icon for hide/show toggle
         SizedBox(
           width: 28,
