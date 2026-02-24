@@ -380,6 +380,33 @@ void main() {
     });
 
     // -----------------------------------------------------------------------
+    // Memory data integration
+    // -----------------------------------------------------------------------
+
+    group('memory data integration', () {
+      test('scanned project has memory == null when no MEMORY.md exists', () async {
+        await createGsdProject(scanRoot, 'no-memory-project');
+
+        final results = await scanner.scanAll(scanDirOverride: scanRoot.path);
+        expect(results.length, equals(1));
+        expect(results.first.memory, isNull);
+      });
+
+      test('ProjectModel.memory field is accessible for UI layer', () async {
+        await createGsdProject(scanRoot, 'memory-check-project');
+
+        final results = await scanner.scanAll(scanDirOverride: scanRoot.path);
+        final project = results.first;
+
+        // Verify the memory field exists and follows the nullable pattern
+        // (null = no memory, non-null = has memory with hasMemory/lastConsolidated/isStale)
+        expect(project.memory?.hasMemory, isNull);
+        expect(project.memory?.lastConsolidated, isNull);
+        expect(project.memory?.isStale, isNull);
+      });
+    });
+
+    // -----------------------------------------------------------------------
     // _FileCache: mtime-based caching
     // -----------------------------------------------------------------------
 
