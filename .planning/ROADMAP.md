@@ -40,7 +40,7 @@ See: milestones/v1.1-ROADMAP.md for full details
 **Milestone Goal:** Auf jeder Project Card anzeigen ob rem-sleep Memory-Konsolidierung gelaufen ist, mit schlafendem Buch-Icon und Quick Action zum Triggern.
 
 - [x] **Phase 12: Memory Detection** - Pure Dart Service erkennt Memory-Status pro Projekt via Dateisystem (completed 2026-02-24)
-- [ ] **Phase 13: Memory UI + Actions** - Sleeping-Book-Icon auf Cards mit Stale-Indikator, Tooltip und Quick Action
+- [x] **Phase 13: Memory UI + Actions** - Sleeping-Book-Icon auf Cards mit Stale-Indikator, Tooltip und Quick Action (completed 2026-02-24)
 
 ## Phase Details
 
@@ -66,7 +66,7 @@ Plans:
   2. Icon wechselt visuell den Zustand wenn Memory aelter als 7 Tage ist (stale)
   3. Tooltip auf dem Icon zeigt "Letzte Konsolidierung: [Datum]" oder "Keine Memory vorhanden"
   4. Quick Action oeffnet Terminal mit `claude` im Projektverzeichnis zum rem-sleep Triggern
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 Plans:
 - [ ] 13-01-PLAN.md — MemoryIndicator widget + rem-sleep quick action on both card types
 
@@ -88,4 +88,4 @@ Plans:
 | 10. Card Widgets + Quick Actions | v1.1 | 4/4 | Complete | 2026-02-23 |
 | 11. Claude Tools Panel | v1.1 | 3/3 | Complete | 2026-02-23 |
 | 12. Memory Detection | v1.2 | Complete    | 2026-02-24 | - |
-| 13. Memory UI + Actions | v1.2 | 0/1 | Not started | - |
+| 13. Memory UI + Actions | v1.2 | Complete    | 2026-02-24 | - |
