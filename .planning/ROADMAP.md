@@ -35,7 +35,7 @@ See: milestones/v1.1-ROADMAP.md for full details
 
 </details>
 
-### 🚧 v1.2 Memory Indicator
+### v1.2 Memory Indicator
 
 **Milestone Goal:** Auf jeder Project Card anzeigen ob rem-sleep Memory-Konsolidierung gelaufen ist, mit schlafendem Buch-Icon und Quick Action zum Triggern.
 
@@ -52,7 +52,10 @@ See: milestones/v1.1-ROADMAP.md for full details
   1. ProjectModel enthaelt Memory-Status (vorhanden/nicht vorhanden) und letztes Konsolidierungsdatum
   2. Pfad-Encoding wandelt beliebige Projektpfade korrekt ins Claude-Projektverzeichnis-Format um (Slashes werden Dashes)
   3. Unit Tests mit echten Temp-Verzeichnissen validieren Erkennung, Pfad-Encoding und fehlende Memory-Datei
-**Plans**: TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 12-01-PLAN.md — TDD: MemoryData model + MemoryReader service (path encoding, detection, mtime)
+- [ ] 12-02-PLAN.md — Wire MemoryReader into ProjectScanner + ProjectModel
 
 ### Phase 13: Memory UI + Actions
 **Goal**: User sieht auf jeder Project Card den Memory-Status und kann rem-sleep direkt triggern
@@ -82,5 +85,5 @@ See: milestones/v1.1-ROADMAP.md for full details
 | 9. Theme + UI Shell | v1.1 | 2/2 | Complete | 2026-02-22 |
 | 10. Card Widgets + Quick Actions | v1.1 | 4/4 | Complete | 2026-02-23 |
 | 11. Claude Tools Panel | v1.1 | 3/3 | Complete | 2026-02-23 |
-| 12. Memory Detection | v1.2 | 0/? | Not started | - |
+| 12. Memory Detection | v1.2 | 0/2 | Planning | - |
 | 13. Memory UI + Actions | v1.2 | 0/? | Not started | - |
