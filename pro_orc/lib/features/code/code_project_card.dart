@@ -99,6 +99,14 @@ class _CodeProjectCardState extends ConsumerState<CodeProjectCard> {
           _buildNextStep(colors, widget.project.gsd!.nextStep!),
         ],
 
+        // --- Memory indicator (below next step) ---
+        const SizedBox(height: 14),
+        MemoryIndicator(
+          memory: widget.project.memory,
+          colors: colors,
+          onTap: () => ref.read(quickActionsProvider).openRemSleep(widget.project.path),
+        ),
+
         const Spacer(),
 
         // --- Quick action buttons ---
@@ -137,8 +145,6 @@ class _CodeProjectCardState extends ConsumerState<CodeProjectCard> {
             ],
           ),
         ),
-        const SizedBox(width: 4),
-        MemoryIndicator(memory: widget.project.memory, colors: colors),
         // Eye icon for hide/show toggle
         SizedBox(
           width: 28,

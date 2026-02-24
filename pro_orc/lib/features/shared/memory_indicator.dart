@@ -5,10 +5,11 @@ import 'package:pro_orc/theme/n3_colors.dart';
 
 /// Memory status indicator — shows Claude memory consolidation status for a project.
 ///
+/// Renders as a clickable button with brain icon + "zzz" text.
 /// Visual states based on [MemoryData]:
-/// - No memory (null): gray/disabled icon — no consolidation present
-/// - Memory, fresh: violet icon — memory exists and is up to date
-/// - Memory, stale: amber icon — memory exists but needs refreshing
+/// - No memory (null): gray/disabled — click triggers rem-sleep via [onTap]
+/// - Memory, fresh: violet — memory exists and is up to date
+/// - Memory, stale: amber — memory exists but needs refreshing
 ///
 /// Tooltip shows German date text or "Keine Memory vorhanden".
 class MemoryIndicator extends StatelessWidget {
@@ -16,10 +17,14 @@ class MemoryIndicator extends StatelessWidget {
     super.key,
     required this.memory,
     required this.colors,
+    this.onTap,
   });
 
   final MemoryData? memory;
   final AppColors colors;
+
+  /// Called when the indicator is tapped. Opens Terminal for rem-sleep.
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -28,10 +33,32 @@ class MemoryIndicator extends StatelessWidget {
 
     return Tooltip(
       message: tooltip,
-      child: Icon(
-        LucideIcons.bookMarked100,
-        color: iconColor,
-        size: 13,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(6),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                LucideIcons.brain100,
+                color: iconColor,
+                size: 13,
+              ),
+              const SizedBox(width: 3),
+              Text(
+                'zzz',
+                style: TextStyle(
+                  color: iconColor,
+                  fontSize: 9,
+                  fontWeight: FontWeight.w600,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

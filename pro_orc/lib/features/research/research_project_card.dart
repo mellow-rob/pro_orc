@@ -102,6 +102,14 @@ class _ResearchProjectCardState extends ConsumerState<ResearchProjectCard> {
           const SizedBox(height: 8),
         ],
 
+        // --- Memory indicator (below description) ---
+        const SizedBox(height: 6),
+        MemoryIndicator(
+          memory: widget.project.memory,
+          colors: colors,
+          onTap: () => ref.read(quickActionsProvider).openRemSleep(widget.project.path),
+        ),
+
         const Spacer(),
 
         // --- Quick action buttons ---
@@ -126,8 +134,6 @@ class _ResearchProjectCardState extends ConsumerState<ResearchProjectCard> {
             overflow: TextOverflow.ellipsis,
           ),
         ),
-        const SizedBox(width: 4),
-        MemoryIndicator(memory: widget.project.memory, colors: colors),
         // Eye icon for hide/show toggle
         SizedBox(
           width: 28,
