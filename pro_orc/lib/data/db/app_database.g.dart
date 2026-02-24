@@ -58,12 +58,38 @@ class $AppConfigTableTable extends AppConfigTable
     requiredDuringInsert: false,
     defaultValue: const Constant('git'),
   );
+  static const VerificationMeta _notionApiKeyMeta = const VerificationMeta(
+    'notionApiKey',
+  );
+  @override
+  late final GeneratedColumn<String> notionApiKey = GeneratedColumn<String>(
+    'notion_api_key',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _notionParentPageIdMeta =
+      const VerificationMeta('notionParentPageId');
+  @override
+  late final GeneratedColumn<String> notionParentPageId =
+      GeneratedColumn<String>(
+        'notion_parent_page_id',
+        aliasedName,
+        false,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+        defaultValue: const Constant(''),
+      );
   @override
   List<GeneratedColumn> get $columns => [
     id,
     scanDir,
     ignoreListJson,
     gitBinaryPath,
+    notionApiKey,
+    notionParentPageId,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -104,6 +130,24 @@ class $AppConfigTableTable extends AppConfigTable
         ),
       );
     }
+    if (data.containsKey('notion_api_key')) {
+      context.handle(
+        _notionApiKeyMeta,
+        notionApiKey.isAcceptableOrUnknown(
+          data['notion_api_key']!,
+          _notionApiKeyMeta,
+        ),
+      );
+    }
+    if (data.containsKey('notion_parent_page_id')) {
+      context.handle(
+        _notionParentPageIdMeta,
+        notionParentPageId.isAcceptableOrUnknown(
+          data['notion_parent_page_id']!,
+          _notionParentPageIdMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -129,6 +173,14 @@ class $AppConfigTableTable extends AppConfigTable
         DriftSqlType.string,
         data['${effectivePrefix}git_binary_path'],
       )!,
+      notionApiKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}notion_api_key'],
+      )!,
+      notionParentPageId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}notion_parent_page_id'],
+      )!,
     );
   }
 
@@ -144,11 +196,15 @@ class AppConfigTableData extends DataClass
   final String scanDir;
   final String ignoreListJson;
   final String gitBinaryPath;
+  final String notionApiKey;
+  final String notionParentPageId;
   const AppConfigTableData({
     required this.id,
     required this.scanDir,
     required this.ignoreListJson,
     required this.gitBinaryPath,
+    required this.notionApiKey,
+    required this.notionParentPageId,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -157,6 +213,8 @@ class AppConfigTableData extends DataClass
     map['scan_dir'] = Variable<String>(scanDir);
     map['ignore_list_json'] = Variable<String>(ignoreListJson);
     map['git_binary_path'] = Variable<String>(gitBinaryPath);
+    map['notion_api_key'] = Variable<String>(notionApiKey);
+    map['notion_parent_page_id'] = Variable<String>(notionParentPageId);
     return map;
   }
 
@@ -166,6 +224,8 @@ class AppConfigTableData extends DataClass
       scanDir: Value(scanDir),
       ignoreListJson: Value(ignoreListJson),
       gitBinaryPath: Value(gitBinaryPath),
+      notionApiKey: Value(notionApiKey),
+      notionParentPageId: Value(notionParentPageId),
     );
   }
 
@@ -179,6 +239,10 @@ class AppConfigTableData extends DataClass
       scanDir: serializer.fromJson<String>(json['scanDir']),
       ignoreListJson: serializer.fromJson<String>(json['ignoreListJson']),
       gitBinaryPath: serializer.fromJson<String>(json['gitBinaryPath']),
+      notionApiKey: serializer.fromJson<String>(json['notionApiKey']),
+      notionParentPageId: serializer.fromJson<String>(
+        json['notionParentPageId'],
+      ),
     );
   }
   @override
@@ -189,6 +253,8 @@ class AppConfigTableData extends DataClass
       'scanDir': serializer.toJson<String>(scanDir),
       'ignoreListJson': serializer.toJson<String>(ignoreListJson),
       'gitBinaryPath': serializer.toJson<String>(gitBinaryPath),
+      'notionApiKey': serializer.toJson<String>(notionApiKey),
+      'notionParentPageId': serializer.toJson<String>(notionParentPageId),
     };
   }
 
@@ -197,11 +263,15 @@ class AppConfigTableData extends DataClass
     String? scanDir,
     String? ignoreListJson,
     String? gitBinaryPath,
+    String? notionApiKey,
+    String? notionParentPageId,
   }) => AppConfigTableData(
     id: id ?? this.id,
     scanDir: scanDir ?? this.scanDir,
     ignoreListJson: ignoreListJson ?? this.ignoreListJson,
     gitBinaryPath: gitBinaryPath ?? this.gitBinaryPath,
+    notionApiKey: notionApiKey ?? this.notionApiKey,
+    notionParentPageId: notionParentPageId ?? this.notionParentPageId,
   );
   AppConfigTableData copyWithCompanion(AppConfigTableCompanion data) {
     return AppConfigTableData(
@@ -213,6 +283,12 @@ class AppConfigTableData extends DataClass
       gitBinaryPath: data.gitBinaryPath.present
           ? data.gitBinaryPath.value
           : this.gitBinaryPath,
+      notionApiKey: data.notionApiKey.present
+          ? data.notionApiKey.value
+          : this.notionApiKey,
+      notionParentPageId: data.notionParentPageId.present
+          ? data.notionParentPageId.value
+          : this.notionParentPageId,
     );
   }
 
@@ -222,13 +298,22 @@ class AppConfigTableData extends DataClass
           ..write('id: $id, ')
           ..write('scanDir: $scanDir, ')
           ..write('ignoreListJson: $ignoreListJson, ')
-          ..write('gitBinaryPath: $gitBinaryPath')
+          ..write('gitBinaryPath: $gitBinaryPath, ')
+          ..write('notionApiKey: $notionApiKey, ')
+          ..write('notionParentPageId: $notionParentPageId')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, scanDir, ignoreListJson, gitBinaryPath);
+  int get hashCode => Object.hash(
+    id,
+    scanDir,
+    ignoreListJson,
+    gitBinaryPath,
+    notionApiKey,
+    notionParentPageId,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -236,7 +321,9 @@ class AppConfigTableData extends DataClass
           other.id == this.id &&
           other.scanDir == this.scanDir &&
           other.ignoreListJson == this.ignoreListJson &&
-          other.gitBinaryPath == this.gitBinaryPath);
+          other.gitBinaryPath == this.gitBinaryPath &&
+          other.notionApiKey == this.notionApiKey &&
+          other.notionParentPageId == this.notionParentPageId);
 }
 
 class AppConfigTableCompanion extends UpdateCompanion<AppConfigTableData> {
@@ -244,29 +331,40 @@ class AppConfigTableCompanion extends UpdateCompanion<AppConfigTableData> {
   final Value<String> scanDir;
   final Value<String> ignoreListJson;
   final Value<String> gitBinaryPath;
+  final Value<String> notionApiKey;
+  final Value<String> notionParentPageId;
   const AppConfigTableCompanion({
     this.id = const Value.absent(),
     this.scanDir = const Value.absent(),
     this.ignoreListJson = const Value.absent(),
     this.gitBinaryPath = const Value.absent(),
+    this.notionApiKey = const Value.absent(),
+    this.notionParentPageId = const Value.absent(),
   });
   AppConfigTableCompanion.insert({
     this.id = const Value.absent(),
     this.scanDir = const Value.absent(),
     this.ignoreListJson = const Value.absent(),
     this.gitBinaryPath = const Value.absent(),
+    this.notionApiKey = const Value.absent(),
+    this.notionParentPageId = const Value.absent(),
   });
   static Insertable<AppConfigTableData> custom({
     Expression<int>? id,
     Expression<String>? scanDir,
     Expression<String>? ignoreListJson,
     Expression<String>? gitBinaryPath,
+    Expression<String>? notionApiKey,
+    Expression<String>? notionParentPageId,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (scanDir != null) 'scan_dir': scanDir,
       if (ignoreListJson != null) 'ignore_list_json': ignoreListJson,
       if (gitBinaryPath != null) 'git_binary_path': gitBinaryPath,
+      if (notionApiKey != null) 'notion_api_key': notionApiKey,
+      if (notionParentPageId != null)
+        'notion_parent_page_id': notionParentPageId,
     });
   }
 
@@ -275,12 +373,16 @@ class AppConfigTableCompanion extends UpdateCompanion<AppConfigTableData> {
     Value<String>? scanDir,
     Value<String>? ignoreListJson,
     Value<String>? gitBinaryPath,
+    Value<String>? notionApiKey,
+    Value<String>? notionParentPageId,
   }) {
     return AppConfigTableCompanion(
       id: id ?? this.id,
       scanDir: scanDir ?? this.scanDir,
       ignoreListJson: ignoreListJson ?? this.ignoreListJson,
       gitBinaryPath: gitBinaryPath ?? this.gitBinaryPath,
+      notionApiKey: notionApiKey ?? this.notionApiKey,
+      notionParentPageId: notionParentPageId ?? this.notionParentPageId,
     );
   }
 
@@ -299,6 +401,12 @@ class AppConfigTableCompanion extends UpdateCompanion<AppConfigTableData> {
     if (gitBinaryPath.present) {
       map['git_binary_path'] = Variable<String>(gitBinaryPath.value);
     }
+    if (notionApiKey.present) {
+      map['notion_api_key'] = Variable<String>(notionApiKey.value);
+    }
+    if (notionParentPageId.present) {
+      map['notion_parent_page_id'] = Variable<String>(notionParentPageId.value);
+    }
     return map;
   }
 
@@ -308,7 +416,9 @@ class AppConfigTableCompanion extends UpdateCompanion<AppConfigTableData> {
           ..write('id: $id, ')
           ..write('scanDir: $scanDir, ')
           ..write('ignoreListJson: $ignoreListJson, ')
-          ..write('gitBinaryPath: $gitBinaryPath')
+          ..write('gitBinaryPath: $gitBinaryPath, ')
+          ..write('notionApiKey: $notionApiKey, ')
+          ..write('notionParentPageId: $notionParentPageId')
           ..write(')'))
         .toString();
   }
@@ -725,6 +835,8 @@ typedef $$AppConfigTableTableCreateCompanionBuilder =
       Value<String> scanDir,
       Value<String> ignoreListJson,
       Value<String> gitBinaryPath,
+      Value<String> notionApiKey,
+      Value<String> notionParentPageId,
     });
 typedef $$AppConfigTableTableUpdateCompanionBuilder =
     AppConfigTableCompanion Function({
@@ -732,6 +844,8 @@ typedef $$AppConfigTableTableUpdateCompanionBuilder =
       Value<String> scanDir,
       Value<String> ignoreListJson,
       Value<String> gitBinaryPath,
+      Value<String> notionApiKey,
+      Value<String> notionParentPageId,
     });
 
 class $$AppConfigTableTableFilterComposer
@@ -760,6 +874,16 @@ class $$AppConfigTableTableFilterComposer
 
   ColumnFilters<String> get gitBinaryPath => $composableBuilder(
     column: $table.gitBinaryPath,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get notionApiKey => $composableBuilder(
+    column: $table.notionApiKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get notionParentPageId => $composableBuilder(
+    column: $table.notionParentPageId,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -792,6 +916,16 @@ class $$AppConfigTableTableOrderingComposer
     column: $table.gitBinaryPath,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get notionApiKey => $composableBuilder(
+    column: $table.notionApiKey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get notionParentPageId => $composableBuilder(
+    column: $table.notionParentPageId,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$AppConfigTableTableAnnotationComposer
@@ -816,6 +950,16 @@ class $$AppConfigTableTableAnnotationComposer
 
   GeneratedColumn<String> get gitBinaryPath => $composableBuilder(
     column: $table.gitBinaryPath,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get notionApiKey => $composableBuilder(
+    column: $table.notionApiKey,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get notionParentPageId => $composableBuilder(
+    column: $table.notionParentPageId,
     builder: (column) => column,
   );
 }
@@ -861,11 +1005,15 @@ class $$AppConfigTableTableTableManager
                 Value<String> scanDir = const Value.absent(),
                 Value<String> ignoreListJson = const Value.absent(),
                 Value<String> gitBinaryPath = const Value.absent(),
+                Value<String> notionApiKey = const Value.absent(),
+                Value<String> notionParentPageId = const Value.absent(),
               }) => AppConfigTableCompanion(
                 id: id,
                 scanDir: scanDir,
                 ignoreListJson: ignoreListJson,
                 gitBinaryPath: gitBinaryPath,
+                notionApiKey: notionApiKey,
+                notionParentPageId: notionParentPageId,
               ),
           createCompanionCallback:
               ({
@@ -873,11 +1021,15 @@ class $$AppConfigTableTableTableManager
                 Value<String> scanDir = const Value.absent(),
                 Value<String> ignoreListJson = const Value.absent(),
                 Value<String> gitBinaryPath = const Value.absent(),
+                Value<String> notionApiKey = const Value.absent(),
+                Value<String> notionParentPageId = const Value.absent(),
               }) => AppConfigTableCompanion.insert(
                 id: id,
                 scanDir: scanDir,
                 ignoreListJson: ignoreListJson,
                 gitBinaryPath: gitBinaryPath,
+                notionApiKey: notionApiKey,
+                notionParentPageId: notionParentPageId,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))

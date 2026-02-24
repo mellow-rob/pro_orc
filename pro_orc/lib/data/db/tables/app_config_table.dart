@@ -7,4 +7,6 @@ class AppConfigTable extends Table {
         const Constant('[".*","node_modules","build",".dart_tool"]'),
       )();
   TextColumn get gitBinaryPath => text().withDefault(const Constant('git'))();
+  TextColumn get notionApiKey => text().withDefault(const Constant(''))();
+  TextColumn get notionParentPageId => text().withDefault(const Constant(''))();
 }

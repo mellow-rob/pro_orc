@@ -15,13 +15,17 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? e]) : super(e ?? _connect());
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
     onUpgrade: (m, from, to) async {
       if (from < 2) {
         await m.addColumn(projectSettingsTable, projectSettingsTable.isHidden);
+      }
+      if (from < 3) {
+        await m.addColumn(appConfigTable, appConfigTable.notionApiKey);
+        await m.addColumn(appConfigTable, appConfigTable.notionParentPageId);
       }
     },
   );
@@ -110,6 +114,22 @@ class AppDatabase extends _$AppDatabase {
             : const Value.absent(),
         gitBinaryPath: gitBinaryPath != null
             ? Value(gitBinaryPath)
+            : const Value.absent(),
+      ),
+    );
+  }
+
+  /// Updates Notion integration config fields on id=1 row.
+  /// [notionApiKey] should be ALREADY-ENCRYPTED before passing here.
+  Future<void> updateNotionConfig({
+    String? notionApiKey,
+    String? notionParentPageId,
+  }) async {
+    await (update(appConfigTable)..where((t) => t.id.equals(1))).write(
+      AppConfigTableCompanion(
+        notionApiKey: notionApiKey != null ? Value(notionApiKey) : const Value.absent(),
+        notionParentPageId: notionParentPageId != null
+            ? Value(notionParentPageId)
             : const Value.absent(),
       ),
     );
