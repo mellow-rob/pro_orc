@@ -9,12 +9,12 @@ See: .planning/PROJECT.md (updated 2026-02-24)
 
 ## Current Position
 
-Phase: 12 of 13 (Memory Detection)
-Plan: 1 of 2 in current phase
-Status: Executing
-Last activity: 2026-02-24 — Completed 12-01 MemoryReader TDD
+Phase: 12 of 13 (Memory Detection) -- COMPLETE
+Plan: 2 of 2 in current phase
+Status: Phase complete
+Last activity: 2026-02-24 — Completed 12-02 Scanner Integration
 
-Progress: [██████████░░░░░░░░░░] 50% (v1.2)
+Progress: [████████████████████] 100% (v1.2 Phase 12)
 
 ## Performance Metrics
 
@@ -46,6 +46,7 @@ Progress: [██████████░░░░░░░░░░] 50% (v1
 | 11    | 01   | 3 min    | 2     | 3     |
 | 11    | 02   | 2 min    | 2     | 6     |
 | 12    | 01   | ~1 min   | 2     | 3     |
+| 12    | 02   | ~2 min   | 2     | 3     |
 
 ## Accumulated Context
 
@@ -56,6 +57,7 @@ v1.0 decisions archived to milestones/v1.0-ROADMAP.md.
 v1.1 decisions archived to milestones/v1.1-ROADMAP.md.
 
 - 12-01: Sync file ops for memory check (not hot path), top-level functions matching git_reader pattern
+- 12-02: Nullify MemoryData when hasMemory is false (null = not present, consistent with gsd/git pattern)
 
 ### Pending Todos
 
@@ -69,5 +71,5 @@ None active.
 ## Session Continuity
 
 Last session: 2026-02-24
-Stopped at: Completed 12-01-PLAN.md — ready for 12-02
+Stopped at: Completed 12-02-PLAN.md — Phase 12 complete, ready for Phase 13
 Resume file: N/A
