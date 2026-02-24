@@ -52,19 +52,19 @@ Deferred to later releases.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| MEM-01 | — | Pending |
-| MEM-02 | — | Pending |
-| MEM-03 | — | Pending |
-| MUI-01 | — | Pending |
-| MUI-02 | — | Pending |
-| MUI-03 | — | Pending |
-| MACT-01 | — | Pending |
+| MEM-01 | Phase 12 | Pending |
+| MEM-02 | Phase 12 | Pending |
+| MEM-03 | Phase 12 | Pending |
+| MUI-01 | Phase 13 | Pending |
+| MUI-02 | Phase 13 | Pending |
+| MUI-03 | Phase 13 | Pending |
+| MACT-01 | Phase 13 | Pending |
 
 **Coverage:**
 - v1.2 requirements: 7 total
-- Mapped to phases: 0
-- Unmapped: 7 (pending roadmap creation)
+- Mapped to phases: 7
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-24*
-*Last updated: 2026-02-24 after initial definition*
+*Last updated: 2026-02-24 after roadmap creation*
