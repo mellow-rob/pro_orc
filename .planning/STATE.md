@@ -5,16 +5,15 @@
 See: .planning/PROJECT.md (updated 2026-02-24)
 
 **Core value:** Auf einen Blick sehen, wo jedes Projekt steht, was der nächste Schritt ist, und welche Tools zur Verfügung stehen — ohne Terminal-Hopping oder Notion-Suche.
-**Current focus:** v1.2 Memory Indicator — Phase 13: Memory UI Actions
+**Current focus:** Planning next milestone
 
 ## Current Position
 
-Phase: 13 of 13 (Memory UI Actions)
-Plan: 1 of 1 in current phase -- COMPLETE
-Status: Phase complete
-Last activity: 2026-02-24 — Completed 13-01 Memory UI Actions
+Milestone: v1.2 Memory Indicator — SHIPPED 2026-02-24
+Status: Milestone complete
+Last activity: 2026-02-24 — Archived v1.2 milestone
 
-Progress: [████████████████████] 100% (v1.2 Phase 13)
+Progress: [████████████████████] 100% (v1.2 shipped)
 
 ## Performance Metrics
 
@@ -56,11 +55,7 @@ Progress: [████████████████████] 100% (v
 Full decision log in PROJECT.md Key Decisions table.
 v1.0 decisions archived to milestones/v1.0-ROADMAP.md.
 v1.1 decisions archived to milestones/v1.1-ROADMAP.md.
-
-- 12-01: Sync file ops for memory check (not hot path), top-level functions matching git_reader pattern
-- 12-02: Nullify MemoryData when hasMemory is false (null = not present, consistent with gsd/git pattern)
-- [Phase 13]: 13-01: No intl dependency — manual padLeft date formatting for DD.MM.YYYY
-- [Phase 13]: 13-01: openRemSleep opens Terminal.app (same as openInTerminal) — simple, user runs claude manually
+v1.2 decisions archived to milestones/v1.2-ROADMAP.md.
 
 ### Pending Todos
 
@@ -74,5 +69,5 @@ None active.
 ## Session Continuity
 
 Last session: 2026-02-24
-Stopped at: Completed 13-01-PLAN.md — Phase 13 complete, v1.2 Memory Indicator fully shipped
+Stopped at: v1.2 milestone archived, ready for /gsd:new-milestone
 Resume file: N/A

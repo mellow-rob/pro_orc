@@ -35,3 +35,20 @@
 
 ---
 
+
+## v1.2 Memory Indicator (Shipped: 2026-02-24)
+
+**Phases completed:** 2 phases, 3 plans, 6 tasks
+**Files:** 20 files changed, 459 insertions
+**Timeline:** 2026-02-24 (single day)
+
+**Key accomplishments:**
+1. TDD-developed MemoryReader service with Claude path encoding and multi-strategy fuzzy matching
+2. MemoryReader integrated into ProjectScanner pipeline with nullable MemoryData field pattern
+3. Brain+zzz memory indicator on all project cards with 3 visual states (gray/violet/amber)
+4. Clickable rem-sleep trigger via osascript Terminal automation (`claude /rem-sleep`)
+5. Real-time memory status updates via watcher on `~/.claude/projects/` directory
+6. New app icon deployed across DMG installer, Finder, and Homebrew cask
+
+---
+

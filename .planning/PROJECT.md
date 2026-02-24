@@ -29,21 +29,13 @@ Auf einen Blick sehen, wo jedes Projekt steht, was der nächste Schritt ist, und
 - ✓ Card-Grid Dashboard mit n3urala1 Theme in Flutter — v1.1
 - ✓ Claude Tools Inventory in Flutter — v1.1
 - ✓ Quick Actions: Terminal.app, Finder, GitHub, Notion — v1.1
-
-## Current Milestone: v1.2 Memory Indicator
-
-**Goal:** Auf jeder Project Card anzeigen ob rem-sleep Memory-Konsolidierung gelaufen ist, mit schlafendem Buch-Icon und Quick Action zum Triggern.
-
-**Target features:**
-- Memory-Status-Erkennung pro Projekt via `~/.claude/projects/[encoded-path]/memory/MEMORY.md`
-- Sleeping-Book-Icon auf Code- und Research-Cards mit Konsolidierungs-Status
-- Quick Action zum Triggern von rem-sleep im Terminal
+- ✓ Memory-Status-Erkennung pro Projekt (Existenz + mtime von MEMORY.md) — v1.2
+- ✓ Brain+zzz Memory Indicator auf Project Cards (konsolidiert/nicht vorhanden/stale) — v1.2
+- ✓ Quick Action: rem-sleep im Terminal triggern via osascript — v1.2
 
 ### Active
 
-- [ ] Memory-Status-Erkennung pro Projekt (Existenz + mtime von MEMORY.md) — v1.2
-- [ ] Sleeping-Book-Icon auf Project Cards (konsolidiert/nicht konsolidiert/stale) — v1.2
-- [ ] Quick Action: rem-sleep im Terminal triggern — v1.2
+(None — planning next milestone)
 
 ### Out of Scope
 
@@ -62,13 +54,15 @@ Auf einen Blick sehen, wo jedes Projekt steht, was der nächste Schritt ist, und
 ## Context
 
 - v1.0 shipped as Next.js web app: 3,120 LOC TypeScript/TSX/CSS, 97 files (2026-02-19)
-- v1.1 shipped as native macOS Flutter app: 8,931 LOC Dart, 164 files (2026-02-24)
+- v1.1 shipped as native macOS Flutter app: 8,931 LOC Dart, 164 files (2026-02-23)
+- v1.2 shipped Memory Indicator: +459 LOC Dart, 20 files changed (2026-02-24)
 - v1.0 reference implementation in `pro-orc/` (Next.js) — superseded by Flutter rewrite
 - Flutter app in `pro_orc/` directory
 - Dashboard discovers 22+ projects across code/ and research/ directories
 - Tech stack: Flutter 3.41.1 + Dart 3.x, Riverpod 3.x, Drift SQLite v2, tray_manager 0.5.2, window_manager 0.5.1
 - n3urala1 dark theme: OKLCH→sRGB tokens, cyan primary, fuchsia accent, glassmorphism, animated orbs
-- Distribution: DMG installer via create-dmg, Homebrew cask `robdewit/pro-orc/pro-orc`
+- Distribution: DMG installer via create-dmg, Homebrew cask `mellow-rob/tap/pro-orc`
+- Claude memory detection via multi-strategy path matching (exact + fuzzy with length constraint)
 - Known tech debt: withOpacity() in launch_dialog.dart:12, ~/.zshrc Flutter PATH
 
 ## Constraints
@@ -97,6 +91,11 @@ Auf einen Blick sehen, wo jedes Projekt steht, was der nächste Schritt ist, und
 | watcher package + StreamController.broadcast | Debounce, keepAlive, permanent internal subscription | ✓ Good — solves DirectoryWatcher.ready hang |
 | Real temp git repos in tests (no mocking) | TDD with actual filesystem, mirrors production | ✓ Good — catches real integration issues |
 | DMG + Homebrew cask distribution | create-dmg builds installer, cask formula for `brew install` | ✓ Good — professional distribution |
+| Sync file ops for memory check | Not hot path, per-project check, simpler code | ✓ Good — no async overhead |
+| Multi-strategy memory path matching | Claude encodes paths inconsistently (/ and _ both become -) | ✓ Good — handles all edge cases |
+| Brain+zzz icon for memory indicator | User preferred over bookMarked, more intuitive for "sleeping memory" | ✓ Good — clear visual metaphor |
+| osascript Terminal automation for rem-sleep | `tell Terminal to do script "cd X && claude /rem-sleep"` | ✓ Good — one-click execution |
+| Watch ~/.claude/projects/ for memory changes | Real-time updates when rem-sleep runs in another terminal | ✓ Good — instant feedback |
 
 ---
-*Last updated: 2026-02-24 after v1.2 milestone start*
+*Last updated: 2026-02-24 after v1.2 milestone*
