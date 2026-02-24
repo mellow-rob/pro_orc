@@ -3,10 +3,11 @@ import 'dart:io';
 
 import 'package:path/path.dart' as p;
 
-import '../db/app_database.dart';
-import '../models/project_model.dart';
-import 'gsd_parser.dart';
-import 'git_reader.dart';
+import 'package:pro_orc/data/db/app_database.dart';
+import 'package:pro_orc/data/models/project_model.dart';
+import 'package:pro_orc/data/services/gsd_parser.dart';
+import 'package:pro_orc/data/services/git_reader.dart';
+import 'package:pro_orc/data/services/memory_reader.dart';
 
 // ---------------------------------------------------------------------------
 // Errors
@@ -146,6 +147,11 @@ class ProjectScanner {
     // --- 4. Read git data for all projects ---
     final gitResults = await readAllGitData(projectPaths, gitBinary: gitBinary);
 
+    // --- 4b. Read memory data for all projects ---
+    final memoryResults = await Future.wait(
+      projectPaths.map((path) => readMemoryData(path)),
+    );
+
     // --- 5. Assemble ProjectModel for each project ---
     final models = <ProjectModel>[];
 
@@ -154,6 +160,7 @@ class ProjectScanner {
       final folderId = p.basename(path);
       final gsdResult = gsdResults[i];
       final gitData = gitResults[i];
+      final memoryData = memoryResults[i];
 
       // Resolve project type: DB override > content heuristic
       final settings = await _db.getProjectSettings(folderId);
@@ -180,6 +187,7 @@ class ProjectScanner {
         description: gsdResult.description,
         gsd: gsd,
         git: git,
+        memory: memoryData.hasMemory ? memoryData : null,
         hasParseError: gsdResult.hasParseError,
         isStale: isStale,
         usedAgents: usedAgents,

@@ -1,5 +1,6 @@
-import 'gsd_data.dart';
-import 'git_data.dart';
+import 'package:pro_orc/data/models/gsd_data.dart';
+import 'package:pro_orc/data/models/git_data.dart';
+import 'package:pro_orc/data/models/memory_data.dart';
 
 /// Metadata for a .md file discovered in a project directory.
 class MdFileInfo {
@@ -27,6 +28,7 @@ class ProjectModel {
   final bool hasParseError; // true = show warning icon on card
   final bool isStale; // >30 days since last activity
   final List<String>? usedAgents; // agent names found in .planning/ files
+  final MemoryData? memory; // null if no Claude memory consolidation
   final List<MdFileInfo>? mdFiles; // .md files discovered in project
 
   const ProjectModel({
@@ -37,6 +39,7 @@ class ProjectModel {
     this.description,
     this.gsd,
     this.git,
+    this.memory,
     this.hasParseError = false,
     this.isStale = false,
     this.usedAgents,
