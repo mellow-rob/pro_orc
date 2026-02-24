@@ -30,9 +30,20 @@ Auf einen Blick sehen, wo jedes Projekt steht, was der nächste Schritt ist, und
 - ✓ Claude Tools Inventory in Flutter — v1.1
 - ✓ Quick Actions: Terminal.app, Finder, GitHub, Notion — v1.1
 
+## Current Milestone: v1.2 Memory Indicator
+
+**Goal:** Auf jeder Project Card anzeigen ob rem-sleep Memory-Konsolidierung gelaufen ist, mit schlafendem Buch-Icon und Quick Action zum Triggern.
+
+**Target features:**
+- Memory-Status-Erkennung pro Projekt via `~/.claude/projects/[encoded-path]/memory/MEMORY.md`
+- Sleeping-Book-Icon auf Code- und Research-Cards mit Konsolidierungs-Status
+- Quick Action zum Triggern von rem-sleep im Terminal
+
 ### Active
 
-(None — plan next milestone with `/gsd:new-milestone`)
+- [ ] Memory-Status-Erkennung pro Projekt (Existenz + mtime von MEMORY.md) — v1.2
+- [ ] Sleeping-Book-Icon auf Project Cards (konsolidiert/nicht konsolidiert/stale) — v1.2
+- [ ] Quick Action: rem-sleep im Terminal triggern — v1.2
 
 ### Out of Scope
 
@@ -88,4 +99,4 @@ Auf einen Blick sehen, wo jedes Projekt steht, was der nächste Schritt ist, und
 | DMG + Homebrew cask distribution | create-dmg builds installer, cask formula for `brew install` | ✓ Good — professional distribution |
 
 ---
-*Last updated: 2026-02-24 after v1.1 milestone complete*
+*Last updated: 2026-02-24 after v1.2 milestone start*

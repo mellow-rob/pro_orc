@@ -5,12 +5,14 @@
 See: .planning/PROJECT.md (updated 2026-02-24)
 
 **Core value:** Auf einen Blick sehen, wo jedes Projekt steht, was der nächste Schritt ist, und welche Tools zur Verfügung stehen — ohne Terminal-Hopping oder Notion-Suche.
-**Current focus:** Planning next milestone
+**Current focus:** v1.2 Memory Indicator
 
 ## Current Position
 
-Status: Between milestones — v1.1 shipped, next milestone not yet started
-Last activity: 2026-02-24 — v1.1 milestone archived
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-02-24 — Milestone v1.2 started
 
 Progress: [████████████████████] 100% (v1.0 + v1.1 complete, 30/30 plans)
 
