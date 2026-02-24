@@ -4,6 +4,7 @@ import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:launch_at_startup/launch_at_startup.dart';
+import 'package:pro_orc/data/services/notion_crypto.dart';
 import 'package:pro_orc/features/shell/glass_card.dart';
 import 'package:pro_orc/providers/database_provider.dart';
 import 'package:pro_orc/providers/projects_provider.dart';
@@ -25,8 +26,14 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
   bool _launchAtLogin = false;
   bool _loading = true;
 
+  // Notion credentials — decrypted plaintext held in memory only
+  String _notionApiKey = '';
+  String _notionParentPageId = '';
+
   final _gitController = TextEditingController();
   final _ignoreAddController = TextEditingController();
+  final _notionKeyController = TextEditingController();
+  final _notionPageIdController = TextEditingController();
 
   @override
   void initState() {
@@ -38,6 +45,8 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
   void dispose() {
     _gitController.dispose();
     _ignoreAddController.dispose();
+    _notionKeyController.dispose();
+    _notionPageIdController.dispose();
     super.dispose();
   }
 
@@ -59,6 +68,9 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
       launchEnabled = await launchAtStartup.isEnabled();
     } catch (_) {}
 
+    final notionKeyPlain = decryptNotionKey(config.notionApiKey);
+    final notionPageId = config.notionParentPageId;
+
     if (mounted) {
       setState(() {
         _scanDirs = List.from(dirs);
@@ -66,6 +78,10 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
         _gitBinaryPath = config.gitBinaryPath;
         _gitController.text = config.gitBinaryPath;
         _launchAtLogin = launchEnabled;
+        _notionApiKey = notionKeyPlain;
+        _notionKeyController.text = notionKeyPlain;
+        _notionParentPageId = notionPageId;
+        _notionPageIdController.text = notionPageId;
         _loading = false;
       });
     }
@@ -138,6 +154,26 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
       }
     } catch (_) {
       // May fail in debug mode
+    }
+  }
+
+  // --- Notion Integration ---
+
+  Future<void> _saveNotionApiKey() async {
+    final value = _notionKeyController.text.trim();
+    if (value != _notionApiKey) {
+      setState(() => _notionApiKey = value);
+      final db = ref.read(appDatabaseProvider);
+      await db.updateNotionConfig(notionApiKey: encryptNotionKey(value));
+    }
+  }
+
+  Future<void> _saveNotionParentPageId() async {
+    final value = _notionPageIdController.text.trim();
+    if (value != _notionParentPageId) {
+      setState(() => _notionParentPageId = value);
+      final db = ref.read(appDatabaseProvider);
+      await db.updateNotionConfig(notionParentPageId: value);
     }
   }
 
@@ -356,6 +392,107 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
                   value: _launchAtLogin,
                   onChanged: _toggleLaunchAtLogin,
                   activeColor: colors.cyan,
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 20),
+
+          // --- Notion Integration ---
+          _buildSection(
+            colors: colors,
+            icon: Icons.auto_stories_outlined,
+            title: 'Notion Integration',
+            subtitle: 'API-Schluessel und Parent Page fuer Research-Projekte',
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // API Key field
+                Text(
+                  'API Key',
+                  style: TextStyle(color: colors.textSec, fontSize: 12),
+                ),
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _notionKeyController,
+                        obscureText: true,
+                        style: TextStyle(
+                          color: colors.textPri,
+                          fontSize: 13,
+                          fontFamily: 'SF Mono',
+                        ),
+                        decoration: InputDecoration(
+                          isDense: true,
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 10,
+                          ),
+                          filled: true,
+                          fillColor: colors.bgElev.withValues(alpha: 0.4),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide.none,
+                          ),
+                        ),
+                        onSubmitted: (_) => _saveNotionApiKey(),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    TextButton(
+                      onPressed: _saveNotionApiKey,
+                      child: Text(
+                        'Speichern',
+                        style: TextStyle(color: colors.cyan, fontSize: 13),
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 12),
+
+                // Parent Page ID field
+                Text(
+                  'Parent Page ID',
+                  style: TextStyle(color: colors.textSec, fontSize: 12),
+                ),
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _notionPageIdController,
+                        style: TextStyle(
+                          color: colors.textPri,
+                          fontSize: 13,
+                          fontFamily: 'SF Mono',
+                        ),
+                        decoration: InputDecoration(
+                          isDense: true,
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 10,
+                          ),
+                          filled: true,
+                          fillColor: colors.bgElev.withValues(alpha: 0.4),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide.none,
+                          ),
+                        ),
+                        onSubmitted: (_) => _saveNotionParentPageId(),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    TextButton(
+                      onPressed: _saveNotionParentPageId,
+                      child: Text(
+                        'Speichern',
+                        style: TextStyle(color: colors.cyan, fontSize: 13),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
