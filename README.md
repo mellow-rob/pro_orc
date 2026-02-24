@@ -8,6 +8,7 @@ Native macOS menubar app that auto-discovers your projects, displays GSD plannin
 - **GSD status** at a glance — phase progress, completion percentage, next steps
 - **Git integration** — last commit, branch, dirty state, GitHub links
 - **Claude Tools inventory** — discovers installed Skills, Plugins, and MCP servers from `~/.claude/`
+- **Memory indicator** — shows Claude rem-sleep memory consolidation status per project (brain+zzz icon), click to trigger rem-sleep
 - **Quick actions** — open in Terminal, Finder, GitHub; right-click context menus
 - **Menubar-only** — lives in the macOS menubar, no Dock icon
 - **Reactive** — file watcher auto-refreshes when projects change on disk
