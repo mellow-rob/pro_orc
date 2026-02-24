@@ -5,14 +5,14 @@
 See: .planning/PROJECT.md (updated 2026-02-24)
 
 **Core value:** Auf einen Blick sehen, wo jedes Projekt steht, was der nächste Schritt ist, und welche Tools zur Verfügung stehen — ohne Terminal-Hopping oder Notion-Suche.
-**Current focus:** v1.3 Project Creator — Phase 14: Notion Settings
+**Current focus:** v1.3 Project Creator — Phase 14: Add Card + Dialog
 
 ## Current Position
 
-Phase: 14 of 17 (Notion Settings)
+Phase: 14 of 16 (Add Card + Dialog)
 Plan: 0 of TBD in current phase
 Status: Ready to plan
-Last activity: 2026-02-24 — v1.3 roadmap created (4 phases, 23 requirements)
+Last activity: 2026-02-24 — Roadmap angepasst: Notion Settings entfernt, Notion via Claude MCP statt eigenem API Key
 
 Progress: [░░░░░░░░░░░░░░░░░░░░] 0% (v1.3 requirements)
 
@@ -65,10 +65,10 @@ v1.2 decisions archived to milestones/v1.2-ROADMAP.md.
 
 ### Blockers/Concerns
 
-- Notion API integration requires outbound HTTP from macOS sandboxless app — http package needed (not yet in pubspec). Add to Phase 14 plan.
+- Notion-Integration via Claude MCP — kein eigener API Key, Claude erstellt Notion-Seite per Prompt
 
 ## Session Continuity
 
 Last session: 2026-02-24
-Stopped at: v1.3 roadmap created, Phase 14 ready to plan
-Resume file: None
+Stopped at: Phase 14 context gathered, ready to plan
+Resume file: .planning/phases/14-add-card-dialog/14-CONTEXT.md
