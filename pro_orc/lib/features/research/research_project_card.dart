@@ -178,6 +178,12 @@ class _ResearchProjectCardState extends ConsumerState<ResearchProjectCard> {
           tooltip: 'Notion',
           onPressed: () => qa.openUrl(project.gsd!.notionUrl!),
         ),
+      if (project.memory != null)
+        _QuickAction(
+          icon: LucideIcons.moonStar100,
+          tooltip: 'Claude Memory',
+          onPressed: () => qa.openRemSleep(project.path),
+        ),
     ];
 
     return Row(

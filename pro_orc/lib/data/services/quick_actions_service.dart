@@ -14,6 +14,14 @@ class QuickActionsService {
     await Process.run('open', [projectPath], runInShell: true);
   }
 
+  /// Opens Terminal.app at the project directory for Claude rem-sleep interaction.
+  ///
+  /// Opens a Terminal window at [projectPath] where the user can run
+  /// `claude` to interact with memory consolidation (rem-sleep workflow).
+  Future<void> openRemSleep(String projectPath) async {
+    await Process.run('open', ['-a', 'Terminal', projectPath], runInShell: true);
+  }
+
   /// Opens a URL (GitHub or Notion) in the system default browser.
   /// Silently fails if URL cannot be launched (consistent with service error pattern).
   Future<void> openUrl(String url) async {
