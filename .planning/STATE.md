@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-24)
 
 **Core value:** Auf einen Blick sehen, wo jedes Projekt steht, was der nächste Schritt ist, und welche Tools zur Verfügung stehen — ohne Terminal-Hopping oder Notion-Suche.
-**Current focus:** v1.2 Memory Indicator — Phase 12: Memory Detection
+**Current focus:** v1.2 Memory Indicator — Phase 13: Memory UI Actions
 
 ## Current Position
 
-Phase: 12 of 13 (Memory Detection) -- COMPLETE
-Plan: 2 of 2 in current phase
+Phase: 13 of 13 (Memory UI Actions)
+Plan: 1 of 1 in current phase -- COMPLETE
 Status: Phase complete
-Last activity: 2026-02-24 — Completed 12-02 Scanner Integration
+Last activity: 2026-02-24 — Completed 13-01 Memory UI Actions
 
-Progress: [████████████████████] 100% (v1.2 Phase 12)
+Progress: [████████████████████] 100% (v1.2 Phase 13)
 
 ## Performance Metrics
 
@@ -47,6 +47,7 @@ Progress: [████████████████████] 100% (v
 | 11    | 02   | 2 min    | 2     | 6     |
 | 12    | 01   | ~1 min   | 2     | 3     |
 | 12    | 02   | ~2 min   | 2     | 3     |
+| 13    | 01   | 3 min    | 2     | 4     |
 
 ## Accumulated Context
 
@@ -58,6 +59,8 @@ v1.1 decisions archived to milestones/v1.1-ROADMAP.md.
 
 - 12-01: Sync file ops for memory check (not hot path), top-level functions matching git_reader pattern
 - 12-02: Nullify MemoryData when hasMemory is false (null = not present, consistent with gsd/git pattern)
+- [Phase 13]: 13-01: No intl dependency — manual padLeft date formatting for DD.MM.YYYY
+- [Phase 13]: 13-01: openRemSleep opens Terminal.app (same as openInTerminal) — simple, user runs claude manually
 
 ### Pending Todos
 
@@ -71,5 +74,5 @@ None active.
 ## Session Continuity
 
 Last session: 2026-02-24
-Stopped at: Completed 12-02-PLAN.md — Phase 12 complete, ready for Phase 13
+Stopped at: Completed 13-01-PLAN.md — Phase 13 complete, v1.2 Memory Indicator fully shipped
 Resume file: N/A
