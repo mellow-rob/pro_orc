@@ -17,3 +17,21 @@
 
 ---
 
+
+## v1.1 Flutter macOS Rewrite (Shipped: 2026-02-24)
+
+**Phases completed:** 6 phases, 18 plans
+**Lines of code:** 8,931 Dart
+**Files:** 164 files changed, 26,979 insertions
+**Timeline:** 2026-02-19 to 2026-02-23
+
+**Key accomplishments:**
+1. Native macOS menubar app with tray icon, show/hide window, geometry persistence, sandbox disabled
+2. Pure Dart data layer: Drift SQLite, GSD parser (multi-level fallback), git reader with 5s timeouts
+3. Reactive file watching via watcher package + Riverpod provider chain — live card updates in ~1s
+4. n3urala1 dark theme: OKLCH tokens, animated orb background, glassmorphism cards, NavigationRail
+5. Card widgets with GSD status badges, progress bars, quick actions (Terminal, Finder, GitHub, Notion)
+6. Claude Tools tab auto-discovering Skills, Plugins, and MCP servers from ~/.claude/
+
+---
+
