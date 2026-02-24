@@ -72,35 +72,35 @@ Deferred to later releases.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| ADD-01 | - | Pending |
-| ADD-02 | - | Pending |
-| ADD-03 | - | Pending |
-| ADD-04 | - | Pending |
-| DLG-01 | - | Pending |
-| DLG-02 | - | Pending |
-| DLG-03 | - | Pending |
-| DLG-04 | - | Pending |
-| DLG-05 | - | Pending |
-| DLG-06 | - | Pending |
-| DLG-07 | - | Pending |
-| DLG-08 | - | Pending |
-| CRE-01 | - | Pending |
-| CRE-02 | - | Pending |
-| CRE-03 | - | Pending |
-| CRE-04 | - | Pending |
-| CRE-05 | - | Pending |
-| CRE-06 | - | Pending |
-| CRE-07 | - | Pending |
-| NOT-01 | - | Pending |
-| NOT-02 | - | Pending |
-| NOT-03 | - | Pending |
-| NOT-04 | - | Pending |
+| ADD-01 | Phase 15 | Pending |
+| ADD-02 | Phase 15 | Pending |
+| ADD-03 | Phase 15 | Pending |
+| ADD-04 | Phase 15 | Pending |
+| DLG-01 | Phase 15 | Pending |
+| DLG-02 | Phase 15 | Pending |
+| DLG-03 | Phase 15 | Pending |
+| DLG-04 | Phase 15 | Pending |
+| DLG-05 | Phase 15 | Pending |
+| DLG-06 | Phase 15 | Pending |
+| DLG-07 | Phase 15 | Pending |
+| DLG-08 | Phase 15 | Pending |
+| CRE-01 | Phase 16 | Pending |
+| CRE-02 | Phase 16 | Pending |
+| CRE-03 | Phase 16 | Pending |
+| CRE-04 | Phase 16 | Pending |
+| CRE-05 | Phase 16 | Pending |
+| CRE-06 | Phase 16 | Pending |
+| CRE-07 | Phase 16 | Pending |
+| NOT-01 | Phase 14 | Pending |
+| NOT-02 | Phase 14 | Pending |
+| NOT-03 | Phase 17 | Pending |
+| NOT-04 | Phase 17 | Pending |
 
 **Coverage:**
 - v1.3 requirements: 23 total
-- Mapped to phases: 0
-- Unmapped: 23
+- Mapped to phases: 23
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-24*
-*Last updated: 2026-02-24 after initial definition*
+*Last updated: 2026-02-24 after roadmap creation (v1.3 phases 14-17)*
