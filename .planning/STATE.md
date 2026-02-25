@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-24)
 ## Current Position
 
 Phase: 14 of 16 (Add Card + Dialog)
-Plan: 0 of TBD in current phase
-Status: Ready to plan
-Last activity: 2026-02-24 — Roadmap angepasst: Notion Settings entfernt, Notion via Claude MCP statt eigenem API Key
+Plan: 1 of 3 in current phase
+Status: In progress
+Last activity: 2026-02-25 — Executed 14-01: AddProjectCard ghost widget integrated in Code and Research tabs
 
-Progress: [░░░░░░░░░░░░░░░░░░░░] 0% (v1.3 requirements)
+Progress: [████░░░░░░░░░░░░░░░░] 33% (v1.3 requirements)
 
 ## Performance Metrics
 
@@ -48,6 +48,7 @@ Progress: [░░░░░░░░░░░░░░░░░░░░] 0% (v1.
 | 12    | 01   | ~1 min   | 2     | 3     |
 | 12    | 02   | ~2 min   | 2     | 3     |
 | 13    | 01   | 3 min    | 2     | 4     |
+| 14    | 01   | 2 min    | 2     | 3     |
 
 ## Accumulated Context
 
@@ -69,6 +70,6 @@ v1.2 decisions archived to milestones/v1.2-ROADMAP.md.
 
 ## Session Continuity
 
-Last session: 2026-02-24
-Stopped at: Phase 14 context gathered, ready to plan
-Resume file: .planning/phases/14-add-card-dialog/14-CONTEXT.md
+Last session: 2026-02-25
+Stopped at: Completed 14-01-PLAN.md — AddProjectCard widget + tab integration done
+Resume file: .planning/phases/14-add-card-dialog/14-02-PLAN.md
