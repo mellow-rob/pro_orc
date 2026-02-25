@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pro_orc/data/models/project_model.dart';
 import 'package:pro_orc/features/code/code_project_card.dart';
+import 'package:pro_orc/features/shared/add_project_card.dart';
 import 'package:pro_orc/features/shared/empty_state.dart';
 import 'package:pro_orc/features/shared/project_detail_panel.dart';
 import 'package:pro_orc/features/shell/glass_card.dart';
@@ -156,6 +157,20 @@ class _CodeTabState extends ConsumerState<CodeTab> {
                         gridDelegate: gridDelegate,
                       ),
                     ),
+                    SliverPadding(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                      sliver: SliverGrid(
+                        delegate: SliverChildBuilderDelegate(
+                          (context, index) => AddProjectCard(
+                            accentColor: colors.cyan,
+                            onTap: () =>
+                                _openCreateDialog(context, 'code'),
+                          ),
+                          childCount: 1,
+                        ),
+                        gridDelegate: gridDelegate,
+                      ),
+                    ),
                   ],
                 );
               }
@@ -163,11 +178,19 @@ class _CodeTabState extends ConsumerState<CodeTab> {
               return GridView.builder(
                 padding: const EdgeInsets.all(16),
                 gridDelegate: gridDelegate,
-                itemCount: visible.length,
-                itemBuilder: (context, index) => CodeProjectCard(
-                  project: visible[index],
-                  onTap: () => _showDetail(context, visible[index]),
-                ),
+                itemCount: visible.length + 1,
+                itemBuilder: (context, index) {
+                  if (index == visible.length) {
+                    return AddProjectCard(
+                      accentColor: colors.cyan,
+                      onTap: () => _openCreateDialog(context, 'code'),
+                    );
+                  }
+                  return CodeProjectCard(
+                    project: visible[index],
+                    onTap: () => _showDetail(context, visible[index]),
+                  );
+                },
               );
             },
           ),
@@ -234,5 +257,10 @@ class _CodeTabState extends ConsumerState<CodeTab> {
 
   void _showDetail(BuildContext context, ProjectModel project) {
     showProjectDetail(context, project);
+  }
+
+  // ignore: unused_element
+  void _openCreateDialog(BuildContext context, String initialTab) {
+    // Wired in 14-02: CreateProjectDialog
   }
 }
