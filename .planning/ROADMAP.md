@@ -81,11 +81,11 @@ Plans:
   2. git init, .planning/PROJECT.md, CLAUDE.md und .gitignore werden nur erstellt wenn der jeweilige Toggle aktiv war
   3. Terminal.app oeffnet sich im neuen Projektordner wenn Terminal-Toggle aktiv
   4. rem-sleep laeuft im neuen Projektordner via osascript wenn rem-sleep-Toggle aktiv
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 15-01: ProjectCreatorService (Filesystem + git + file scaffolding)
-- [ ] 15-02: Dialog wired to service + post-creation actions
+- [ ] 15-01-PLAN.md — ProjectCreatorService + Dialog UI Updates (kebab-case, neue Toggles, Pfad-Vorschau)
+- [ ] 15-02-PLAN.md — Dialog an Service verdrahten + Post-Creation Actions (Terminal, rem-sleep, Feedback)
 
 ### Phase 16: Notion via Claude
 **Goal**: Research-Projekte mit aktivem Notion-Toggle starten Claude Code im Terminal mit einem Prompt, der ueber MCP eine Notion-Seite erstellt und die URL in PROJECT.md schreibt.
@@ -119,5 +119,5 @@ Plans:
 | 12. Memory Detection | v1.2 | 2/2 | Complete | 2026-02-24 |
 | 13. Memory UI + Actions | v1.2 | 1/1 | Complete | 2026-02-24 |
 | 14. Add Card + Dialog | v1.3 | Complete    | 2026-02-25 | - |
-| 15. Project Creation | v1.3 | 0/TBD | Not started | - |
+| 15. Project Creation | v1.3 | 0/2 | Not started | - |
 | 16. Notion via Claude | v1.3 | 0/TBD | Not started | - |
