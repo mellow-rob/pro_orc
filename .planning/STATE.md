@@ -5,14 +5,14 @@
 See: .planning/PROJECT.md (updated 2026-02-24)
 
 **Core value:** Auf einen Blick sehen, wo jedes Projekt steht, was der nächste Schritt ist, und welche Tools zur Verfügung stehen — ohne Terminal-Hopping oder Notion-Suche.
-**Current focus:** v1.3 Project Creator — Phase 14: Add Card + Dialog
+**Current focus:** v1.3 Project Creator — Phase 15: Project Creation
 
 ## Current Position
 
-Phase: 14 of 16 (Add Card + Dialog)
-Plan: 3 of 3 in current phase
+Phase: 15 of 16 (Project Creation)
+Plan: 1 of 2 complete
 Status: In progress
-Last activity: 2026-02-25 — Completed 14-02: CreateProjectDialog verified and approved, UI polish committed
+Last activity: 2026-02-25 — Completed 15-01: ProjectCreatorService + dialog UI updates
 
 Progress: [████░░░░░░░░░░░░░░░░] 33% (v1.3 requirements)
 
@@ -50,6 +50,7 @@ Progress: [████░░░░░░░░░░░░░░░░] 33% (v1
 | 13    | 01   | 3 min    | 2     | 4     |
 | 14    | 01   | 2 min    | 2     | 3     |
 | 14    | 02   | 2 min    | 2     | 3     |
+| 15    | 01   | 3 min    | 2     | 2     |
 
 ## Accumulated Context
 
@@ -67,6 +68,8 @@ v1.2 decisions archived to milestones/v1.2-ROADMAP.md.
 - _isLoading kept mutable (not final) for Phase 15 create button spinner
 - Add card: only "+" icon, no label text (cleaner minimal look, per visual verification)
 - Toggle switch size reduced via FittedBox + fixed section height prevents dialog resize on tab switch
+- [Phase 15]: ProjectCreatorService warnings-not-failures: only directory creation fails; git/file write errors are warnings
+- [Phase 15]: Dialog keeps ProjectCreatorService import out until Phase 15-02 wiring to avoid unused import warning
 
 ### Pending Todos
 
@@ -80,5 +83,5 @@ v1.2 decisions archived to milestones/v1.2-ROADMAP.md.
 ## Session Continuity
 
 Last session: 2026-02-25
-Stopped at: Completed 14-02. Ready to execute 14-03 (Settings UI for scan directories)
-Resume file: .planning/phases/14-add-card-dialog/14-03-PLAN.md
+Stopped at: Completed 15-01: ProjectCreatorService and dialog updates
+Resume file: .planning/phases/15-project-creation/15-02-PLAN.md
