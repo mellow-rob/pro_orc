@@ -78,25 +78,12 @@ class _AddProjectCardState extends State<AddProjectCard> {
                     color: colors.bgCard.withValues(alpha: bgAlpha),
                     borderRadius: BorderRadius.circular(_borderRadius),
                   ),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.add_rounded,
-                        size: 32,
-                        color: widget.accentColor,
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        '+ Neu',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                          color: widget.accentColor,
-                        ),
-                      ),
-                    ],
+                  child: Center(
+                    child: Icon(
+                      Icons.add_rounded,
+                      size: 32,
+                      color: widget.accentColor,
+                    ),
                   ),
                 ),
               ),

@@ -409,9 +409,14 @@ class _CreateProjectDialogState extends ConsumerState<CreateProjectDialog>
       ],
     );
 
-    return AnimatedSwitcher(
-      duration: const Duration(milliseconds: 200),
-      child: isCode ? codeToggles : researchToggles,
+    // Fixed height to prevent dialog resize on tab switch.
+    // 3 toggles × 28px (24 switch + 4 padding) = 84px
+    return SizedBox(
+      height: 84,
+      child: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 200),
+        child: isCode ? codeToggles : researchToggles,
+      ),
     );
   }
 
@@ -422,17 +427,33 @@ class _CreateProjectDialogState extends ConsumerState<CreateProjectDialog>
     required bool value,
     required ValueChanged<bool> onChanged,
   }) {
-    return SwitchListTile.adaptive(
-      title: Text(
-        title,
-        style: TextStyle(color: colors.textPri, fontSize: 13),
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              title,
+              style: TextStyle(color: colors.textPri, fontSize: 13),
+            ),
+          ),
+          SizedBox(
+            height: 24,
+            width: 40,
+            child: FittedBox(
+              fit: BoxFit.contain,
+              child: Switch.adaptive(
+                value: value,
+                activeThumbColor: Colors.white,
+                activeTrackColor: Colors.white.withValues(alpha: 0.4),
+                inactiveThumbColor: colors.textDim,
+                inactiveTrackColor: colors.textDim.withValues(alpha: 0.2),
+                onChanged: onChanged,
+              ),
+            ),
+          ),
+        ],
       ),
-      value: value,
-      activeThumbColor: accent,
-      activeTrackColor: accent.withValues(alpha: 0.5),
-      onChanged: onChanged,
-      dense: true,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 0),
     );
   }
 
