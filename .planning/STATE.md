@@ -10,9 +10,9 @@ See: .planning/PROJECT.md (updated 2026-02-24)
 ## Current Position
 
 Phase: 14 of 16 (Add Card + Dialog)
-Plan: 2 of 3 in current phase
+Plan: 3 of 3 in current phase
 Status: In progress
-Last activity: 2026-02-25 — Executed 14-02: CreateProjectDialog widget + wired in Code and Research tabs
+Last activity: 2026-02-25 — Completed 14-02: CreateProjectDialog verified and approved, UI polish committed
 
 Progress: [████░░░░░░░░░░░░░░░░] 33% (v1.3 requirements)
 
@@ -65,6 +65,8 @@ v1.2 decisions archived to milestones/v1.2-ROADMAP.md.
 - Dialog glassmorphism: Dialog(transparent) + ClipRRect + BackdropFilter + Container(bgSurf) — same pattern as GlassCard
 - activeThumbColor/activeTrackColor on SwitchListTile.adaptive (not deprecated activeColor)
 - _isLoading kept mutable (not final) for Phase 15 create button spinner
+- Add card: only "+" icon, no label text (cleaner minimal look, per visual verification)
+- Toggle switch size reduced via FittedBox + fixed section height prevents dialog resize on tab switch
 
 ### Pending Todos
 
@@ -78,5 +80,5 @@ v1.2 decisions archived to milestones/v1.2-ROADMAP.md.
 ## Session Continuity
 
 Last session: 2026-02-25
-Stopped at: Checkpoint in 14-02-PLAN.md Task 3 — awaiting visual verification of CreateProjectDialog
-Resume file: .planning/phases/14-add-card-dialog/14-02-PLAN.md
+Stopped at: Completed 14-02. Ready to execute 14-03 (Settings UI for scan directories)
+Resume file: .planning/phases/14-add-card-dialog/14-03-PLAN.md

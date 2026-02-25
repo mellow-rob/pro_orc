@@ -59,12 +59,13 @@ completed: 2026-02-25
 - **Duration:** ~2 min
 - **Started:** 2026-02-25T08:31:31Z
 - **Completed:** 2026-02-25T08:34:00Z
-- **Tasks:** 2 of 2 complete (Task 3 is checkpoint — pending human verification)
-- **Files modified:** 3
+- **Tasks:** 3 of 3 complete (checkpoint approved after UI polish)
+- **Files modified:** 5
 
 ## Accomplishments
 - `CreateProjectDialog` (464 lines) with glassmorphism style, TabBar, name field with live folder preview and existence check, Zielordner dropdown loading from DB, per-tab toggles with correct defaults, and disabled Erstellen button when invalid
 - `_openCreateDialog` wired in both code_tab.dart and research_tab.dart via `showDialog<Map<String, dynamic>>`
+- UI polish after visual verification: add card shows only "+" icon (no "Neu" text), toggle switches use white color with FittedBox for smaller size, dialog toggle section height fixed to prevent resize on tab switch
 - `flutter analyze` reports zero issues on new/modified files; pre-existing issues only in unrelated files
 
 ## Task Commits
@@ -73,13 +74,15 @@ Each task was committed atomically:
 
 1. **Task 1: CreateProjectDialog Widget** - `1f8d385` (feat)
 2. **Task 2: Wire Dialog into Code and Research tabs** - `57cf320` (feat)
+3. **Task 3: Visual Verification (UI polish)** - `4941225` (fix)
 
-**Plan metadata:** pending (after human verification)
+**Plan metadata:** `0603569` (docs: complete CreateProjectDialog plan summary and state update)
 
 ## Files Created/Modified
-- `pro_orc/lib/features/shared/create_project_dialog.dart` - CreateProjectDialog ConsumerStatefulWidget with full form UI
+- `pro_orc/lib/features/shared/create_project_dialog.dart` - CreateProjectDialog ConsumerStatefulWidget with full form UI; UI polish: FittedBox toggles, fixed height toggle section
 - `pro_orc/lib/features/code/code_tab.dart` - Import + wired _openCreateDialog with showDialog call
 - `pro_orc/lib/features/research/research_tab.dart` - Import + wired _openCreateDialog with showDialog call
+- `pro_orc/lib/features/shared/add_project_card.dart` - Simplified to only "+" icon, removed "Neu" label text
 
 ## Decisions Made
 - Used `AnimatedSwitcher` keyed on tab index for toggle group transitions — avoids second animation controller
@@ -112,9 +115,9 @@ None beyond the deprecated API fixes handled automatically.
 None - no external service configuration required.
 
 ## Next Phase Readiness
-- CreateProjectDialog fully functional UI, ready for Phase 15 filesystem creation wiring
+- CreateProjectDialog fully functional UI, visually verified and approved — ready for Phase 15 filesystem creation wiring
 - Dialog returns `Map<String, dynamic>` with all form values: name, folderName, scanDir, tab, gitInit, gsdSkeleton, notion, remSleep
-- Pending: human visual verification of checkpoint Task 3 before proceeding
+- Phase 14 plan 03 (settings UI for target directories) remains before Phase 15
 
 ---
 *Phase: 14-add-card-dialog*
