@@ -4,16 +4,17 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path/path.dart' as path;
+import 'package:pro_orc/data/services/project_creator_service.dart';
+import 'package:pro_orc/data/services/quick_actions_service.dart';
 import 'package:pro_orc/providers/database_provider.dart';
 import 'package:pro_orc/theme/n3_colors.dart';
 
 /// Dialog for creating a new Code or Research project.
 ///
 /// Opened from [CodeTab] or [ResearchTab] via their Add+ cards.
-/// Returns a [Map<String, dynamic>] with form values on confirm,
-/// or null when dismissed.
-///
-/// Phase 15-02 wires the actual filesystem creation via [ProjectCreatorService].
+/// Calls [createProject] to create the filesystem scaffold, then
+/// triggers optional post-creation actions (Terminal, rem-sleep).
+/// Auto-closes on success after a brief feedback moment.
 class CreateProjectDialog extends ConsumerStatefulWidget {
   const CreateProjectDialog({
     super.key,
@@ -53,6 +54,8 @@ class _CreateProjectDialogState extends ConsumerState<CreateProjectDialog>
 
   // ignore: prefer_final_fields
   bool _isLoading = false;
+  bool _isCreated = false;
+  String? _errorMessage;
 
   @override
   void initState() {
@@ -159,7 +162,10 @@ class _CreateProjectDialogState extends ConsumerState<CreateProjectDialog>
   }
 
   bool get _isFormValid =>
-      _derivedFolderName.isNotEmpty && !_folderExists && !_isLoading;
+      _derivedFolderName.isNotEmpty &&
+      !_folderExists &&
+      !_isLoading &&
+      !_isCreated;
 
   String get _dialogTitle {
     return _tabController.index == 0
@@ -171,22 +177,69 @@ class _CreateProjectDialogState extends ConsumerState<CreateProjectDialog>
     return _tabController.index == 0 ? colors.cyan : colors.fuch;
   }
 
-  void _submit() {
-    if (!_isFormValid) return;
-    final isCode = _tabController.index == 0;
-    Navigator.of(context).pop(<String, dynamic>{
-      'name': _nameController.text.trim(),
-      'folderName': _derivedFolderName,
-      'scanDir': _selectedScanDir,
-      'tab': isCode ? 'code' : 'research',
-      'gitInit': isCode ? _gitInit : false,
-      'gsdSkeleton': isCode ? _gsdSkeleton : false,
-      'notion': isCode ? false : _notion,
-      'remSleep': isCode ? _codeRemSleep : _researchRemSleep,
-      'claudeMd': isCode ? _claudeMd : false,
-      'terminal': isCode ? _terminal : _researchTerminal,
-      'gitignoreTemplate': isCode ? _gitignoreTemplate : 'none',
+  Future<void> _submit() async {
+    if (!_isFormValid || _isLoading) return;
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
     });
+
+    final isCode = _tabController.index == 0;
+    final result = await createProject(
+      scanDir: _selectedScanDir!,
+      folderName: _derivedFolderName,
+      displayName: _nameController.text.trim(),
+      projectType: isCode ? 'code' : 'research',
+      gitInit: isCode ? _gitInit : false,
+      gsdSkeleton: isCode ? _gsdSkeleton : false,
+      claudeMd: isCode ? _claudeMd : false,
+      gitignoreTemplate: isCode ? _gitignoreTemplate : 'none',
+    );
+
+    if (!mounted) return;
+
+    if (result.success) {
+      setState(() {
+        _isLoading = false;
+        _isCreated = true;
+        // Show warnings (e.g. git init failed) above the success indicator
+        if (result.warnings.isNotEmpty) {
+          _errorMessage = result.warnings.join(' • ');
+        }
+      });
+
+      // Post-creation actions (Terminal, rem-sleep)
+      final projectPath = result.projectPath;
+      final wantsTerminal = isCode ? _terminal : _researchTerminal;
+      final wantsRemSleep = isCode ? _codeRemSleep : _researchRemSleep;
+      final actions = QuickActionsService();
+
+      if (wantsRemSleep) {
+        // rem-sleep implies terminal — cd -> claude -> rem-sleep
+        await actions.openRemSleep(projectPath);
+      } else if (wantsTerminal) {
+        // Just open terminal in project dir
+        await actions.openInTerminal(projectPath);
+      }
+
+      // Show warnings if any (e.g. git init failed) — extend delay to 3s
+      final delay = result.warnings.isNotEmpty
+          ? const Duration(milliseconds: 3000)
+          : const Duration(milliseconds: 1500);
+
+      await Future.delayed(delay);
+      if (mounted) {
+        Navigator.of(context).pop(result);
+      }
+    } else {
+      // Creation failed — show error, reset loading
+      setState(() {
+        _isLoading = false;
+        _errorMessage = result.warnings.isNotEmpty
+            ? result.warnings.first
+            : 'Projekt konnte nicht erstellt werden';
+      });
+    }
   }
 
   @override
@@ -587,26 +640,66 @@ class _CreateProjectDialogState extends ConsumerState<CreateProjectDialog>
   }
 
   Widget _buildButtons(AppColors colors, Color accent) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.end,
-      children: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          style: TextButton.styleFrom(
-            foregroundColor: colors.textSec,
-          ),
-          child: const Text('Abbrechen'),
+    final isDisabled = _isLoading || _isCreated;
+
+    Widget buttonChild;
+    if (_isLoading) {
+      buttonChild = SizedBox(
+        width: 20,
+        height: 20,
+        child: CircularProgressIndicator(
+          strokeWidth: 2,
+          color: colors.bgBase,
         ),
-        const SizedBox(width: 8),
-        FilledButton(
-          onPressed: _isFormValid ? _submit : null,
-          style: FilledButton.styleFrom(
-            backgroundColor: accent,
-            disabledBackgroundColor: accent.withValues(alpha: 0.3),
-            foregroundColor: colors.bgBase,
-            disabledForegroundColor: colors.bgBase.withValues(alpha: 0.5),
+      );
+    } else if (_isCreated) {
+      buttonChild = Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.check, color: colors.bgBase, size: 16),
+          const SizedBox(width: 4),
+          const Text('Erstellt!'),
+        ],
+      );
+    } else {
+      buttonChild = const Text('Erstellen');
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+          // Warning/error text — shown above buttons row
+        if (_errorMessage != null)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Text(
+              _errorMessage!,
+              style: TextStyle(color: colors.amber, fontSize: 12),
+            ),
           ),
-          child: const Text('Erstellen'),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            TextButton(
+              onPressed: isDisabled ? null : () => Navigator.of(context).pop(),
+              style: TextButton.styleFrom(
+                foregroundColor: colors.textSec,
+                disabledForegroundColor: colors.textDim.withValues(alpha: 0.4),
+              ),
+              child: const Text('Abbrechen'),
+            ),
+            const SizedBox(width: 8),
+            FilledButton(
+              onPressed: _isFormValid ? _submit : null,
+              style: FilledButton.styleFrom(
+                backgroundColor: accent,
+                disabledBackgroundColor: accent.withValues(alpha: 0.3),
+                foregroundColor: colors.bgBase,
+                disabledForegroundColor: colors.bgBase.withValues(alpha: 0.5),
+              ),
+              child: buttonChild,
+            ),
+          ],
         ),
       ],
     );

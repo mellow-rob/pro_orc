@@ -261,12 +261,12 @@ class _CodeTabState extends ConsumerState<CodeTab> {
   }
 
   void _openCreateDialog(BuildContext context, String initialTab) {
-    showDialog<Map<String, dynamic>>(
+    showDialog<dynamic>(
       context: context,
       barrierDismissible: true,
       barrierColor: Colors.black54,
       builder: (context) => CreateProjectDialog(initialTab: initialTab),
     );
-    // Result handling wired in Phase 15
+    // New project appears automatically via watcher-driven projectsProvider invalidation
   }
 }
