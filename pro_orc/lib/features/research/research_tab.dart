@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pro_orc/data/models/project_model.dart';
 import 'package:pro_orc/features/research/research_project_card.dart';
 import 'package:pro_orc/features/shared/add_project_card.dart';
+import 'package:pro_orc/features/shared/create_project_dialog.dart';
 import 'package:pro_orc/features/shared/empty_state.dart';
 import 'package:pro_orc/features/shared/project_detail_panel.dart';
 import 'package:pro_orc/features/shell/glass_card.dart';
@@ -234,8 +235,13 @@ class _ResearchTabState extends ConsumerState<ResearchTab> {
     showProjectDetail(context, project);
   }
 
-  // ignore: unused_element
   void _openCreateDialog(BuildContext context, String initialTab) {
-    // Wired in 14-02: CreateProjectDialog
+    showDialog<Map<String, dynamic>>(
+      context: context,
+      barrierDismissible: true,
+      barrierColor: Colors.black54,
+      builder: (context) => CreateProjectDialog(initialTab: initialTab),
+    );
+    // Result handling wired in Phase 15
   }
 }
