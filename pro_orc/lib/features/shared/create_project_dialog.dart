@@ -13,7 +13,7 @@ import 'package:pro_orc/theme/n3_colors.dart';
 /// Returns a [Map<String, dynamic>] with form values on confirm,
 /// or null when dismissed.
 ///
-/// Phase 15 will wire the actual filesystem creation logic.
+/// Phase 15-02 wires the actual filesystem creation via [ProjectCreatorService].
 class CreateProjectDialog extends ConsumerStatefulWidget {
   const CreateProjectDialog({
     super.key,
@@ -41,10 +41,14 @@ class _CreateProjectDialogState extends ConsumerState<CreateProjectDialog>
   // Code tab toggles
   bool _gitInit = true;
   bool _gsdSkeleton = true;
+  bool _claudeMd = true;
+  bool _terminal = true;
   bool _codeRemSleep = false;
+  String _gitignoreTemplate = 'none';
 
   // Research tab toggles
   bool _notion = true;
+  bool _researchTerminal = true;
   bool _researchRemSleep = true;
 
   // ignore: prefer_final_fields
@@ -75,13 +79,30 @@ class _CreateProjectDialogState extends ConsumerState<CreateProjectDialog>
   Future<void> _loadScanDirs() async {
     final db = ref.read(appDatabaseProvider);
     final dirs = await db.getScanDirs();
+    // Filter out non-writable directories
+    final writable = <String>[];
+    for (final d in dirs) {
+      if (FileSystemEntity.isDirectorySync(d) && _isWritable(d)) {
+        writable.add(d);
+      }
+    }
     if (mounted) {
       setState(() {
-        _scanDirs = dirs;
-        _selectedScanDir = dirs.isNotEmpty ? dirs.first : null;
+        _scanDirs = writable;
+        _selectedScanDir = writable.isNotEmpty ? writable.first : null;
       });
-      // Re-check folder existence with the loaded scan dir
       _updateDerivedName(_nameController.text);
+    }
+  }
+
+  bool _isWritable(String dirPath) {
+    final testFile = File(path.join(dirPath, '.pro_orc_write_test'));
+    try {
+      testFile.writeAsStringSync('');
+      testFile.deleteSync();
+      return true;
+    } catch (_) {
+      return false;
     }
   }
 
@@ -92,9 +113,13 @@ class _CreateProjectDialogState extends ConsumerState<CreateProjectDialog>
         if (_tabController.index == 0) {
           _gitInit = true;
           _gsdSkeleton = true;
+          _claudeMd = true;
+          _terminal = true;
           _codeRemSleep = false;
+          _gitignoreTemplate = 'none';
         } else {
           _notion = true;
+          _researchTerminal = true;
           _researchRemSleep = true;
         }
       });
@@ -117,9 +142,12 @@ class _CreateProjectDialogState extends ConsumerState<CreateProjectDialog>
   String _deriveFolderName(String input) {
     final trimmed = input.trim().toLowerCase();
     if (trimmed.isEmpty) return '';
-    // Replace spaces with underscores, then remove any chars not in [a-z0-9_-]
-    final withUnderscores = trimmed.replaceAll(' ', '_');
-    return withUnderscores.replaceAll(RegExp(r'[^a-z0-9_\-]'), '');
+    // Replace spaces and underscores with hyphens for kebab-case
+    final withHyphens = trimmed.replaceAll(RegExp(r'[\s_]+'), '-');
+    // Remove any chars not in [a-z0-9-]
+    final cleaned = withHyphens.replaceAll(RegExp(r'[^a-z0-9\-]'), '');
+    // Collapse multiple hyphens into one
+    return cleaned.replaceAll(RegExp(r'-{2,}'), '-');
   }
 
   String _abbreviatePath(String p) {
@@ -155,6 +183,9 @@ class _CreateProjectDialogState extends ConsumerState<CreateProjectDialog>
       'gsdSkeleton': isCode ? _gsdSkeleton : false,
       'notion': isCode ? false : _notion,
       'remSleep': isCode ? _codeRemSleep : _researchRemSleep,
+      'claudeMd': isCode ? _claudeMd : false,
+      'terminal': isCode ? _terminal : _researchTerminal,
+      'gitignoreTemplate': isCode ? _gitignoreTemplate : 'none',
     });
   }
 
@@ -303,17 +334,24 @@ class _CreateProjectDialogState extends ConsumerState<CreateProjectDialog>
         ),
       );
     }
+    // Full path preview: ~/code/mein-projekt
+    final fullPath = _selectedScanDir != null
+        ? _abbreviatePath(path.join(_selectedScanDir!, _derivedFolderName))
+        : _derivedFolderName;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
       child: Text(
-        'Ordner: $_derivedFolderName',
+        fullPath,
         style: TextStyle(color: colors.textSec, fontSize: 12),
+        overflow: TextOverflow.ellipsis,
       ),
     );
   }
 
   Widget _buildZielordnerDropdown(AppColors colors, Color accent) {
     if (_scanDirs.isEmpty) return const SizedBox.shrink();
+    // Hide dropdown if only one scan dir (auto-selected)
+    if (_scanDirs.length == 1) return const SizedBox.shrink();
 
     return DropdownButtonFormField<String>(
       initialValue: _selectedScanDir,
@@ -382,9 +420,36 @@ class _CreateProjectDialogState extends ConsumerState<CreateProjectDialog>
         _buildToggle(
           colors: colors,
           accent: accent,
+          title: 'CLAUDE.md erstellen',
+          value: _claudeMd,
+          onChanged: (v) => setState(() => _claudeMd = v),
+        ),
+        _buildGitignoreDropdown(colors, accent),
+        _buildToggle(
+          colors: colors,
+          accent: accent,
+          title: 'Terminal oeffnen',
+          value: _terminal,
+          onChanged: (v) {
+            setState(() {
+              _terminal = v;
+              // Switching off Terminal also switches off rem-sleep
+              if (!v) _codeRemSleep = false;
+            });
+          },
+        ),
+        _buildToggle(
+          colors: colors,
+          accent: accent,
           title: 'rem-sleep nach Erstellung',
           value: _codeRemSleep,
-          onChanged: (v) => setState(() => _codeRemSleep = v),
+          onChanged: (v) {
+            setState(() {
+              _codeRemSleep = v;
+              // rem-sleep ON forces Terminal ON
+              if (v) _terminal = true;
+            });
+          },
         ),
       ],
     );
@@ -402,20 +467,84 @@ class _CreateProjectDialogState extends ConsumerState<CreateProjectDialog>
         _buildToggle(
           colors: colors,
           accent: accent,
+          title: 'Terminal oeffnen',
+          value: _researchTerminal,
+          onChanged: (v) {
+            setState(() {
+              _researchTerminal = v;
+              // Switching off Terminal also switches off rem-sleep
+              if (!v) _researchRemSleep = false;
+            });
+          },
+        ),
+        _buildToggle(
+          colors: colors,
+          accent: accent,
           title: 'rem-sleep nach Erstellung',
           value: _researchRemSleep,
-          onChanged: (v) => setState(() => _researchRemSleep = v),
+          onChanged: (v) {
+            setState(() {
+              _researchRemSleep = v;
+              // rem-sleep ON forces Terminal ON
+              if (v) _researchTerminal = true;
+            });
+          },
         ),
       ],
     );
 
-    // Fixed height to prevent dialog resize on tab switch.
-    // 3 toggles × 28px (24 switch + 4 padding) = 84px
+    // Code: 5 toggles × 28px + gitignore dropdown ~44px = ~184px, use 190
+    // Research: 3 toggles × 28px = 84px
+    // Use a larger fixed height to accommodate code tab
     return SizedBox(
-      height: 84,
+      height: 190,
       child: AnimatedSwitcher(
         duration: const Duration(milliseconds: 200),
         child: isCode ? codeToggles : researchToggles,
+      ),
+    );
+  }
+
+  Widget _buildGitignoreDropdown(AppColors colors, Color accent) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: DropdownButtonFormField<String>(
+        initialValue: _gitignoreTemplate,
+        dropdownColor: colors.bgElev,
+        style: TextStyle(color: colors.textPri, fontSize: 13),
+        iconEnabledColor: colors.textDim,
+        isExpanded: true,
+        decoration: InputDecoration(
+          labelText: '.gitignore Template',
+          labelStyle: TextStyle(color: colors.textDim, fontSize: 11),
+          filled: true,
+          fillColor: colors.bgElev.withValues(alpha: 0.4),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: BorderSide.none,
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: BorderSide.none,
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide:
+                BorderSide(color: accent.withValues(alpha: 0.5), width: 1),
+          ),
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          isDense: true,
+        ),
+        items: const [
+          DropdownMenuItem(value: 'none', child: Text('Kein .gitignore')),
+          DropdownMenuItem(value: 'flutter', child: Text('Flutter')),
+          DropdownMenuItem(value: 'nodejs', child: Text('Node.js')),
+          DropdownMenuItem(value: 'python', child: Text('Python')),
+        ],
+        onChanged: (value) {
+          if (value != null) setState(() => _gitignoreTemplate = value);
+        },
       ),
     );
   }
