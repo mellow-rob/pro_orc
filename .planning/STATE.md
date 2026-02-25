@@ -10,9 +10,9 @@ See: .planning/PROJECT.md (updated 2026-02-24)
 ## Current Position
 
 Phase: 14 of 16 (Add Card + Dialog)
-Plan: 1 of 3 in current phase
+Plan: 2 of 3 in current phase
 Status: In progress
-Last activity: 2026-02-25 — Executed 14-01: AddProjectCard ghost widget integrated in Code and Research tabs
+Last activity: 2026-02-25 — Executed 14-02: CreateProjectDialog widget + wired in Code and Research tabs
 
 Progress: [████░░░░░░░░░░░░░░░░] 33% (v1.3 requirements)
 
@@ -49,6 +49,7 @@ Progress: [████░░░░░░░░░░░░░░░░] 33% (v1
 | 12    | 02   | ~2 min   | 2     | 3     |
 | 13    | 01   | 3 min    | 2     | 4     |
 | 14    | 01   | 2 min    | 2     | 3     |
+| 14    | 02   | 2 min    | 2     | 3     |
 
 ## Accumulated Context
 
@@ -58,6 +59,12 @@ Full decision log in PROJECT.md Key Decisions table.
 v1.0 decisions archived to milestones/v1.0-ROADMAP.md.
 v1.1 decisions archived to milestones/v1.1-ROADMAP.md.
 v1.2 decisions archived to milestones/v1.2-ROADMAP.md.
+
+**14-02 decisions:**
+- CreateProjectDialog uses AnimatedSwitcher keyed on tab index for toggle group transitions
+- Dialog glassmorphism: Dialog(transparent) + ClipRRect + BackdropFilter + Container(bgSurf) — same pattern as GlassCard
+- activeThumbColor/activeTrackColor on SwitchListTile.adaptive (not deprecated activeColor)
+- _isLoading kept mutable (not final) for Phase 15 create button spinner
 
 ### Pending Todos
 
@@ -71,5 +78,5 @@ v1.2 decisions archived to milestones/v1.2-ROADMAP.md.
 ## Session Continuity
 
 Last session: 2026-02-25
-Stopped at: Completed 14-01-PLAN.md — AddProjectCard widget + tab integration done
+Stopped at: Checkpoint in 14-02-PLAN.md Task 3 — awaiting visual verification of CreateProjectDialog
 Resume file: .planning/phases/14-add-card-dialog/14-02-PLAN.md
