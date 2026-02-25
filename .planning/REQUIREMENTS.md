@@ -35,12 +35,10 @@ Neue Projekte direkt aus Pro Orc erstellen mit Add+ Karte, Erstellungs-Dialog un
 - [ ] **CRE-06**: CLAUDE.md mit Projektname und Platzhalter-Sektionen anlegen wenn Toggle aktiv
 - [ ] **CRE-07**: .gitignore aus gewaehltem Template anlegen wenn nicht "None"
 
-### Notion Integration
+### Notion Integration (via Claude MCP)
 
-- [ ] **NOT-01**: Notion API Key in Settings konfigurierbar (verschluesselt gespeichert)
-- [ ] **NOT-02**: Notion Parent Page/Database ID in Settings konfigurierbar
-- [ ] **NOT-03**: Neue Notion-Seite erstellen mit Projektname als Titel
-- [ ] **NOT-04**: Notion-URL als `<!-- notion: URL -->` in PROJECT.md des neuen Projekts schreiben
+- [ ] **NOT-01**: Claude Code mit vorbereitetem Prompt starten der Notion-Seite via MCP erstellt
+- [ ] **NOT-02**: Notion-URL als `<!-- notion: URL -->` in PROJECT.md des neuen Projekts schreiben
 
 ## Future Requirements
 
@@ -62,6 +60,7 @@ Deferred to later releases.
 
 | Feature | Reason |
 |---------|--------|
+| Eigener Notion API Key | Notion-Integration laeuft via Claude MCP, kein eigener Key noetig |
 | Notion API Read/Sync | Nur Seiten-Erstellung, kein vollstaendiger Sync |
 | Projekt-Templates mit vollem Scaffolding | Zu komplex, .gitignore + CLAUDE.md reichen fuer v1.3 |
 | Projekt-Editing in Dialog nach Erstellung | Read-only Dashboard Prinzip bleibt |
@@ -72,33 +71,31 @@ Deferred to later releases.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| ADD-01 | Phase 15 | Pending |
-| ADD-02 | Phase 15 | Pending |
-| ADD-03 | Phase 15 | Pending |
-| ADD-04 | Phase 15 | Pending |
-| DLG-01 | Phase 15 | Pending |
-| DLG-02 | Phase 15 | Pending |
-| DLG-03 | Phase 15 | Pending |
-| DLG-04 | Phase 15 | Pending |
-| DLG-05 | Phase 15 | Pending |
-| DLG-06 | Phase 15 | Pending |
-| DLG-07 | Phase 15 | Pending |
-| DLG-08 | Phase 15 | Pending |
-| CRE-01 | Phase 16 | Pending |
-| CRE-02 | Phase 16 | Pending |
-| CRE-03 | Phase 16 | Pending |
-| CRE-04 | Phase 16 | Pending |
-| CRE-05 | Phase 16 | Pending |
-| CRE-06 | Phase 16 | Pending |
-| CRE-07 | Phase 16 | Pending |
-| NOT-01 | Phase 14 | Pending |
-| NOT-02 | Phase 14 | Pending |
-| NOT-03 | Phase 17 | Pending |
-| NOT-04 | Phase 17 | Pending |
+| ADD-01 | Phase 14 | Pending |
+| ADD-02 | Phase 14 | Pending |
+| ADD-03 | Phase 14 | Pending |
+| ADD-04 | Phase 14 | Pending |
+| DLG-01 | Phase 14 | Pending |
+| DLG-02 | Phase 14 | Pending |
+| DLG-03 | Phase 14 | Pending |
+| DLG-04 | Phase 14 | Pending |
+| DLG-05 | Phase 14 | Pending |
+| DLG-06 | Phase 14 | Pending |
+| DLG-07 | Phase 14 | Pending |
+| DLG-08 | Phase 14 | Pending |
+| CRE-01 | Phase 15 | Pending |
+| CRE-02 | Phase 15 | Pending |
+| CRE-03 | Phase 15 | Pending |
+| CRE-04 | Phase 15 | Pending |
+| CRE-05 | Phase 15 | Pending |
+| CRE-06 | Phase 15 | Pending |
+| CRE-07 | Phase 15 | Pending |
+| NOT-01 | Phase 16 | Pending |
+| NOT-02 | Phase 16 | Pending |
 
 **Coverage:**
-- v1.3 requirements: 23 total
-- Mapped to phases: 23
+- v1.3 requirements: 21 total
+- Mapped to phases: 21
 - Unmapped: 0
 
 ---
