@@ -1,7 +1,12 @@
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:drift/drift.dart' show Value;
+import 'package:path/path.dart' as p;
+import 'package:pro_orc/data/db/app_database.dart';
 import 'package:pro_orc/data/models/project_model.dart';
+import 'package:pro_orc/data/services/project_creator_service.dart';
+import 'package:pro_orc/data/services/quick_actions_service.dart';
 import 'package:pro_orc/features/code/code_project_card.dart';
 import 'package:pro_orc/features/shared/add_project_card.dart';
 import 'package:pro_orc/features/shared/create_project_dialog.dart';
@@ -261,14 +266,35 @@ class _CodeTabState extends ConsumerState<CodeTab> {
   }
 
   Future<void> _openCreateDialog(BuildContext context, String initialTab) async {
-    final result = await showDialog<dynamic>(
+    final result = await showDialog<Map<String, dynamic>>(
       context: context,
       barrierDismissible: true,
       barrierColor: Colors.black54,
       builder: (context) => CreateProjectDialog(initialTab: initialTab),
     );
     if (result != null) {
+      final creationResult = result['result'] as ProjectCreationResult;
+      final wantsRemSleep = result['wantsRemSleep'] as bool? ?? false;
+      final wantsTerminal = result['wantsTerminal'] as bool? ?? false;
+
+      // Persist projectType in DB so scanner classifies correctly
+      final folderId = p.basename(creationResult.projectPath);
+      final db = ref.read(appDatabaseProvider);
+      await db.upsertProjectSettings(ProjectSettingsTableCompanion.insert(
+        folderId: folderId,
+        projectType: const Value('code'),
+      ));
+
+      // Force rescan so new project appears in tab
       ref.invalidate(projectsProvider);
+
+      // Execute post-creation actions (Terminal, rem-sleep)
+      final actions = QuickActionsService();
+      if (wantsRemSleep) {
+        await actions.openRemSleep(creationResult.projectPath);
+      } else if (wantsTerminal) {
+        await actions.openInTerminal(creationResult.projectPath);
+      }
     }
   }
 }

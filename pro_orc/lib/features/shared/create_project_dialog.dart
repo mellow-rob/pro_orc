@@ -5,9 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path/path.dart' as path;
 import 'package:pro_orc/data/services/project_creator_service.dart';
-import 'package:pro_orc/data/services/quick_actions_service.dart';
 import 'package:pro_orc/providers/database_provider.dart';
-import 'package:pro_orc/providers/projects_provider.dart';
 import 'package:pro_orc/theme/n3_colors.dart';
 
 /// Dialog for creating a new Code or Research project.
@@ -53,6 +51,9 @@ class _CreateProjectDialogState extends ConsumerState<CreateProjectDialog>
   bool _researchTerminal = true;
   bool _researchRemSleep = true;
 
+  // Track previous tab index to detect actual tab changes
+  late int _previousTabIndex;
+
   // ignore: prefer_final_fields
   bool _isLoading = false;
   bool _isCreated = false;
@@ -62,6 +63,7 @@ class _CreateProjectDialogState extends ConsumerState<CreateProjectDialog>
   void initState() {
     super.initState();
     final initialIndex = widget.initialTab == 'research' ? 1 : 0;
+    _previousTabIndex = initialIndex;
     _tabController = TabController(
       length: 2,
       vsync: this,
@@ -111,8 +113,9 @@ class _CreateProjectDialogState extends ConsumerState<CreateProjectDialog>
   }
 
   void _onTabChanged() {
-    if (!_tabController.indexIsChanging) {
-      // Tab switch completed — reset toggles to this tab's defaults
+    // Only reset toggles on actual tab switch, not on every listener fire
+    if (_tabController.index != _previousTabIndex) {
+      _previousTabIndex = _tabController.index;
       setState(() {
         if (_tabController.index == 0) {
           _gitInit = true;
@@ -209,32 +212,24 @@ class _CreateProjectDialogState extends ConsumerState<CreateProjectDialog>
         }
       });
 
-      // Force immediate rescan so new project appears in tab
-      ref.invalidate(projectsProvider);
-
-      // Post-creation actions (Terminal, rem-sleep)
-      final projectPath = result.projectPath;
-      final wantsTerminal = isCode ? _terminal : _researchTerminal;
-      final wantsRemSleep = isCode ? _codeRemSleep : _researchRemSleep;
-      final actions = QuickActionsService();
-
-      if (wantsRemSleep) {
-        // rem-sleep implies terminal — cd -> claude -> rem-sleep
-        await actions.openRemSleep(projectPath);
-      } else if (wantsTerminal) {
-        // Just open terminal in project dir
-        await actions.openInTerminal(projectPath);
-      }
-
-      // Show warnings if any (e.g. git init failed) — extend delay to 3s
+      // Brief delay so user sees "Erstellt!" feedback
       final delay = result.warnings.isNotEmpty
           ? const Duration(milliseconds: 3000)
           : const Duration(milliseconds: 1500);
-
       await Future.delayed(delay);
-      if (mounted) {
-        Navigator.of(context).pop(result);
-      }
+
+      if (!mounted) return;
+
+      // Collect post-creation action flags before closing
+      final wantsTerminal = isCode ? _terminal : _researchTerminal;
+      final wantsRemSleep = isCode ? _codeRemSleep : _researchRemSleep;
+
+      // Pop with a map containing result + action flags — tab handles actions
+      Navigator.of(context).pop({
+        'result': result,
+        'wantsTerminal': wantsTerminal,
+        'wantsRemSleep': wantsRemSleep,
+      });
     } else {
       // Creation failed — show error, reset loading
       setState(() {
