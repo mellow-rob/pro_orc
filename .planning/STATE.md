@@ -10,9 +10,9 @@ See: .planning/PROJECT.md (updated 2026-02-24)
 ## Current Position
 
 Phase: 15 of 16 (Project Creation)
-Plan: 1 of 2 complete
-Status: In progress
-Last activity: 2026-02-25 — Completed 15-01: ProjectCreatorService + dialog UI updates
+Plan: 2 of 2 complete
+Status: Complete
+Last activity: 2026-02-26 — Completed 15-02: Dialog service wiring + post-creation actions
 
 Progress: [████░░░░░░░░░░░░░░░░] 33% (v1.3 requirements)
 
@@ -70,6 +70,10 @@ v1.2 decisions archived to milestones/v1.2-ROADMAP.md.
 - Toggle switch size reduced via FittedBox + fixed section height prevents dialog resize on tab switch
 - [Phase 15]: ProjectCreatorService warnings-not-failures: only directory creation fails; git/file write errors are warnings
 - [Phase 15]: Dialog keeps ProjectCreatorService import out until Phase 15-02 wiring to avoid unused import warning
+- [Phase 15-02]: Post-creation actions (Terminal, rem-sleep) execute in tab context, not dialog — dialog pops with action flags
+- [Phase 15-02]: New projects get DB projectType entry to bypass _inferType heuristic for empty directories
+- [Phase 15-02]: osascript without runInShell for reliable Terminal command execution
+- [Phase 15-02]: TabController listener tracks previousTabIndex to prevent toggle reset on unrelated setState
 
 ### Pending Todos
 
@@ -82,6 +86,6 @@ v1.2 decisions archived to milestones/v1.2-ROADMAP.md.
 
 ## Session Continuity
 
-Last session: 2026-02-25
-Stopped at: Completed 15-01: ProjectCreatorService and dialog updates
-Resume file: .planning/phases/15-project-creation/15-02-PLAN.md
+Last session: 2026-02-26
+Stopped at: Phase 15 complete — all plans executed and verified
+Resume file: .planning/ROADMAP.md
