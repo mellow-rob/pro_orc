@@ -90,16 +90,16 @@ Plans:
 ### Phase 16: Notion via Claude
 **Goal**: Research-Projekte mit aktivem Notion-Toggle starten Claude Code im Terminal mit einem Prompt, der ueber MCP eine Notion-Seite erstellt und die URL in PROJECT.md schreibt.
 **Depends on**: Phase 15
-**Requirements**: NOT-03, NOT-04
+**Requirements**: NOT-01, NOT-02
 **Success Criteria** (what must be TRUE):
   1. Nach Erstellung eines Research-Projekts mit aktivem Notion-Toggle startet Claude Code im Terminal mit einem vorbereiteten Prompt
   2. Der Prompt weist Claude an, eine Notion-Seite mit dem Projektnamen als Titel zu erstellen (via MCP)
   3. Der Prompt weist Claude an, die Notion-URL als `<!-- notion: URL -->` in PROJECT.md zu schreiben
   4. Kein eigener Notion API Key noetig — Claude nutzt seine bestehende MCP Notion-Verbindung
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 16-01: Claude-Prompt-Generierung + Integration in ProjectCreatorService
+- [ ] 16-01-PLAN.md — openClaudeWithPrompt + Notion-Toggle Durchreichung + ResearchTab Verdrahtung
 
 ## Progress
 
@@ -120,4 +120,4 @@ Plans:
 | 13. Memory UI + Actions | v1.2 | 1/1 | Complete | 2026-02-24 |
 | 14. Add Card + Dialog | v1.3 | Complete    | 2026-02-25 | - |
 | 15. Project Creation | v1.3 | Complete    | 2026-02-26 | - |
-| 16. Notion via Claude | v1.3 | 0/TBD | Not started | - |
+| 16. Notion via Claude | v1.3 | 0/1 | Not started | - |
