@@ -17,6 +17,16 @@ class QuickActionsService {
   }
 
   /// Opens Terminal.app, cd's into the project directory, and runs
+  /// Claude Code with the given prompt string.
+  Future<void> openClaudeWithPrompt(String projectPath, String prompt) async {
+    // Escape single quotes in prompt for shell safety
+    final escapedPrompt = prompt.replaceAll("'", "'\\''");
+    final script = _terminalScript("cd \"$projectPath\" && claude '$escapedPrompt'");
+    await Process.run('osascript', ['-e', script]);
+    await Process.run('open', ['-a', 'Terminal']);
+  }
+
+  /// Opens Terminal.app, cd's into the project directory, and runs
   /// `claude /rem-sleep` to trigger memory consolidation.
   Future<void> openRemSleep(String projectPath) async {
     final script = _terminalScript('cd "$projectPath" && claude /rem-sleep');

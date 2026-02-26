@@ -229,6 +229,8 @@ class _CreateProjectDialogState extends ConsumerState<CreateProjectDialog>
         'result': result,
         'wantsTerminal': wantsTerminal,
         'wantsRemSleep': wantsRemSleep,
+        'wantsNotion': !isCode && _notion,
+        'displayName': _nameController.text.trim(),
       });
     } else {
       // Creation failed — show error, reset loading
