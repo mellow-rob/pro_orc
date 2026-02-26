@@ -5,7 +5,7 @@
 - ✅ **v1.0 MVP** — Phases 1-5 (shipped 2026-02-19)
 - ✅ **v1.1 Flutter macOS Rewrite** — Phases 6-11 (shipped 2026-02-23)
 - ✅ **v1.2 Memory Indicator** — Phases 12-13 (shipped 2026-02-24)
-- 🚧 **v1.3 Project Creator** — Phases 14-16 (in progress)
+- ✅ **v1.3 Project Creator** — Phases 14-16 (shipped 2026-02-26)
 
 ## Phases
 
@@ -46,60 +46,16 @@ See: milestones/v1.2-ROADMAP.md for full details
 
 </details>
 
-### 🚧 v1.3 Project Creator (In Progress)
+<details>
+<summary>✅ v1.3 Project Creator (Phases 14-16) — SHIPPED 2026-02-26</summary>
 
-**Milestone Goal:** Neue Projekte direkt aus Pro Orc erstellen — Add+ Karte, Erstellungs-Dialog, Filesystem-Scaffolding, Notion via Claude MCP.
+- [x] Phase 14: Add Card + Dialog (2/2 plans) — completed 2026-02-25
+- [x] Phase 15: Project Creation (2/2 plans) — completed 2026-02-26
+- [x] Phase 16: Notion via Claude (1/1 plan) — completed 2026-02-26
 
-- [x] **Phase 14: Add Card + Dialog** - Add+ Karte in Code- und Research-Grid, Erstellungs-Dialog mit Tab-Switcher und allen Toggles/Feldern (completed 2026-02-25)
-- [x] **Phase 15: Project Creation** - Filesystem-Operationen: Ordner, git init, GSD skeleton, CLAUDE.md, .gitignore, Terminal, rem-sleep (completed 2026-02-26)
-- [x] **Phase 16: Notion via Claude** - Claude Code mit Prompt starten der Notion-Seite via MCP erstellt (completed 2026-02-26)
+See: milestones/v1.3-ROADMAP.md for full details
 
-## Phase Details
-
-### Phase 14: Add Card + Dialog
-**Goal**: User sieht Add+ Karte im Code- und Research-Grid und kann daraus einen Erstellungs-Dialog oeffnen, der alle Optionen fuer den neuen Projekttyp zeigt.
-**Depends on**: Phase 13
-**Requirements**: ADD-01, ADD-02, ADD-03, ADD-04, DLG-01, DLG-02, DLG-03, DLG-04, DLG-05, DLG-06, DLG-07, DLG-08
-**Success Criteria** (what must be TRUE):
-  1. Add+ Karte erscheint als letzte Karte in Code-Tab und Research-Tab (nach allen Projekt-Karten)
-  2. Klick auf Add+ im Code-Tab oeffnet Dialog mit vorausgewaehltem Code-Tab; Klick im Research-Tab oeffnet Dialog mit Research-Tab
-  3. Dialog zeigt Namensfeld plus alle Code-spezifischen Toggles (git init, GSD skeleton, CLAUDE.md, .gitignore Dropdown) wenn Code-Tab aktiv
-  4. Dialog zeigt Namensfeld plus alle Research-spezifischen Optionen (Notion-Seite, Terminal, rem-sleep) wenn Research-Tab aktiv
-  5. Tab-Switcher innerhalb des Dialogs wechselt zwischen Code- und Research-Optionen ohne Dialog zu schliessen
-**Plans**: 2 plans
-
-Plans:
-- [ ] 14-01-PLAN.md — AddProjectCard Widget (Ghost GlassCard + Integration in Code/Research Grids)
-- [ ] 14-02-PLAN.md — CreateProjectDialog Widget (TabBar, Formular, Toggles, Zielordner-Dropdown)
-
-### Phase 15: Project Creation
-**Goal**: User kann ein neues Projekt erstellen — Ordner wird angelegt, git/GSD/CLAUDE.md/gitignore optional initialisiert, Terminal oeffnet sich im neuen Verzeichnis, optionaler rem-sleep laeuft an.
-**Depends on**: Phase 14
-**Requirements**: CRE-01, CRE-02, CRE-03, CRE-04, CRE-05, CRE-06, CRE-07
-**Success Criteria** (what must be TRUE):
-  1. Neuer Projektordner erscheint nach Erstellung automatisch im entsprechenden Tab (via Watcher-Invalidierung)
-  2. git init, .planning/PROJECT.md, CLAUDE.md und .gitignore werden nur erstellt wenn der jeweilige Toggle aktiv war
-  3. Terminal.app oeffnet sich im neuen Projektordner wenn Terminal-Toggle aktiv
-  4. rem-sleep laeuft im neuen Projektordner via osascript wenn rem-sleep-Toggle aktiv
-**Plans**: 2 plans
-
-Plans:
-- [ ] 15-01-PLAN.md — ProjectCreatorService + Dialog UI Updates (kebab-case, neue Toggles, Pfad-Vorschau)
-- [ ] 15-02-PLAN.md — Dialog an Service verdrahten + Post-Creation Actions (Terminal, rem-sleep, Feedback)
-
-### Phase 16: Notion via Claude
-**Goal**: Research-Projekte mit aktivem Notion-Toggle starten Claude Code im Terminal mit einem Prompt, der ueber MCP eine Notion-Seite erstellt und die URL in PROJECT.md schreibt.
-**Depends on**: Phase 15
-**Requirements**: NOT-01, NOT-02
-**Success Criteria** (what must be TRUE):
-  1. Nach Erstellung eines Research-Projekts mit aktivem Notion-Toggle startet Claude Code im Terminal mit einem vorbereiteten Prompt
-  2. Der Prompt weist Claude an, eine Notion-Seite mit dem Projektnamen als Titel zu erstellen (via MCP)
-  3. Der Prompt weist Claude an, die Notion-URL als `<!-- notion: URL -->` in PROJECT.md zu schreiben
-  4. Kein eigener Notion API Key noetig — Claude nutzt seine bestehende MCP Notion-Verbindung
-**Plans**: 1 plan
-
-Plans:
-- [ ] 16-01-PLAN.md — openClaudeWithPrompt + Notion-Toggle Durchreichung + ResearchTab Verdrahtung
+</details>
 
 ## Progress
 
@@ -118,6 +74,6 @@ Plans:
 | 11. Claude Tools Panel | v1.1 | 3/3 | Complete | 2026-02-23 |
 | 12. Memory Detection | v1.2 | 2/2 | Complete | 2026-02-24 |
 | 13. Memory UI + Actions | v1.2 | 1/1 | Complete | 2026-02-24 |
-| 14. Add Card + Dialog | v1.3 | Complete    | 2026-02-25 | - |
-| 15. Project Creation | v1.3 | Complete    | 2026-02-26 | - |
-| 16. Notion via Claude | v1.3 | Complete    | 2026-02-26 | - |
+| 14. Add Card + Dialog | v1.3 | 2/2 | Complete | 2026-02-25 |
+| 15. Project Creation | v1.3 | 2/2 | Complete | 2026-02-26 |
+| 16. Notion via Claude | v1.3 | 1/1 | Complete | 2026-02-26 |

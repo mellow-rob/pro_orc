@@ -52,3 +52,20 @@
 
 ---
 
+
+## v1.3 Project Creator (Shipped: 2026-02-26)
+
+**Phases completed:** 3 phases (14-16), 5 plans
+**Lines added:** +1,320 LOC Dart (total: 10,485 LOC)
+**Files modified:** 6 (in pro_orc/lib/)
+**Timeline:** 2 days (2026-02-24 → 2026-02-26)
+
+**Key accomplishments:**
+1. Ghost Add+ Karte with glassmorphism hover animation in Code (cyan) and Research (fuchsia) grids
+2. Erstellungs-Dialog with TabBar, name→kebab-case derivation, full path preview, and configurable toggles
+3. ProjectCreatorService: pure Dart filesystem scaffolding (directory, git init, GSD skeleton, CLAUDE.md, .gitignore)
+4. Post-creation actions: Terminal/rem-sleep via osascript, DB projectType persistence, auto-rescan via provider invalidation
+5. Notion via Claude MCP: Claude Code launches in Terminal with German prompt to create Notion page and write URL to PROJECT.md
+
+---
+

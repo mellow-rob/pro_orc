@@ -3,11 +3,11 @@
 
 ## What This Is
 
-Native macOS Flutter-App als persönliches Projekt-Management Dashboard. Scannt automatisch Projektordner (`~/project_orchestration/code/` und `~/project_orchestration/project research/`), zeigt GSD-Status und Fortschritt pro Projekt, listet installierte Claude Code Tools auf, und bietet Quick Actions zum Öffnen in Terminal/Finder/Notion/GitHub. Menubar-Icon + Hauptfenster, Echtzeit File-Watching via dart:io/watcher. Nur lokal, kein Netzwerk, kein Auth — ein Single-User Power-Dashboard.
+Native macOS Flutter-App als persoenliches Projekt-Management Dashboard. Scannt automatisch Projektordner, zeigt GSD-Status und Fortschritt pro Projekt, listet installierte Claude Code Tools auf, und bietet Quick Actions zum Oeffnen in Terminal/Finder/Notion/GitHub. Neue Projekte koennen direkt aus dem Dashboard erstellt werden — mit konfigurierbaren Toggles fuer git init, GSD skeleton, CLAUDE.md, .gitignore und Notion-Seiten-Erstellung via Claude MCP. Menubar-Icon + Hauptfenster, Echtzeit File-Watching via dart:io/watcher. Nur lokal, kein Netzwerk, kein Auth — ein Single-User Power-Dashboard.
 
 ## Core Value
 
-Auf einen Blick sehen, wo jedes Projekt steht, was der nächste Schritt ist, und welche Tools zur Verfügung stehen — ohne Terminal-Hopping oder Notion-Suche.
+Auf einen Blick sehen, wo jedes Projekt steht, was der naechste Schritt ist, und welche Tools zur Verfuegung stehen — ohne Terminal-Hopping oder Notion-Suche.
 
 ## Requirements
 
@@ -32,27 +32,15 @@ Auf einen Blick sehen, wo jedes Projekt steht, was der nächste Schritt ist, und
 - ✓ Memory-Status-Erkennung pro Projekt (Existenz + mtime von MEMORY.md) — v1.2
 - ✓ Brain+zzz Memory Indicator auf Project Cards (konsolidiert/nicht vorhanden/stale) — v1.2
 - ✓ Quick Action: rem-sleep im Terminal triggern via osascript — v1.2
-
-## Current Milestone: v1.3 Project Creator
-
-**Goal:** Neue Projekte direkt aus Pro Orc erstellen — Add+ Karte, Erstellungs-Dialog mit Code/Research Tab-Switcher, Ordner anlegen, git init, Notion API Integration, rem-sleep Trigger.
-
-**Target features:**
-- Add+ Karte als letzte Karte in Code- und Research-Tab
-- Einheitlicher Erstellungs-Dialog mit Code/Research Tab-Switcher (vorausgewählt je nach Herkunft)
-- Code: Ordner anlegen, optional git init, optional GSD skeleton (.planning/PROJECT.md), Terminal öffnen, optional rem-sleep
-- Research: Ordner anlegen, optional Notion-Seite erstellen (via API), Terminal öffnen, optional rem-sleep
-- Settings: Notion API Key + Parent Page Konfiguration
-- Notion API Integration für automatische Seiten-Erstellung
+- ✓ Add+ Karte im Code- und Research-Tab Grid mit Ghost-Style und Hover-Animation — v1.3
+- ✓ Erstellungs-Dialog mit Code/Research Tab-Switcher, Toggles, kebab-case Name und Pfad-Vorschau — v1.3
+- ✓ Projekt-Erstellung: Ordner + git init + GSD skeleton + CLAUDE.md + .gitignore — v1.3
+- ✓ Post-Creation Actions: Terminal oeffnen, rem-sleep ausfuehren, Projekt erscheint automatisch im Tab — v1.3
+- ✓ Notion-Seiten-Erstellung via Claude MCP (kein eigener API Key noetig) — v1.3
 
 ### Active
 
-- [ ] Add+ Karte im Code- und Research-Tab Grid — v1.3
-- [ ] Erstellungs-Dialog mit Code/Research Tab-Switcher — v1.3
-- [ ] Code-Projekt erstellen: Ordner + git init + optional GSD skeleton — v1.3
-- [ ] Research-Projekt erstellen: Ordner + optional Notion-Seite via API — v1.3
-- [ ] Terminal öffnen + optional rem-sleep nach Erstellung — v1.3
-- [ ] Notion API Integration (Key + Parent in Settings) — v1.3
+(No active milestone — planning next version)
 
 ### Out of Scope
 
@@ -62,19 +50,20 @@ Auf einen Blick sehen, wo jedes Projekt steht, was der nächste Schritt ist, und
 - Projekt-Editing in UI — Read-only Dashboard
 - Notifications — Live updates in open tab reichen
 - Plugin System — Over-engineering
-- App Store Distribution — Sandbox-Anforderungen zu restriktiv für Filesystem-Zugriff
+- App Store Distribution — Sandbox-Anforderungen zu restriktiv fuer Filesystem-Zugriff
 - Light Mode — n3urala1 Theme ist intentional dark-only
 - Auto-Update — Single-Developer Tool, `git pull && flutter build macos` reicht
 - Cloud Sync — Nur lokaler Filesystem-Zugriff, kein Remote
-- Notion API Read/Write — Nur Seiten-Erstellung für neue Research-Projekte, kein vollständiger Sync
+- Notion API Read/Write — Nur Seiten-Erstellung via Claude MCP, kein vollstaendiger Sync
 
 ## Context
 
 - v1.0 shipped as Next.js web app: 3,120 LOC TypeScript/TSX/CSS, 97 files (2026-02-19)
 - v1.1 shipped as native macOS Flutter app: 8,931 LOC Dart, 164 files (2026-02-23)
 - v1.2 shipped Memory Indicator: +459 LOC Dart, 20 files changed (2026-02-24)
+- v1.3 shipped Project Creator: +1,320 LOC Dart, 6 files changed (2026-02-26)
 - v1.0 reference implementation in `pro-orc/` (Next.js) — superseded by Flutter rewrite
-- Flutter app in `pro_orc/` directory
+- Flutter app in `pro_orc/` directory — 10,485 LOC Dart
 - Dashboard discovers 22+ projects across code/ and research/ directories
 - Tech stack: Flutter 3.41.1 + Dart 3.x, Riverpod 3.x, Drift SQLite v2, tray_manager 0.5.2, window_manager 0.5.1
 - n3urala1 dark theme: OKLCH→sRGB tokens, cyan primary, fuchsia accent, glassmorphism, animated orbs
@@ -89,21 +78,21 @@ Auf einen Blick sehen, wo jedes Projekt steht, was der nächste Schritt ist, und
 - **Design**: n3urala1 Dark Mode Theme, kein Toggle
 - **Datenquelle**: Filesystem + Git via dart:io / git CLI, Drift SQLite for config
 - **Live Updates**: watcher package + Riverpod invalidation
-- **Notion**: Nur ausgehende Links (url_launcher)
+- **Notion**: Seiten-Erstellung via Claude MCP, ausgehende Links via url_launcher
 
 ## Key Decisions
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Notion-Link als `<!-- notion: URL -->` in PROJECT.md | Einfachste Integration, keine API nötig, leicht parsebar | ✓ Good — works reliably |
+| Notion-Link als `<!-- notion: URL -->` in PROJECT.md | Einfachste Integration, keine API noetig, leicht parsebar | ✓ Good — works reliably |
 | Filesystem + Git als Datenquelle | Kein DB-Setup, Daten sind bereits da | ✓ Good — zero setup |
-| Card Grid Layout | Bessere Übersicht als Liste/Kanban für <50 Projekte | ✓ Good — scales to 22+ projects |
-| Auto-Erkennung Claude Tools | Kein manuelles Pflegen nötig | ✓ Good — discovers all tools from ~/.claude/ |
-| Terminal.app für "Open in Terminal" | User-Präferenz, via `open -a Terminal` | ✓ Good |
+| Card Grid Layout | Bessere Uebersicht als Liste/Kanban fuer <50 Projekte | ✓ Good — scales to 22+ projects |
+| Auto-Erkennung Claude Tools | Kein manuelles Pflegen noetig | ✓ Good — discovers all tools from ~/.claude/ |
+| Terminal.app fuer "Open in Terminal" | User-Praeferenz, via `open -a Terminal` | ✓ Good |
 | n3urala1 OKLCH dark theme | Cyan primary, fuchsia accent, glassmorphism | ✓ Good — distinctive aesthetic |
-| Flutter macOS Rewrite statt inkrementelle Web-Features | Native Experience, Menubar, Performance; Flutter als Zukunftsbasis | ✓ Good — 8.9k LOC Dart, native menubar, ~1s live updates |
+| Flutter macOS Rewrite statt inkrementelle Web-Features | Native Experience, Menubar, Performance; Flutter als Zukunftsbasis | ✓ Good — 10.5k LOC Dart, native menubar, ~1s live updates |
 | Riverpod 3.x + FutureProvider + ref.listen | Watcher-driven invalidation, stateless reactive pattern | ✓ Good — clean separation |
-| Drift SQLite for config/settings | Typed schema, migrations, in-memory testing | ✓ Good — enables per-project settings |
+| Drift SQLite for config/settings | Typed schema, migrations, in-memory testing | ✓ Good — enables per-project settings + projectType persistence |
 | runInShell: true on all Process.run | macOS GUI apps don't inherit Homebrew PATH | ✓ Good — essential for git/flutter CLI access |
 | watcher package + StreamController.broadcast | Debounce, keepAlive, permanent internal subscription | ✓ Good — solves DirectoryWatcher.ready hang |
 | Real temp git repos in tests (no mocking) | TDD with actual filesystem, mirrors production | ✓ Good — catches real integration issues |
@@ -113,6 +102,11 @@ Auf einen Blick sehen, wo jedes Projekt steht, was der nächste Schritt ist, und
 | Brain+zzz icon for memory indicator | User preferred over bookMarked, more intuitive for "sleeping memory" | ✓ Good — clear visual metaphor |
 | osascript Terminal automation for rem-sleep | `tell Terminal to do script "cd X && claude /rem-sleep"` | ✓ Good — one-click execution |
 | Watch ~/.claude/projects/ for memory changes | Real-time updates when rem-sleep runs in another terminal | ✓ Good — instant feedback |
+| Ghost Add+ Card (reduced alpha, no label) | Clean minimal look, visually distinct from project cards | ✓ Good — intuitive "add more" affordance |
+| Dialog pops with action flags, tabs execute | Avoids mounted/lifecycle issues in dialog context | ✓ Good — reliable post-creation actions |
+| DB projectType persistence for new projects | Bypasses _inferType heuristic for empty directories | ✓ Good — correct tab classification immediately |
+| osascript without runInShell for Terminal commands | Reliable quoting for complex shell commands with special chars | ✓ Good — handles German text in prompts |
+| Notion via Claude MCP statt eigener API Key | Claude hat bereits MCP-Verbindung; kein Key-Management noetig | ✓ Good — zero-config Notion integration |
 
 ---
-*Last updated: 2026-02-24 after v1.3 milestone start*
+*Last updated: 2026-02-26 after v1.3 milestone*
