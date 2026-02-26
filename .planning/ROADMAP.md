@@ -51,7 +51,7 @@ See: milestones/v1.2-ROADMAP.md for full details
 **Milestone Goal:** Neue Projekte direkt aus Pro Orc erstellen — Add+ Karte, Erstellungs-Dialog, Filesystem-Scaffolding, Notion via Claude MCP.
 
 - [x] **Phase 14: Add Card + Dialog** - Add+ Karte in Code- und Research-Grid, Erstellungs-Dialog mit Tab-Switcher und allen Toggles/Feldern (completed 2026-02-25)
-- [ ] **Phase 15: Project Creation** - Filesystem-Operationen: Ordner, git init, GSD skeleton, CLAUDE.md, .gitignore, Terminal, rem-sleep
+- [x] **Phase 15: Project Creation** - Filesystem-Operationen: Ordner, git init, GSD skeleton, CLAUDE.md, .gitignore, Terminal, rem-sleep (completed 2026-02-26)
 - [ ] **Phase 16: Notion via Claude** - Claude Code mit Prompt starten der Notion-Seite via MCP erstellt
 
 ## Phase Details
@@ -119,5 +119,5 @@ Plans:
 | 12. Memory Detection | v1.2 | 2/2 | Complete | 2026-02-24 |
 | 13. Memory UI + Actions | v1.2 | 1/1 | Complete | 2026-02-24 |
 | 14. Add Card + Dialog | v1.3 | Complete    | 2026-02-25 | - |
-| 15. Project Creation | v1.3 | 0/2 | Not started | - |
+| 15. Project Creation | v1.3 | Complete    | 2026-02-26 | - |
 | 16. Notion via Claude | v1.3 | 0/TBD | Not started | - |
