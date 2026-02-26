@@ -52,7 +52,7 @@ See: milestones/v1.2-ROADMAP.md for full details
 
 - [x] **Phase 14: Add Card + Dialog** - Add+ Karte in Code- und Research-Grid, Erstellungs-Dialog mit Tab-Switcher und allen Toggles/Feldern (completed 2026-02-25)
 - [x] **Phase 15: Project Creation** - Filesystem-Operationen: Ordner, git init, GSD skeleton, CLAUDE.md, .gitignore, Terminal, rem-sleep (completed 2026-02-26)
-- [ ] **Phase 16: Notion via Claude** - Claude Code mit Prompt starten der Notion-Seite via MCP erstellt
+- [x] **Phase 16: Notion via Claude** - Claude Code mit Prompt starten der Notion-Seite via MCP erstellt (completed 2026-02-26)
 
 ## Phase Details
 
@@ -120,4 +120,4 @@ Plans:
 | 13. Memory UI + Actions | v1.2 | 1/1 | Complete | 2026-02-24 |
 | 14. Add Card + Dialog | v1.3 | Complete    | 2026-02-25 | - |
 | 15. Project Creation | v1.3 | Complete    | 2026-02-26 | - |
-| 16. Notion via Claude | v1.3 | 0/1 | Not started | - |
+| 16. Notion via Claude | v1.3 | Complete    | 2026-02-26 | - |
