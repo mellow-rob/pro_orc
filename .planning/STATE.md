@@ -5,14 +5,14 @@
 See: .planning/PROJECT.md (updated 2026-02-24)
 
 **Core value:** Auf einen Blick sehen, wo jedes Projekt steht, was der nächste Schritt ist, und welche Tools zur Verfügung stehen — ohne Terminal-Hopping oder Notion-Suche.
-**Current focus:** v1.3 Project Creator — Phase 15: Project Creation
+**Current focus:** v1.3 Project Creator — Phase 16: Notion via Claude
 
 ## Current Position
 
-Phase: 15 of 16 (Project Creation)
-Plan: 2 of 2 complete
+Phase: 16 of 16 (Notion via Claude)
+Plan: 1 of 1 complete
 Status: Complete
-Last activity: 2026-02-26 — Completed 15-02: Dialog service wiring + post-creation actions
+Last activity: 2026-02-26 — Completed 16-01: Notion page creation via Claude Code MCP
 
 Progress: [████░░░░░░░░░░░░░░░░] 33% (v1.3 requirements)
 
@@ -51,6 +51,7 @@ Progress: [████░░░░░░░░░░░░░░░░] 33% (v1
 | 14    | 01   | 2 min    | 2     | 3     |
 | 14    | 02   | 2 min    | 2     | 3     |
 | 15    | 01   | 3 min    | 2     | 2     |
+| 16    | 01   | 2 min    | 2     | 3     |
 
 ## Accumulated Context
 
@@ -74,6 +75,8 @@ v1.2 decisions archived to milestones/v1.2-ROADMAP.md.
 - [Phase 15-02]: New projects get DB projectType entry to bypass _inferType heuristic for empty directories
 - [Phase 15-02]: osascript without runInShell for reliable Terminal command execution
 - [Phase 15-02]: TabController listener tracks previousTabIndex to prevent toggle reset on unrelated setState
+- [Phase 16-01]: wantsNotion takes priority over Terminal/rem-sleep — Claude Code already opens Terminal
+- [Phase 16-01]: German prompt via single-quote shell escaping instructs Claude to create Notion page via MCP and write URL as HTML comment in PROJECT.md
 
 ### Pending Todos
 
@@ -82,10 +85,10 @@ v1.2 decisions archived to milestones/v1.2-ROADMAP.md.
 
 ### Blockers/Concerns
 
-- Notion-Integration via Claude MCP — kein eigener API Key, Claude erstellt Notion-Seite per Prompt
+None
 
 ## Session Continuity
 
 Last session: 2026-02-26
-Stopped at: Phase 15 complete — all plans executed and verified
+Stopped at: Completed 16-01-PLAN.md
 Resume file: .planning/ROADMAP.md
