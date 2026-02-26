@@ -235,13 +235,15 @@ class _ResearchTabState extends ConsumerState<ResearchTab> {
     showProjectDetail(context, project);
   }
 
-  void _openCreateDialog(BuildContext context, String initialTab) {
-    showDialog<dynamic>(
+  Future<void> _openCreateDialog(BuildContext context, String initialTab) async {
+    final result = await showDialog<dynamic>(
       context: context,
       barrierDismissible: true,
       barrierColor: Colors.black54,
       builder: (context) => CreateProjectDialog(initialTab: initialTab),
     );
-    // New project appears automatically via watcher-driven projectsProvider invalidation
+    if (result != null) {
+      ref.invalidate(projectsProvider);
+    }
   }
 }

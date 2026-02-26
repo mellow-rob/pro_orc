@@ -7,6 +7,7 @@ import 'package:path/path.dart' as path;
 import 'package:pro_orc/data/services/project_creator_service.dart';
 import 'package:pro_orc/data/services/quick_actions_service.dart';
 import 'package:pro_orc/providers/database_provider.dart';
+import 'package:pro_orc/providers/projects_provider.dart';
 import 'package:pro_orc/theme/n3_colors.dart';
 
 /// Dialog for creating a new Code or Research project.
@@ -207,6 +208,9 @@ class _CreateProjectDialogState extends ConsumerState<CreateProjectDialog>
           _errorMessage = result.warnings.join(' • ');
         }
       });
+
+      // Force immediate rescan so new project appears in tab
+      ref.invalidate(projectsProvider);
 
       // Post-creation actions (Terminal, rem-sleep)
       final projectPath = result.projectPath;
@@ -546,11 +550,10 @@ class _CreateProjectDialogState extends ConsumerState<CreateProjectDialog>
       ],
     );
 
-    // Code: 5 toggles × 28px + gitignore dropdown ~44px = ~184px, use 190
-    // Research: 3 toggles × 28px = 84px
-    // Use a larger fixed height to accommodate code tab
-    return SizedBox(
-      height: 190,
+    return AnimatedSize(
+      duration: const Duration(milliseconds: 200),
+      curve: Curves.easeInOut,
+      alignment: Alignment.topCenter,
       child: AnimatedSwitcher(
         duration: const Duration(milliseconds: 200),
         child: isCode ? codeToggles : researchToggles,
