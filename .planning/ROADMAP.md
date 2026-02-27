@@ -92,11 +92,11 @@ Plans:
   3. Dialog erkennt Figma-Links und andere externe Ressourcen-URLs aus Projektdateien und zeigt sie einzeln an
   4. Dialog erkennt Claude Memory unter `~/.claude/projects/` und MCP-erstellte Daten (Firebase, Vercel, etc.) und fragt einzeln nach
   5. Jede erkannte externe Ressource wird als eigenstaendiger Schritt mit separatem Ja/Nein angezeigt — keine Ressource wird ohne explizite Bestaetigung geloescht
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 18-01: Resource detection service (Notion, GitHub, Figma, Claude Memory, other URLs)
-- [ ] 18-02: Step-by-step cleanup UI wired into deletion dialog
+- [ ] 18-01-PLAN.md — ExternalResource model + resource_detector service (Notion, GitHub, Figma, Claude Memory, other URLs)
+- [ ] 18-02-PLAN.md — Step-by-step cleanup UI with checkboxes and post-deletion summary in DeleteProjectDialog
 
 ## Progress
 
