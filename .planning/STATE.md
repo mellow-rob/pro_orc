@@ -5,17 +5,17 @@
 See: .planning/PROJECT.md (updated 2026-02-27)
 
 **Core value:** Auf einen Blick sehen, wo jedes Projekt steht, was der naechste Schritt ist, und welche Tools zur Verfuegung stehen — ohne Terminal-Hopping oder Notion-Suche.
-**Current focus:** v1.4 Projekt-Loeschfunktion — Phase 17: Deletion Core
+**Current focus:** v1.4 Projekt-Loeschfunktion — Phase 18: External Resource Cleanup
 
 ## Current Position
 
 Milestone: v1.4 Projekt-Loeschfunktion
-Phase: 17 of 18 (Deletion Core)
-Plan: 2 of 2 in current phase
+Phase: 18 of 18 (External Resource Cleanup)
+Plan: 1 of 2 in current phase
 Status: Building
-Last activity: 2026-02-27 — Completed 17-02: DeleteProjectDialog + wired _confirmDelete in both cards
+Last activity: 2026-02-27 — Completed 18-01: ExternalResource model + detectExternalResources service
 
-Progress: [██░░░░░░░░] 50% (v1.4)
+Progress: [████░░░░░░] 63% (v1.4)
 
 ## Performance Metrics
 
@@ -40,6 +40,7 @@ Progress: [██░░░░░░░░] 50% (v1.4)
 | 16    | 01   | 2 min    | 2     | 3     |
 | 17    | 01   | 2 min    | 2     | 3     |
 | 17    | 02   | 2 min    | 2     | 3     |
+| 18    | 01   | 1 min    | 2     | 2     |
 
 ## Accumulated Context
 
@@ -52,6 +53,8 @@ v1.0 decisions archived to milestones/v1.0-ROADMAP.md.
 v1.1 decisions archived to milestones/v1.1-ROADMAP.md.
 v1.2 decisions archived to milestones/v1.2-ROADMAP.md.
 v1.3 decisions archived to milestones/v1.3-ROADMAP.md.
+- [Phase 18]: Reuse encodeProjectPath exact-path for Claude Memory detection (no fuzzy scan needed)
+- [Phase 18]: Cap URL scan at 10 URLs, skip files >100KB to avoid noise
 
 ### Pending Todos
 
@@ -65,5 +68,5 @@ None
 ## Session Continuity
 
 Last session: 2026-02-27
-Stopped at: Completed 17-02 — DeleteProjectDialog + _confirmDelete wired in both card types
+Stopped at: Completed 18-01 — ExternalResource model + detectExternalResources service
 Resume file: None
