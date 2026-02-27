@@ -2,18 +2,21 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:pro_orc/data/models/external_resource.dart';
 import 'package:pro_orc/data/models/project_model.dart';
 import 'package:pro_orc/data/services/deletion_service.dart';
+import 'package:pro_orc/data/services/resource_detector.dart';
 import 'package:pro_orc/providers/projects_provider.dart';
 import 'package:pro_orc/theme/n3_colors.dart';
 
-/// GitHub-style deletion confirmation dialog.
+/// GitHub-style deletion confirmation dialog with external resource detection.
 ///
 /// Requires the user to type the exact project name before enabling
 /// the "Loeschen" button — prevents accidental permanent deletion.
 ///
 /// On confirm: calls [deleteProject], invalidates [projectsProvider]
-/// for auto-refresh, then pops with `true`.
+/// for auto-refresh. If resources were selected, shows a post-deletion
+/// summary with cleanup hints before closing. Otherwise pops immediately.
 /// On cancel: pops with `false` — no side effects.
 class DeleteProjectDialog extends ConsumerStatefulWidget {
   const DeleteProjectDialog({
@@ -32,11 +35,26 @@ class _DeleteProjectDialogState extends ConsumerState<DeleteProjectDialog> {
   late final TextEditingController _textController;
   bool _isDeleting = false;
 
+  /// null = still loading, empty = none found
+  List<ExternalResource>? _resources;
+
+  /// Indices of resources the user wants to clean up (unchecked by default)
+  final Set<int> _selectedResources = {};
+
+  /// true after deletion — shows cleanup summary instead of the main form
+  bool _showSummary = false;
+
   @override
   void initState() {
     super.initState();
     _textController = TextEditingController();
     _textController.addListener(() => setState(() {}));
+    _loadResources();
+  }
+
+  void _loadResources() async {
+    final resources = await detectExternalResources(widget.project);
+    if (mounted) setState(() => _resources = resources);
   }
 
   @override
@@ -60,7 +78,27 @@ class _DeleteProjectDialogState extends ConsumerState<DeleteProjectDialog> {
       ref.invalidate(projectsProvider);
     }
 
-    Navigator.of(context).pop(true);
+    // If any resources were selected, show the summary screen
+    if (_selectedResources.isNotEmpty) {
+      setState(() => _showSummary = true);
+    } else {
+      Navigator.of(context).pop(true);
+    }
+  }
+
+  IconData _iconForType(ExternalResourceType type) {
+    switch (type) {
+      case ExternalResourceType.notion:
+        return Icons.article_outlined;
+      case ExternalResourceType.github:
+        return Icons.code;
+      case ExternalResourceType.figma:
+        return Icons.palette_outlined;
+      case ExternalResourceType.claudeMemory:
+        return Icons.psychology_outlined;
+      case ExternalResourceType.other:
+        return Icons.link;
+    }
   }
 
   @override
@@ -82,25 +120,37 @@ class _DeleteProjectDialogState extends ConsumerState<DeleteProjectDialog> {
                 borderRadius: BorderRadius.circular(14),
               ),
               padding: const EdgeInsets.all(24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildHeader(colors),
-                  const SizedBox(height: 16),
-                  _buildWarning(colors),
-                  const SizedBox(height: 16),
-                  _buildProjectName(colors),
-                  const SizedBox(height: 16),
-                  _buildTextField(colors),
-                  const SizedBox(height: 24),
-                  _buildButtons(colors),
-                ],
-              ),
+              child: _showSummary
+                  ? _buildSummary(colors)
+                  : _buildMainForm(colors),
             ),
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildMainForm(AppColors colors) {
+    final hasResources = _resources != null && _resources!.isNotEmpty;
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildHeader(colors),
+        const SizedBox(height: 16),
+        _buildWarning(colors),
+        if (hasResources) ...[
+          const SizedBox(height: 16),
+          _buildResources(colors),
+        ],
+        const SizedBox(height: 16),
+        _buildProjectName(colors),
+        const SizedBox(height: 16),
+        _buildTextField(colors),
+        const SizedBox(height: 24),
+        _buildButtons(colors),
+      ],
     );
   }
 
@@ -145,6 +195,119 @@ class _DeleteProjectDialogState extends ConsumerState<DeleteProjectDialog> {
           color: colors.textSec,
           fontSize: 13,
         ),
+      ),
+    );
+  }
+
+  Widget _buildResources(AppColors colors) {
+    final resources = _resources!;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: colors.bgElev.withValues(alpha: 0.3),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: colors.textDim.withValues(alpha: 0.2),
+          width: 1,
+        ),
+      ),
+      padding: const EdgeInsets.all(12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Verknuepfte externe Ressourcen',
+            style: TextStyle(
+              color: colors.textSec,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 8),
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxHeight: 180),
+            child: SingleChildScrollView(
+              child: Column(
+                children: List.generate(resources.length, (index) {
+                  final resource = resources[index];
+                  final isSelected = _selectedResources.contains(index);
+                  final uri = resource.uri;
+                  final displayUri =
+                      uri.length > 50 ? '${uri.substring(0, 50)}…' : uri;
+
+                  return Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: Checkbox(
+                          value: isSelected,
+                          onChanged: (val) {
+                            setState(() {
+                              if (val == true) {
+                                _selectedResources.add(index);
+                              } else {
+                                _selectedResources.remove(index);
+                              }
+                            });
+                          },
+                          side: BorderSide(
+                            color: isSelected
+                                ? Colors.amber.shade600
+                                : colors.textDim,
+                            width: 1.5,
+                          ),
+                          activeColor: Colors.amber.shade600,
+                          materialTapTargetSize:
+                              MaterialTapTargetSize.shrinkWrap,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Icon(
+                        _iconForType(resource.type),
+                        color: isSelected
+                            ? Colors.amber.shade600
+                            : colors.textDim,
+                        size: 16,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              resource.label,
+                              style: TextStyle(
+                                color: colors.textPri,
+                                fontSize: 13,
+                              ),
+                            ),
+                            Text(
+                              displayUri,
+                              style: TextStyle(
+                                color: colors.textDim,
+                                fontSize: 11,
+                              ),
+                            ),
+                            if (isSelected)
+                              Text(
+                                resource.hint,
+                                style: TextStyle(
+                                  color: Colors.amber.shade600,
+                                  fontSize: 11,
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  );
+                }),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -237,6 +400,113 @@ class _DeleteProjectDialogState extends ConsumerState<DeleteProjectDialog> {
                   ),
                 )
               : const Text('Loeschen'),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSummary(AppColors colors) {
+    final selectedList = _selectedResources
+        .map((i) => _resources![i])
+        .toList();
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Header
+        Row(
+          children: [
+            Icon(Icons.check_circle_outline,
+                color: Colors.green.shade400, size: 22),
+            const SizedBox(width: 8),
+            Text(
+              'Projekt geloescht',
+              style: TextStyle(
+                color: colors.textPri,
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Text(
+          'Folgende Ressourcen muessen manuell bereinigt werden:',
+          style: TextStyle(color: colors.textSec, fontSize: 13),
+        ),
+        const SizedBox(height: 12),
+        Container(
+          decoration: BoxDecoration(
+            color: colors.bgElev.withValues(alpha: 0.3),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: colors.textDim.withValues(alpha: 0.2),
+              width: 1,
+            ),
+          ),
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            children: selectedList.map((resource) {
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(
+                      _iconForType(resource.type),
+                      color: Colors.amber.shade600,
+                      size: 16,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            resource.label,
+                            style: TextStyle(
+                              color: colors.textPri,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            resource.uri,
+                            style: TextStyle(
+                              color: colors.textDim,
+                              fontSize: 11,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            resource.hint,
+                            style: TextStyle(
+                              color: colors.textDim,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
+          ),
+        ),
+        const SizedBox(height: 20),
+        Align(
+          alignment: Alignment.centerRight,
+          child: FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: FilledButton.styleFrom(
+              backgroundColor: colors.textDim.withValues(alpha: 0.2),
+              foregroundColor: colors.textPri,
+            ),
+            child: const Text('Schliessen'),
+          ),
         ),
       ],
     );
