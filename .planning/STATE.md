@@ -11,11 +11,11 @@ See: .planning/PROJECT.md (updated 2026-02-27)
 
 Milestone: v1.4 Projekt-Loeschfunktion
 Phase: 18 of 18 (External Resource Cleanup)
-Plan: 1 of 2 in current phase
+Plan: 2 of 2 in current phase (phase complete)
 Status: Building
-Last activity: 2026-02-27 — Completed 18-01: ExternalResource model + detectExternalResources service
+Last activity: 2026-02-27 — Completed 18-02: DeleteProjectDialog resource detection and cleanup UI
 
-Progress: [████░░░░░░] 63% (v1.4)
+Progress: [█████░░░░░] 75% (v1.4)
 
 ## Performance Metrics
 
@@ -41,6 +41,7 @@ Progress: [████░░░░░░] 63% (v1.4)
 | 17    | 01   | 2 min    | 2     | 3     |
 | 17    | 02   | 2 min    | 2     | 3     |
 | 18    | 01   | 1 min    | 2     | 2     |
+| 18    | 02   | 1 min    | 1     | 1     |
 
 ## Accumulated Context
 
@@ -55,6 +56,8 @@ v1.2 decisions archived to milestones/v1.2-ROADMAP.md.
 v1.3 decisions archived to milestones/v1.3-ROADMAP.md.
 - [Phase 18]: Reuse encodeProjectPath exact-path for Claude Memory detection (no fuzzy scan needed)
 - [Phase 18]: Cap URL scan at 10 URLs, skip files >100KB to avoid noise
+- [Phase 18]: Resource list shown only when resources exist — zero-resource case is identical to Phase 17 dialog (CLN-05)
+- [Phase 18]: Post-deletion summary replaces dialog body in-place via _showSummary flag — avoids push/pop complexity
 
 ### Pending Todos
 
@@ -68,5 +71,5 @@ None
 ## Session Continuity
 
 Last session: 2026-02-27
-Stopped at: Completed 18-01 — ExternalResource model + detectExternalResources service
+Stopped at: Completed 18-02 — DeleteProjectDialog resource detection and cleanup UI (Phase 18 complete)
 Resume file: None
