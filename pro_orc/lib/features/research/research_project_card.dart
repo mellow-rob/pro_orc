@@ -241,6 +241,11 @@ class _ResearchProjectCardState extends ConsumerState<ResearchProjectCard> {
           value: 'ignore',
           child: Text('Ignorieren'),
         ),
+        const PopupMenuDivider(),
+        const PopupMenuItem(
+          value: 'delete',
+          child: Text('Projekt loeschen'),
+        ),
       ],
     ).then((value) {
       if (value == 'toggle_hidden') {
@@ -251,6 +256,8 @@ class _ResearchProjectCardState extends ConsumerState<ResearchProjectCard> {
         _setProjectType('code');
       } else if (value == 'ignore') {
         _ignoreProject();
+      } else if (value == 'delete') {
+        _confirmDelete();
       }
     });
   }
@@ -270,6 +277,10 @@ class _ResearchProjectCardState extends ConsumerState<ResearchProjectCard> {
     final db = ref.read(appDatabaseProvider);
     await db.addIgnorePattern(widget.project.folderId);
     ref.invalidate(projectsProvider);
+  }
+
+  void _confirmDelete() {
+    // Wired in 17-02: shows confirmation dialog using this.context
   }
 }
 
