@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:pro_orc/data/db/app_database.dart';
 import 'package:pro_orc/data/models/project_model.dart';
+import 'package:pro_orc/features/shared/delete_project_dialog.dart';
 import 'package:pro_orc/features/shared/memory_indicator.dart';
 import 'package:pro_orc/features/shared/status_badge.dart';
 import 'package:pro_orc/features/shell/glass_card.dart';
@@ -377,7 +378,10 @@ class _CodeProjectCardState extends ConsumerState<CodeProjectCard> {
   }
 
   void _confirmDelete() {
-    // Wired in 17-02: shows confirmation dialog using this.context
+    showDialog<bool>(
+      context: context,
+      builder: (_) => DeleteProjectDialog(project: widget.project),
+    );
   }
 }
 
