@@ -2,17 +2,20 @@
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-02-26)
+See: .planning/PROJECT.md (updated 2026-02-27)
 
 **Core value:** Auf einen Blick sehen, wo jedes Projekt steht, was der naechste Schritt ist, und welche Tools zur Verfuegung stehen — ohne Terminal-Hopping oder Notion-Suche.
-**Current focus:** v1.4 Projekt-Loeschfunktion
+**Current focus:** v1.4 Projekt-Loeschfunktion — Phase 17: Deletion Core
 
 ## Current Position
 
 Milestone: v1.4 Projekt-Loeschfunktion
-Phase: Not started (defining requirements)
-Status: Defining requirements
-Last activity: 2026-02-27 — Milestone v1.4 started
+Phase: 17 of 18 (Deletion Core)
+Plan: 0 of 2 in current phase
+Status: Ready to plan
+Last activity: 2026-02-27 — Roadmap created for v1.4
+
+Progress: [░░░░░░░░░░] 0% (v1.4)
 
 ## Performance Metrics
 
@@ -57,6 +60,6 @@ None
 
 ## Session Continuity
 
-Last session: 2026-02-26
-Stopped at: v1.3 milestone completed and archived
-Resume file: .planning/ROADMAP.md
+Last session: 2026-02-27
+Stopped at: Roadmap created for v1.4 — ready to plan Phase 17
+Resume file: None

@@ -6,6 +6,7 @@
 - ✅ **v1.1 Flutter macOS Rewrite** — Phases 6-11 (shipped 2026-02-23)
 - ✅ **v1.2 Memory Indicator** — Phases 12-13 (shipped 2026-02-24)
 - ✅ **v1.3 Project Creator** — Phases 14-16 (shipped 2026-02-26)
+- 🚧 **v1.4 Projekt-Loeschfunktion** — Phases 17-18 (in progress)
 
 ## Phases
 
@@ -57,6 +58,46 @@ See: milestones/v1.3-ROADMAP.md for full details
 
 </details>
 
+### 🚧 v1.4 Projekt-Loeschfunktion (In Progress)
+
+**Milestone Goal:** Projekte komplett vom Filesystem loeschen mit Bestaetigungsdialog und optionalem Cleanup externer Ressourcen.
+
+- [ ] **Phase 17: Deletion Core** - Rechtsklick-Eintrag, Bestaetigungsdialog mit Name-Eingabe, rm -rf und Auto-Refresh
+- [ ] **Phase 18: External Resource Cleanup** - Erkennung und schrittweise Abfrage externer Ressourcen (Notion, GitHub, Figma, Claude Memory)
+
+## Phase Details
+
+### Phase 17: Deletion Core
+**Goal**: User kann ein Projekt sicher und permanent vom Filesystem loeschen
+**Depends on**: Phase 16
+**Requirements**: DEL-01, DEL-02, DEL-03, DEL-04, DEL-05
+**Success Criteria** (what must be TRUE):
+  1. User sieht "Projekt loeschen" im Rechtsklick-Kontextmenue auf Code-Cards und Research-Cards
+  2. Nach Klick oeffnet ein Dialog, der den Projektnamen als Freitext-Eingabe erfordert bevor der Loeschbutton aktiv wird
+  3. Nur wenn der eingetippte Name exakt mit dem Projektnamen uebereinstimmt, wird der Loeschbutton freigeschaltet
+  4. Nach Bestaetigung wird der Projektordner permanent geloescht (kein Papierkorb) und das Dashboard aktualisiert sich automatisch ohne manuelles Reload
+**Plans**: TBD
+
+Plans:
+- [ ] 17-01: Deletion service + context menu entry on Code- and Research-Cards
+- [ ] 17-02: Confirmation dialog with GitHub-style name input and provider invalidation
+
+### Phase 18: External Resource Cleanup
+**Goal**: Dialog erkennt verlinkte externe Ressourcen und fragt schrittweise ob diese ebenfalls geloescht werden sollen
+**Depends on**: Phase 17
+**Requirements**: CLN-01, CLN-02, CLN-03, CLN-04, CLN-05
+**Success Criteria** (what must be TRUE):
+  1. Dialog erkennt Notion-Link aus `<!-- notion: URL -->` in PROJECT.md und zeigt eine Ja/Nein-Abfrage an
+  2. Dialog erkennt GitHub Remote aus `git remote -v` und zeigt eine Ja/Nein-Abfrage fuer das Repo-Loeschen an
+  3. Dialog erkennt Figma-Links und andere externe Ressourcen-URLs aus Projektdateien und zeigt sie einzeln an
+  4. Dialog erkennt Claude Memory unter `~/.claude/projects/` und MCP-erstellte Daten (Firebase, Vercel, etc.) und fragt einzeln nach
+  5. Jede erkannte externe Ressource wird als eigenstaendiger Schritt mit separatem Ja/Nein angezeigt — keine Ressource wird ohne explizite Bestaetigung geloescht
+**Plans**: TBD
+
+Plans:
+- [ ] 18-01: Resource detection service (Notion, GitHub, Figma, Claude Memory, other URLs)
+- [ ] 18-02: Step-by-step cleanup UI wired into deletion dialog
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -77,3 +118,5 @@ See: milestones/v1.3-ROADMAP.md for full details
 | 14. Add Card + Dialog | v1.3 | 2/2 | Complete | 2026-02-25 |
 | 15. Project Creation | v1.3 | 2/2 | Complete | 2026-02-26 |
 | 16. Notion via Claude | v1.3 | 1/1 | Complete | 2026-02-26 |
+| 17. Deletion Core | v1.4 | 0/2 | Not started | - |
+| 18. External Resource Cleanup | v1.4 | 0/2 | Not started | - |

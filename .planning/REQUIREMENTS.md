@@ -39,22 +39,22 @@ Keine — v1.4 ist fokussiert auf Loeschfunktion.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DEL-01 | — | Pending |
-| DEL-02 | — | Pending |
-| DEL-03 | — | Pending |
-| DEL-04 | — | Pending |
-| DEL-05 | — | Pending |
-| CLN-01 | — | Pending |
-| CLN-02 | — | Pending |
-| CLN-03 | — | Pending |
-| CLN-04 | — | Pending |
-| CLN-05 | — | Pending |
+| DEL-01 | Phase 17 | Pending |
+| DEL-02 | Phase 17 | Pending |
+| DEL-03 | Phase 17 | Pending |
+| DEL-04 | Phase 17 | Pending |
+| DEL-05 | Phase 17 | Pending |
+| CLN-01 | Phase 18 | Pending |
+| CLN-02 | Phase 18 | Pending |
+| CLN-03 | Phase 18 | Pending |
+| CLN-04 | Phase 18 | Pending |
+| CLN-05 | Phase 18 | Pending |
 
 **Coverage:**
 - v1.4 requirements: 10 total
-- Mapped to phases: 0
-- Unmapped: 10 ⚠️
+- Mapped to phases: 10
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-02-27*
-*Last updated: 2026-02-27 after initial definition*
+*Last updated: 2026-02-27 after roadmap creation*
