@@ -11,11 +11,11 @@ See: .planning/PROJECT.md (updated 2026-02-27)
 
 Milestone: v1.4 Projekt-Loeschfunktion
 Phase: 17 of 18 (Deletion Core)
-Plan: 1 of 2 in current phase
+Plan: 2 of 2 in current phase
 Status: Building
-Last activity: 2026-02-27 — Completed 17-01: deletion service + context menu entries
+Last activity: 2026-02-27 — Completed 17-02: DeleteProjectDialog + wired _confirmDelete in both cards
 
-Progress: [█░░░░░░░░░] 25% (v1.4)
+Progress: [██░░░░░░░░] 50% (v1.4)
 
 ## Performance Metrics
 
@@ -39,6 +39,7 @@ Progress: [█░░░░░░░░░] 25% (v1.4)
 | 15    | 02   | ~4 min   | 3     | 4     |
 | 16    | 01   | 2 min    | 2     | 3     |
 | 17    | 01   | 2 min    | 2     | 3     |
+| 17    | 02   | 2 min    | 2     | 3     |
 
 ## Accumulated Context
 
@@ -46,6 +47,7 @@ Progress: [█░░░░░░░░░] 25% (v1.4)
 
 Full decision log in PROJECT.md Key Decisions table.
 - 17-01: _confirmDelete() takes no context param to avoid BuildContext across async .then() gap lint; uses this.context when wired in 17-02
+- 17-02: DeleteProjectDialog owns deletion side effects (deleteProject + invalidate) — card is a thin showDialog caller
 v1.0 decisions archived to milestones/v1.0-ROADMAP.md.
 v1.1 decisions archived to milestones/v1.1-ROADMAP.md.
 v1.2 decisions archived to milestones/v1.2-ROADMAP.md.
@@ -63,5 +65,5 @@ None
 ## Session Continuity
 
 Last session: 2026-02-27
-Stopped at: Completed 17-01 — deletion service + context menu entries wired
+Stopped at: Completed 17-02 — DeleteProjectDialog + _confirmDelete wired in both card types
 Resume file: None
