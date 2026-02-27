@@ -11,11 +11,11 @@ See: .planning/PROJECT.md (updated 2026-02-27)
 
 Milestone: v1.4 Projekt-Loeschfunktion
 Phase: 17 of 18 (Deletion Core)
-Plan: 0 of 2 in current phase
-Status: Ready to plan
-Last activity: 2026-02-27 — Roadmap created for v1.4
+Plan: 1 of 2 in current phase
+Status: Building
+Last activity: 2026-02-27 — Completed 17-01: deletion service + context menu entries
 
-Progress: [░░░░░░░░░░] 0% (v1.4)
+Progress: [█░░░░░░░░░] 25% (v1.4)
 
 ## Performance Metrics
 
@@ -38,12 +38,14 @@ Progress: [░░░░░░░░░░] 0% (v1.4)
 | 15    | 01   | 3 min    | 2     | 2     |
 | 15    | 02   | ~4 min   | 3     | 4     |
 | 16    | 01   | 2 min    | 2     | 3     |
+| 17    | 01   | 2 min    | 2     | 3     |
 
 ## Accumulated Context
 
 ### Decisions
 
 Full decision log in PROJECT.md Key Decisions table.
+- 17-01: _confirmDelete() takes no context param to avoid BuildContext across async .then() gap lint; uses this.context when wired in 17-02
 v1.0 decisions archived to milestones/v1.0-ROADMAP.md.
 v1.1 decisions archived to milestones/v1.1-ROADMAP.md.
 v1.2 decisions archived to milestones/v1.2-ROADMAP.md.
@@ -61,5 +63,5 @@ None
 ## Session Continuity
 
 Last session: 2026-02-27
-Stopped at: Roadmap created for v1.4 — ready to plan Phase 17
+Stopped at: Completed 17-01 — deletion service + context menu entries wired
 Resume file: None
