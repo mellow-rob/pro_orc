@@ -40,7 +40,15 @@ Auf einen Blick sehen, wo jedes Projekt steht, was der naechste Schritt ist, und
 
 ### Active
 
-(No active milestone — planning next version)
+## Current Milestone: v1.4 Projekt-Loeschfunktion
+
+**Goal:** Projekte komplett vom Filesystem loeschen mit Bestaetigungsdialog und optionalem Cleanup externer Ressourcen (Notion, GitHub, Figma etc.)
+
+**Target features:**
+- Rechtsklick-Kontextmenue "Projekt loeschen" auf Code- und Research-Cards
+- Bestaetigungsdialog mit Projektname-Eingabe (GitHub-Style)
+- Schrittweise Abfragen fuer erkannte externe Ressourcen (Notion-Seite, GitHub Repo, Figma, weitere)
+- Permanentes Loeschen (rm -rf, kein Papierkorb)
 
 ### Out of Scope
 
@@ -109,4 +117,4 @@ Auf einen Blick sehen, wo jedes Projekt steht, was der naechste Schritt ist, und
 | Notion via Claude MCP statt eigener API Key | Claude hat bereits MCP-Verbindung; kein Key-Management noetig | ✓ Good — zero-config Notion integration |
 
 ---
-*Last updated: 2026-02-26 after v1.3 milestone*
+*Last updated: 2026-02-27 after v1.4 milestone start*

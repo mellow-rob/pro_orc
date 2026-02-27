@@ -5,13 +5,14 @@
 See: .planning/PROJECT.md (updated 2026-02-26)
 
 **Core value:** Auf einen Blick sehen, wo jedes Projekt steht, was der naechste Schritt ist, und welche Tools zur Verfuegung stehen — ohne Terminal-Hopping oder Notion-Suche.
-**Current focus:** Planning next milestone
+**Current focus:** v1.4 Projekt-Loeschfunktion
 
 ## Current Position
 
-Milestone: v1.3 Project Creator — SHIPPED 2026-02-26
-Status: Complete
-Last activity: 2026-02-26 — v1.3 milestone archived
+Milestone: v1.4 Projekt-Loeschfunktion
+Phase: Not started (defining requirements)
+Status: Defining requirements
+Last activity: 2026-02-27 — Milestone v1.4 started
 
 ## Performance Metrics
 
