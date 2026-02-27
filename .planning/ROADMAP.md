@@ -76,11 +76,11 @@ See: milestones/v1.3-ROADMAP.md for full details
   2. Nach Klick oeffnet ein Dialog, der den Projektnamen als Freitext-Eingabe erfordert bevor der Loeschbutton aktiv wird
   3. Nur wenn der eingetippte Name exakt mit dem Projektnamen uebereinstimmt, wird der Loeschbutton freigeschaltet
   4. Nach Bestaetigung wird der Projektordner permanent geloescht (kein Papierkorb) und das Dashboard aktualisiert sich automatisch ohne manuelles Reload
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 17-01: Deletion service + context menu entry on Code- and Research-Cards
-- [ ] 17-02: Confirmation dialog with GitHub-style name input and provider invalidation
+- [ ] 17-01-PLAN.md — Deletion service + context menu entry on Code- and Research-Cards
+- [ ] 17-02-PLAN.md — Confirmation dialog with GitHub-style name input and provider invalidation
 
 ### Phase 18: External Resource Cleanup
 **Goal**: Dialog erkennt verlinkte externe Ressourcen und fragt schrittweise ob diese ebenfalls geloescht werden sollen
