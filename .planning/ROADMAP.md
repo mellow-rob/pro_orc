@@ -62,7 +62,7 @@ See: milestones/v1.3-ROADMAP.md for full details
 
 **Milestone Goal:** Projekte komplett vom Filesystem loeschen mit Bestaetigungsdialog und optionalem Cleanup externer Ressourcen.
 
-- [ ] **Phase 17: Deletion Core** - Rechtsklick-Eintrag, Bestaetigungsdialog mit Name-Eingabe, rm -rf und Auto-Refresh
+- [x] **Phase 17: Deletion Core** - Rechtsklick-Eintrag, Bestaetigungsdialog mit Name-Eingabe, rm -rf und Auto-Refresh (completed 2026-02-27)
 - [ ] **Phase 18: External Resource Cleanup** - Erkennung und schrittweise Abfrage externer Ressourcen (Notion, GitHub, Figma, Claude Memory)
 
 ## Phase Details
@@ -118,5 +118,5 @@ Plans:
 | 14. Add Card + Dialog | v1.3 | 2/2 | Complete | 2026-02-25 |
 | 15. Project Creation | v1.3 | 2/2 | Complete | 2026-02-26 |
 | 16. Notion via Claude | v1.3 | 1/1 | Complete | 2026-02-26 |
-| 17. Deletion Core | v1.4 | 0/2 | Not started | - |
+| 17. Deletion Core | v1.4 | Complete    | 2026-02-27 | - |
 | 18. External Resource Cleanup | v1.4 | 0/2 | Not started | - |
