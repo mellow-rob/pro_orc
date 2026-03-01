@@ -37,18 +37,15 @@ Auf einen Blick sehen, wo jedes Projekt steht, was der naechste Schritt ist, und
 - ✓ Projekt-Erstellung: Ordner + git init + GSD skeleton + CLAUDE.md + .gitignore — v1.3
 - ✓ Post-Creation Actions: Terminal oeffnen, rem-sleep ausfuehren, Projekt erscheint automatisch im Tab — v1.3
 - ✓ Notion-Seiten-Erstellung via Claude MCP (kein eigener API Key noetig) — v1.3
+- ✓ Rechtsklick-Kontextmenue "Projekt loeschen" auf Code- und Research-Cards — v1.4
+- ✓ Bestaetigungsdialog mit Projektname-Eingabe (GitHub-Style) vor permanentem Loeschen — v1.4
+- ✓ Permanentes Loeschen (rm -rf) mit automatischem Dashboard-Refresh — v1.4
+- ✓ Erkennung externer Ressourcen (Notion, GitHub, Figma, Claude Memory, URLs) im Loeschdialog — v1.4
+- ✓ Schrittweise Einzelabfrage pro erkannter Ressource mit Cleanup-Hinweisen — v1.4
 
 ### Active
 
-## Current Milestone: v1.4 Projekt-Loeschfunktion
-
-**Goal:** Projekte komplett vom Filesystem loeschen mit Bestaetigungsdialog und optionalem Cleanup externer Ressourcen (Notion, GitHub, Figma etc.)
-
-**Target features:**
-- Rechtsklick-Kontextmenue "Projekt loeschen" auf Code- und Research-Cards
-- Bestaetigungsdialog mit Projektname-Eingabe (GitHub-Style)
-- Schrittweise Abfragen fuer erkannte externe Ressourcen (Notion-Seite, GitHub Repo, Figma, weitere)
-- Permanentes Loeschen (rm -rf, kein Papierkorb)
+(Keine — bereit fuer naechsten Milestone)
 
 ### Out of Scope
 
@@ -70,8 +67,9 @@ Auf einen Blick sehen, wo jedes Projekt steht, was der naechste Schritt ist, und
 - v1.1 shipped as native macOS Flutter app: 8,931 LOC Dart, 164 files (2026-02-23)
 - v1.2 shipped Memory Indicator: +459 LOC Dart, 20 files changed (2026-02-24)
 - v1.3 shipped Project Creator: +1,320 LOC Dart, 6 files changed (2026-02-26)
+- v1.4 shipped Projekt-Loeschfunktion: +1,931 LOC Dart, 17 files changed (2026-02-27)
 - v1.0 reference implementation in `pro-orc/` (Next.js) — superseded by Flutter rewrite
-- Flutter app in `pro_orc/` directory — 10,485 LOC Dart
+- Flutter app in `pro_orc/` directory — ~12,400 LOC Dart
 - Dashboard discovers 22+ projects across code/ and research/ directories
 - Tech stack: Flutter 3.41.1 + Dart 3.x, Riverpod 3.x, Drift SQLite v2, tray_manager 0.5.2, window_manager 0.5.1
 - n3urala1 dark theme: OKLCH→sRGB tokens, cyan primary, fuchsia accent, glassmorphism, animated orbs
@@ -115,6 +113,12 @@ Auf einen Blick sehen, wo jedes Projekt steht, was der naechste Schritt ist, und
 | DB projectType persistence for new projects | Bypasses _inferType heuristic for empty directories | ✓ Good — correct tab classification immediately |
 | osascript without runInShell for Terminal commands | Reliable quoting for complex shell commands with special chars | ✓ Good — handles German text in prompts |
 | Notion via Claude MCP statt eigener API Key | Claude hat bereits MCP-Verbindung; kein Key-Management noetig | ✓ Good — zero-config Notion integration |
+| Top-level deleteProject function (no class) | Matches memory_reader/git_reader pattern | ✓ Good — consistent service pattern |
+| DeleteProjectDialog owns deletion side effects | Card is thin showDialog caller; dialog calls deleteProject + invalidate | ✓ Good — clear ownership |
+| GitHub-style name confirmation | User types exact project name before delete button enables | ✓ Good — prevents accidental deletion |
+| Resource checkboxes unchecked by default | User must explicitly opt-in per CLN-05; no auto-deletion | ✓ Good — safe by default |
+| Post-deletion summary replaces dialog body in-place | _showSummary flag avoids push/pop navigation complexity | ✓ Good — simple state toggle |
+| encodeProjectPath reuse for Claude Memory detection | Exact-path only, no fuzzy scan needed for existence check | ✓ Good — simpler and sufficient |
 
 ---
-*Last updated: 2026-02-27 after v1.4 milestone start*
+*Last updated: 2026-03-01 after v1.4 Projekt-Loeschfunktion milestone*

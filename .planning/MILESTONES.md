@@ -69,3 +69,19 @@
 
 ---
 
+
+## v1.4 Projekt-Loeschfunktion (Shipped: 2026-03-01)
+
+**Phases completed:** 2 phases (17-18), 4 plans, 7 tasks
+**Files:** 17 files changed, 1,931 insertions
+**Timeline:** 1 day (2026-02-27)
+
+**Key accomplishments:**
+1. Pure Dart deleteProject service (rm -rf via Directory.delete recursive) for permanent filesystem deletion
+2. GitHub-style DeleteProjectDialog requiring exact project name match before enabling delete button
+3. "Projekt loeschen" context menu entry on both Code and Research cards with divider separator
+4. ExternalResource model and detectExternalResources service detecting Notion, GitHub, Figma, Claude Memory, and other URLs
+5. Step-by-step resource checkboxes with post-deletion cleanup summary showing full URIs and German hint text
+
+---
+
