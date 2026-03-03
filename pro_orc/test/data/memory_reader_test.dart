@@ -4,7 +4,6 @@ import 'package:path/path.dart' as p;
 import 'package:test/test.dart';
 
 import 'package:pro_orc/data/services/memory_reader.dart';
-import 'package:pro_orc/data/models/memory_data.dart';
 
 void main() {
   group('MemoryReader', () {

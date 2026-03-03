@@ -1,6 +1,8 @@
 // Pure Dart data models for Claude Tools discovery.
 // No Flutter imports — safe for use in isolates and unit tests.
 
+import 'package:pro_orc/data/models/agent_category.dart';
+
 // ---------------------------------------------------------------------------
 // McpServerType
 // ---------------------------------------------------------------------------
@@ -138,8 +140,8 @@ class AgentData {
   /// Absolute path to the `.md` file.
   final String path;
 
-  /// Category derived from name prefix: `"gsd"` or `"general"`.
-  final String category;
+  /// Category derived from name prefix.
+  final AgentCategory category;
 
   const AgentData({
     required this.id,

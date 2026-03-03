@@ -12,7 +12,7 @@ import 'package:pro_orc/data/services/watcher_service.dart';
 final claudeToolsWatcherProvider = StreamProvider<WatchEvent>((ref) async* {
   ref.keepAlive();
 
-  final home = Platform.environment['HOME'] ?? '/Users/rob';
+  final home = Platform.environment['HOME'] ?? '/tmp';
   final claudeDir = '$home/.claude';
 
   final service = WatcherService(claudeDir);

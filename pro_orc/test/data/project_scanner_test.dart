@@ -6,7 +6,8 @@ import 'package:path/path.dart' as p;
 import 'package:test/test.dart';
 
 import 'package:pro_orc/data/db/app_database.dart';
-import 'package:pro_orc/data/db/tables/project_settings_table.dart';
+import 'package:pro_orc/data/models/gsd_status.dart';
+import 'package:pro_orc/data/models/project_type.dart';
 import 'package:pro_orc/data/services/project_scanner.dart';
 
 // ---------------------------------------------------------------------------
@@ -54,11 +55,17 @@ Test project description for $name.
   return dir;
 }
 
-/// Creates a plain (non-GSD) project directory.
+/// Creates a plain (non-GSD) project directory with a git repo
+/// so the scanner's `_isProjectDir` recognises it.
 Future<Directory> createPlainProject(Directory parent, String name) async {
   final dir = Directory(p.join(parent.path, name));
   await dir.create();
   await File(p.join(dir.path, 'README.md')).writeAsString('# $name');
+  await Process.run('git', ['init'], workingDirectory: dir.path, runInShell: true);
+  await Process.run('git', ['config', 'user.email', 'test@test.com'], workingDirectory: dir.path, runInShell: true);
+  await Process.run('git', ['config', 'user.name', 'Test'], workingDirectory: dir.path, runInShell: true);
+  await Process.run('git', ['add', '.'], workingDirectory: dir.path, runInShell: true);
+  await Process.run('git', ['commit', '-m', 'init'], workingDirectory: dir.path, runInShell: true);
   return dir;
 }
 
@@ -107,10 +114,11 @@ void main() {
         }
       });
 
-      test('thrown when scanDir is empty and no override provided', () async {
-        // DB config defaults to empty scanDir
+      test('thrown for single non-existent override dir', () async {
+        // When using scanDirOverride with a non-existent path,
+        // the error propagates instead of being silently caught.
         expect(
-          () => scanner.scanAll(),
+          () => scanner.scanAll(scanDirOverride: '/tmp/no_such_dir_xyz_999'),
           throwsA(isA<ScanDirectoryNotFoundError>()),
         );
       });
@@ -254,7 +262,8 @@ void main() {
 
     group('git data assembly', () {
       test('non-git project gets null git field', () async {
-        await createPlainProject(scanRoot, 'no-git-project');
+        // Create a GSD project without git (has .planning/ but no .git/)
+        await createGsdProject(scanRoot, 'no-git-project');
 
         final results = await scanner.scanAll(scanDirOverride: scanRoot.path);
         expect(results.first.git, isNull);
@@ -275,11 +284,11 @@ void main() {
     // -----------------------------------------------------------------------
 
     group('project type resolution', () {
-      test('projectType is null for project with no DB settings', () async {
+      test('projectType inferred as research for plain project', () async {
         await createPlainProject(scanRoot, 'untyped-project');
 
         final results = await scanner.scanAll(scanDirOverride: scanRoot.path);
-        expect(results.first.projectType, isNull);
+        expect(results.first.projectType, equals(ProjectType.research));
       });
 
       test('projectType is set from DB settings', () async {
@@ -293,7 +302,7 @@ void main() {
         );
 
         final results = await scanner.scanAll(scanDirOverride: scanRoot.path);
-        expect(results.first.projectType, equals('code'));
+        expect(results.first.projectType, equals(ProjectType.code));
       });
 
       test('multiple projects each get their own type from DB', () async {
@@ -317,9 +326,9 @@ void main() {
         final results = await scanner.scanAll(scanDirOverride: scanRoot.path);
         final byId = {for (final r in results) r.folderId: r};
 
-        expect(byId['code-project']!.projectType, equals('code'));
-        expect(byId['research-project']!.projectType, equals('research'));
-        expect(byId['untyped-project']!.projectType, isNull);
+        expect(byId['code-project']!.projectType, equals(ProjectType.code));
+        expect(byId['research-project']!.projectType, equals(ProjectType.research));
+        expect(byId['untyped-project']!.projectType, equals(ProjectType.research));
       });
     });
 
@@ -373,9 +382,9 @@ void main() {
         expect(byId['gsd-only']!.gsd, isNotNull);
         expect(byId['gsd-only']!.git, isNull);
 
-        // plain-project: no GSD, no git
+        // plain-project: no GSD, has git (createPlainProject inits git)
         expect(byId['plain-project']!.gsd, isNull);
-        expect(byId['plain-project']!.git, isNull);
+        expect(byId['plain-project']!.git, isNotNull);
       });
     });
 
@@ -430,7 +439,7 @@ void main() {
             status: 'planning');
 
         final results1 = await scanner.scanAll(scanDirOverride: scanRoot.path);
-        expect(results1.first.gsd!.status, equals('planning'));
+        expect(results1.first.gsd!.status, equals(GsdStatus.planning));
 
         // Modify STATE.md with a small delay to change mtime
         await Future.delayed(const Duration(milliseconds: 50));
@@ -438,7 +447,7 @@ void main() {
             .writeAsString('# Project State\n\n**Status:** done\n');
 
         final results2 = await scanner.scanAll(scanDirOverride: scanRoot.path);
-        expect(results2.first.gsd!.status, equals('done'));
+        expect(results2.first.gsd!.status, equals(GsdStatus.done));
       });
     });
   });

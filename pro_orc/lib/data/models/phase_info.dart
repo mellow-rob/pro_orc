@@ -1,8 +1,10 @@
+import 'package:pro_orc/data/models/phase_status.dart';
+
 /// Represents a single phase from a project's ROADMAP.md.
 class PhaseInfo {
   final int number;
   final String name;
-  final String status; // 'complete', 'in_progress', 'not_started'
+  final PhaseStatus status;
   final int plansCompleted;
   final int plansTotal;
 

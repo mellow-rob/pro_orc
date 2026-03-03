@@ -1,15 +1,14 @@
-import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
-import 'package:pro_orc/data/db/app_database.dart';
 import 'package:pro_orc/data/models/project_model.dart';
-import 'package:pro_orc/features/shared/delete_project_dialog.dart';
+import 'package:pro_orc/data/models/project_type.dart';
 import 'package:pro_orc/features/shared/memory_indicator.dart';
+import 'package:pro_orc/features/shared/project_context_menu.dart';
+import 'package:pro_orc/features/shared/quick_actions.dart';
 import 'package:pro_orc/features/shell/glass_card.dart';
 import 'package:pro_orc/providers/database_provider.dart';
 import 'package:pro_orc/providers/hidden_projects_provider.dart';
-import 'package:pro_orc/providers/projects_provider.dart';
 import 'package:pro_orc/theme/n3_colors.dart';
 
 /// Card widget for a single research project.
@@ -53,8 +52,14 @@ class _ResearchProjectCardState extends ConsumerState<ResearchProjectCard> {
       opacity: widget.isHiddenCard ? 0.45 : 1.0,
       child: GestureDetector(
         onTap: widget.onTap,
-        onSecondaryTapUp: (details) =>
-            _showContextMenu(context, details, isHidden),
+        onSecondaryTapUp: (details) => showProjectContextMenu(
+          context: context,
+          details: details,
+          isHidden: isHidden,
+          ref: ref,
+          project: widget.project,
+          moveTarget: ProjectType.code,
+        ),
         child: MouseRegion(
           onEnter: (_) => setState(() => _isHovered = true),
           onExit: (_) => setState(() => _isHovered = false),
@@ -114,7 +119,10 @@ class _ResearchProjectCardState extends ConsumerState<ResearchProjectCard> {
         const Spacer(),
 
         // --- Quick action buttons ---
-        _buildQuickActions(colors),
+        buildQuickActionRow(
+          buildProjectQuickActions(widget.project, ref.read(quickActionsProvider)),
+          colors,
+        ),
       ],
     );
   }
@@ -158,145 +166,4 @@ class _ResearchProjectCardState extends ConsumerState<ResearchProjectCard> {
     );
   }
 
-  Widget _buildQuickActions(AppColors colors) {
-    final qa = ref.read(quickActionsProvider);
-    final project = widget.project;
-
-    final actions = <_QuickAction>[
-      _QuickAction(
-        icon: LucideIcons.terminal100,
-        tooltip: 'Terminal',
-        onPressed: () => qa.openInTerminal(project.path),
-      ),
-      _QuickAction(
-        icon: LucideIcons.folder100,
-        tooltip: 'Finder',
-        onPressed: () => qa.openInFinder(project.path),
-      ),
-      if (project.git?.githubUrl != null)
-        _QuickAction(
-          icon: LucideIcons.externalLink100,
-          tooltip: 'GitHub',
-          onPressed: () => qa.openUrl(project.git!.githubUrl!),
-        ),
-      if (project.gsd?.notionUrl != null)
-        _QuickAction(
-          icon: LucideIcons.fileText100,
-          tooltip: 'Notion',
-          onPressed: () => qa.openUrl(project.gsd!.notionUrl!),
-        ),
-      if (project.memory != null)
-        _QuickAction(
-          icon: LucideIcons.moonStar100,
-          tooltip: 'Claude Memory',
-          onPressed: () => qa.openRemSleep(project.path),
-        ),
-    ];
-
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.start,
-      children: actions
-          .map(
-            (a) => SizedBox(
-              width: 32,
-              height: 32,
-              child: IconButton(
-                padding: EdgeInsets.zero,
-                iconSize: 15,
-                icon: Icon(a.icon, color: colors.textDim),
-                tooltip: a.tooltip,
-                splashRadius: 16,
-                onPressed: a.onPressed,
-              ),
-            ),
-          )
-          .toList(),
-    );
-  }
-
-  void _showContextMenu(
-    BuildContext context,
-    TapUpDetails details,
-    bool isHidden,
-  ) {
-    final overlay =
-        Overlay.of(context).context.findRenderObject() as RenderBox;
-    showMenu<String>(
-      context: context,
-      position: RelativeRect.fromLTRB(
-        details.globalPosition.dx,
-        details.globalPosition.dy,
-        overlay.size.width - details.globalPosition.dx,
-        overlay.size.height - details.globalPosition.dy,
-      ),
-      items: [
-        PopupMenuItem(
-          value: 'toggle_hidden',
-          child: Text(isHidden ? 'Oeffentlich' : 'Privat'),
-        ),
-        const PopupMenuItem(
-          value: 'move_code',
-          child: Text('Verschieben nach Code'),
-        ),
-        const PopupMenuItem(
-          value: 'ignore',
-          child: Text('Ignorieren'),
-        ),
-        const PopupMenuDivider(),
-        const PopupMenuItem(
-          value: 'delete',
-          child: Text('Projekt loeschen'),
-        ),
-      ],
-    ).then((value) {
-      if (value == 'toggle_hidden') {
-        ref
-            .read(hiddenProjectsProvider.notifier)
-            .toggle(widget.project.folderId);
-      } else if (value == 'move_code') {
-        _setProjectType('code');
-      } else if (value == 'ignore') {
-        _ignoreProject();
-      } else if (value == 'delete') {
-        _confirmDelete();
-      }
-    });
-  }
-
-  Future<void> _setProjectType(String type) async {
-    final db = ref.read(appDatabaseProvider);
-    await db.upsertProjectSettings(
-      ProjectSettingsTableCompanion(
-        folderId: Value(widget.project.folderId),
-        projectType: Value(type),
-      ),
-    );
-    ref.invalidate(projectsProvider);
-  }
-
-  Future<void> _ignoreProject() async {
-    final db = ref.read(appDatabaseProvider);
-    await db.addIgnorePattern(widget.project.folderId);
-    ref.invalidate(projectsProvider);
-  }
-
-  void _confirmDelete() {
-    showDialog<bool>(
-      context: context,
-      builder: (_) => DeleteProjectDialog(project: widget.project),
-    );
-  }
-}
-
-/// Internal action definition for the quick action button list.
-class _QuickAction {
-  const _QuickAction({
-    required this.icon,
-    required this.tooltip,
-    required this.onPressed,
-  });
-
-  final IconData icon;
-  final String tooltip;
-  final VoidCallback onPressed;
 }

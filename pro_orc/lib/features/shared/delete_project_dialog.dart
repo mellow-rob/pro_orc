@@ -1,11 +1,10 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pro_orc/data/models/external_resource.dart';
 import 'package:pro_orc/data/models/project_model.dart';
 import 'package:pro_orc/data/services/deletion_service.dart';
 import 'package:pro_orc/data/services/resource_detector.dart';
+import 'package:pro_orc/features/shell/glass_dialog.dart';
 import 'package:pro_orc/providers/projects_provider.dart';
 import 'package:pro_orc/theme/n3_colors.dart';
 
@@ -38,8 +37,8 @@ class _DeleteProjectDialogState extends ConsumerState<DeleteProjectDialog> {
   /// null = still loading, empty = none found
   List<ExternalResource>? _resources;
 
-  /// Indices of resources the user wants to clean up (unchecked by default)
-  final Set<int> _selectedResources = {};
+  /// URIs of resources the user wants to clean up (unchecked by default)
+  final Set<String> _selectedResources = {};
 
   /// true after deletion — shows cleanup summary instead of the main form
   bool _showSummary = false;
@@ -52,9 +51,13 @@ class _DeleteProjectDialogState extends ConsumerState<DeleteProjectDialog> {
     _loadResources();
   }
 
-  void _loadResources() async {
-    final resources = await detectExternalResources(widget.project);
-    if (mounted) setState(() => _resources = resources);
+  Future<void> _loadResources() async {
+    try {
+      final resources = await detectExternalResources(widget.project);
+      if (mounted) setState(() => _resources = resources);
+    } catch (_) {
+      if (mounted) setState(() => _resources = []);
+    }
   }
 
   @override
@@ -74,9 +77,12 @@ class _DeleteProjectDialogState extends ConsumerState<DeleteProjectDialog> {
 
     if (!mounted) return;
 
-    if (success) {
-      ref.invalidate(projectsProvider);
+    if (!success) {
+      setState(() => _isDeleting = false);
+      return;
     }
+
+    ref.invalidate(projectsProvider);
 
     // If any resources were selected, show the summary screen
     if (_selectedResources.isNotEmpty) {
@@ -105,28 +111,11 @@ class _DeleteProjectDialogState extends ConsumerState<DeleteProjectDialog> {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).extension<AppColors>()!;
 
-    return Dialog(
-      backgroundColor: Colors.transparent,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 440),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(14),
-          child: BackdropFilter(
-            blendMode: BlendMode.src,
-            filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-            child: Container(
-              decoration: BoxDecoration(
-                color: colors.bgSurf,
-                borderRadius: BorderRadius.circular(14),
-              ),
-              padding: const EdgeInsets.all(24),
-              child: _showSummary
-                  ? _buildSummary(colors)
-                  : _buildMainForm(colors),
-            ),
-          ),
-        ),
-      ),
+    return GlassDialog(
+      maxWidth: 440,
+      child: _showSummary
+          ? _buildSummary(colors)
+          : _buildMainForm(colors),
     );
   }
 
@@ -228,12 +217,11 @@ class _DeleteProjectDialogState extends ConsumerState<DeleteProjectDialog> {
             constraints: const BoxConstraints(maxHeight: 180),
             child: SingleChildScrollView(
               child: Column(
-                children: List.generate(resources.length, (index) {
-                  final resource = resources[index];
-                  final isSelected = _selectedResources.contains(index);
-                  final uri = resource.uri;
-                  final displayUri =
-                      uri.length > 50 ? '${uri.substring(0, 50)}…' : uri;
+                children: resources.map((resource) {
+                  final isSelected = _selectedResources.contains(resource.uri);
+                  final displayUri = resource.uri.length > 50
+                      ? '${resource.uri.substring(0, 50)}…'
+                      : resource.uri;
 
                   return Row(
                     crossAxisAlignment: CrossAxisAlignment.center,
@@ -246,9 +234,9 @@ class _DeleteProjectDialogState extends ConsumerState<DeleteProjectDialog> {
                           onChanged: (val) {
                             setState(() {
                               if (val == true) {
-                                _selectedResources.add(index);
+                                _selectedResources.add(resource.uri);
                               } else {
-                                _selectedResources.remove(index);
+                                _selectedResources.remove(resource.uri);
                               }
                             });
                           },
@@ -303,7 +291,7 @@ class _DeleteProjectDialogState extends ConsumerState<DeleteProjectDialog> {
                       ),
                     ],
                   );
-                }),
+                }).toList(),
               ),
             ),
           ),
@@ -406,8 +394,8 @@ class _DeleteProjectDialogState extends ConsumerState<DeleteProjectDialog> {
   }
 
   Widget _buildSummary(AppColors colors) {
-    final selectedList = _selectedResources
-        .map((i) => _resources![i])
+    final selectedList = _resources!
+        .where((r) => _selectedResources.contains(r.uri))
         .toList();
 
     return Column(

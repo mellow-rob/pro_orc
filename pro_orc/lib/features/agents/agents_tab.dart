@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:pro_orc/data/models/agent_category.dart';
 import 'package:pro_orc/data/models/claude_tool_model.dart';
 import 'package:pro_orc/features/agents/agent_card.dart';
 import 'package:pro_orc/providers/claude_tools_provider.dart';
@@ -67,9 +68,9 @@ class _AgentsTabState extends ConsumerState<AgentsTab> {
             .where((a) => a.name.toLowerCase().contains(_searchQuery))
             .toList();
 
-    final gsdAgents = filtered.where((a) => a.category == 'gsd').toList();
+    final gsdAgents = filtered.where((a) => a.category == AgentCategory.gsd).toList();
     final generalAgents =
-        filtered.where((a) => a.category != 'gsd').toList();
+        filtered.where((a) => a.category != AgentCategory.gsd).toList();
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),

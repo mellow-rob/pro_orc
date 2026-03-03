@@ -7,18 +7,18 @@ import 'package:window_manager/window_manager.dart';
 
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
-import '../../providers/projects_provider.dart';
-import '../../theme/n3_colors.dart';
-import '../../tray/tray_service.dart';
-import '../../window/window_geometry_service.dart';
-import '../agents/agents_tab.dart';
-import '../claude_tools/claude_tools_tab.dart';
-import '../code/code_tab.dart';
-import '../research/research_tab.dart';
-import '../settings/settings_tab.dart';
-import 'glow_border_shell.dart';
-import 'launch_dialog.dart';
-import 'orb_background.dart';
+import 'package:pro_orc/providers/projects_provider.dart';
+import 'package:pro_orc/theme/n3_colors.dart';
+import 'package:pro_orc/tray/tray_service.dart';
+import 'package:pro_orc/window/window_geometry_service.dart';
+import 'package:pro_orc/features/agents/agents_tab.dart';
+import 'package:pro_orc/features/claude_tools/claude_tools_tab.dart';
+import 'package:pro_orc/features/code/code_tab.dart';
+import 'package:pro_orc/features/research/research_tab.dart';
+import 'package:pro_orc/features/settings/settings_tab.dart';
+import 'package:pro_orc/features/shell/glow_border_shell.dart';
+import 'package:pro_orc/features/shell/launch_dialog.dart';
+import 'package:pro_orc/features/shell/orb_background.dart';
 
 class ShellScreen extends ConsumerStatefulWidget {
   const ShellScreen({super.key});

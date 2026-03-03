@@ -6,9 +6,9 @@ import 'package:launch_at_startup/launch_at_startup.dart';
 import 'package:macos_window_utils/macos_window_utils.dart';
 import 'package:window_manager/window_manager.dart';
 
-import 'features/shell/shell_screen.dart';
-import 'theme/app_theme.dart';
-import 'window/window_geometry_service.dart';
+import 'package:pro_orc/features/shell/shell_screen.dart';
+import 'package:pro_orc/theme/app_theme.dart';
+import 'package:pro_orc/window/window_geometry_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();

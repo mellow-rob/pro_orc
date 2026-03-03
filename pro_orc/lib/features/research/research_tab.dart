@@ -5,14 +5,15 @@ import 'package:path/path.dart' as p;
 import 'package:pro_orc/data/db/app_database.dart';
 import 'package:pro_orc/providers/database_provider.dart';
 import 'package:pro_orc/data/models/project_model.dart';
+import 'package:pro_orc/data/models/project_type.dart';
 import 'package:pro_orc/data/services/project_creator_service.dart';
 import 'package:pro_orc/data/services/quick_actions_service.dart';
 import 'package:pro_orc/features/research/research_project_card.dart';
 import 'package:pro_orc/features/shared/add_project_card.dart';
 import 'package:pro_orc/features/shared/create_project_dialog.dart';
 import 'package:pro_orc/features/shared/empty_state.dart';
+import 'package:pro_orc/features/shared/hidden_projects_banner.dart';
 import 'package:pro_orc/features/shared/project_detail_panel.dart';
-import 'package:pro_orc/features/shell/glass_card.dart';
 import 'package:pro_orc/providers/hidden_projects_provider.dart';
 import 'package:pro_orc/providers/projects_provider.dart';
 import 'package:pro_orc/theme/n3_colors.dart';
@@ -76,7 +77,7 @@ class _ResearchTabState extends ConsumerState<ResearchTab> {
   ) {
     // Filter to research projects
     final researchProjects = allProjects
-        .where((p) => p.projectType == 'research')
+        .where((p) => p.projectType == ProjectType.research)
         .toList();
 
     // Separate visible and hidden
@@ -189,51 +190,13 @@ class _ResearchTabState extends ConsumerState<ResearchTab> {
 
         // --- Private projects banner (always pinned at bottom) ---
         if (hidden.isNotEmpty)
-          _buildHiddenBanner(colors, hidden.length),
-      ],
-    );
-  }
-
-  Widget _buildHiddenBanner(AppColors colors, int hiddenCount) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-      child: GestureDetector(
-        onTap: () => setState(() => _showHidden = !_showHidden),
-        child: GlassCard(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.visibility_off_outlined,
-                  color: colors.textDim,
-                  size: 16,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  '$hiddenCount private ${hiddenCount == 1 ? 'Projekt' : 'Projekte'}',
-                  style: TextStyle(color: colors.textSec, fontSize: 13),
-                ),
-                const Spacer(),
-                Text(
-                  _showHidden ? 'Verbergen' : 'Anzeigen',
-                  style: TextStyle(
-                    color: colors.fuch,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                const SizedBox(width: 4),
-                Icon(
-                  _showHidden ? Icons.expand_less : Icons.expand_more,
-                  color: colors.fuch,
-                  size: 16,
-                ),
-              ],
-            ),
+          HiddenProjectsBanner(
+            hiddenCount: hidden.length,
+            isExpanded: _showHidden,
+            onToggle: () => setState(() => _showHidden = !_showHidden),
+            accentColor: colors.fuch,
           ),
-        ),
-      ),
+      ],
     );
   }
 
@@ -258,7 +221,7 @@ class _ResearchTabState extends ConsumerState<ResearchTab> {
       final db = ref.read(appDatabaseProvider);
       await db.upsertProjectSettings(ProjectSettingsTableCompanion.insert(
         folderId: folderId,
-        projectType: const Value('research'),
+        projectType: Value(ProjectType.research.name),
       ));
 
       // Force rescan so new project appears in tab

@@ -5,6 +5,7 @@ import 'package:path/path.dart' as p;
 
 import 'package:pro_orc/data/db/app_database.dart';
 import 'package:pro_orc/data/models/project_model.dart';
+import 'package:pro_orc/data/models/project_type.dart';
 import 'package:pro_orc/data/services/gsd_parser.dart';
 import 'package:pro_orc/data/services/git_reader.dart';
 import 'package:pro_orc/data/services/memory_reader.dart';
@@ -130,8 +131,10 @@ class ProjectScanner {
       try {
         final paths = await _listProjectPaths(scanDir, ignorePatterns);
         projectPaths.addAll(paths);
-      } catch (_) {
-        // Skip non-existent scan dirs gracefully
+      } on ScanDirectoryNotFoundError {
+        // When using a single override, propagate the error.
+        // For multi-dir configs, skip non-existent dirs gracefully.
+        if (scanDirOverride != null) rethrow;
       }
     }
 
@@ -164,7 +167,8 @@ class ProjectScanner {
 
       // Resolve project type: DB override > content heuristic
       final settings = await _db.getProjectSettings(folderId);
-      final projectType = settings?.projectType ?? await _inferType(path);
+      final projectType = ProjectType.fromString(settings?.projectType) ??
+          await _inferType(path);
 
       // Nullify empty GSD/git data
       final gsd = (gsdResult.gsd.isEmpty) ? null : gsdResult.gsd;
@@ -232,16 +236,16 @@ class ProjectScanner {
   /// Infers project type from folder contents.
   ///
   /// Checks for common build/config files that indicate a code project.
-  /// If none are found, the project is classified as 'research'.
-  Future<String> _inferType(String projectPath) async {
+  /// If none are found, the project is classified as research.
+  Future<ProjectType> _inferType(String projectPath) async {
     for (final marker in _codeMarkers) {
       final file = File(p.join(projectPath, marker));
-      if (await file.exists()) return 'code';
+      if (await file.exists()) return ProjectType.code;
     }
     // Also check for common code subdirectories
     for (final dir in ['lib', 'src', 'app', 'bin']) {
       final d = Directory(p.join(projectPath, dir));
-      if (await d.exists()) return 'code';
+      if (await d.exists()) return ProjectType.code;
     }
 
     // Check one level of subdirectories for code markers.
@@ -252,7 +256,7 @@ class ProjectScanner {
         if (entity is Directory) {
           for (final marker in _codeMarkers) {
             final file = File(p.join(entity.path, marker));
-            if (await file.exists()) return 'code';
+            if (await file.exists()) return ProjectType.code;
           }
         }
       }
@@ -260,7 +264,7 @@ class ProjectScanner {
       // Ignore errors — fall through to research
     }
 
-    return 'research';
+    return ProjectType.research;
   }
 
   /// Lists all direct child directories of [scanDir], filtering out hidden

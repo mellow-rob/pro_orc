@@ -1,19 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:pro_orc/data/models/gsd_status.dart';
 import 'package:pro_orc/theme/n3_colors.dart';
 
-/// GSD status badge chip — maps project status string to a colored label.
-///
-/// Supported status values and their colors:
-/// - 'building'  -> "In Progress"  (cyan)
-/// - 'planning'  -> "Planned"      (amber-yellow)
-/// - 'done'      -> "Complete"     (green)
-/// - 'research'  -> "Research"     (fuchsia)
-/// - 'paused'    -> "Paused"       (amber)
-/// - null/other  -> "Not Started"  (textDis / grey)
+/// GSD status badge chip — maps [GsdStatus] to a colored label.
 class GsdStatusBadge extends StatelessWidget {
   const GsdStatusBadge({super.key, this.status});
 
-  final String? status;
+  final GsdStatus? status;
 
   @override
   Widget build(BuildContext context) {
@@ -39,12 +32,13 @@ class GsdStatusBadge extends StatelessWidget {
 
   (String, Color) _resolve(AppColors colors) {
     return switch (status) {
-      'building' => ('In Progress', colors.cyan),
-      'planning' => ('Planned', const Color(0xFFE0A020)),
-      'done' => ('Complete', const Color(0xFF22C55E)),
-      'research' => ('Research', colors.fuch),
-      'paused' => ('Paused', const Color(0xFFF59E0B)),
-      _ => ('Not Started', colors.textDis),
+      GsdStatus.building => ('In Progress', colors.cyan),
+      GsdStatus.planning => ('Planned', const Color(0xFFE0A020)),
+      GsdStatus.done => ('Complete', const Color(0xFF22C55E)),
+      GsdStatus.research => ('Research', colors.fuch),
+      GsdStatus.paused => ('Paused', const Color(0xFFF59E0B)),
+      GsdStatus.archived => ('Archived', colors.textDis),
+      null => ('Not Started', colors.textDis),
     };
   }
 }

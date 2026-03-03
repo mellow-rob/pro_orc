@@ -203,3 +203,37 @@ class AppColors extends ThemeExtension<AppColors> {
     );
   }
 }
+
+const _noBorder = OutlineInputBorder(
+  borderRadius: BorderRadius.all(Radius.circular(8)),
+  borderSide: BorderSide.none,
+);
+
+/// Helper to build the standard glassmorphism input decoration.
+extension AppColorsInputDecoration on AppColors {
+  InputDecoration glassInputDecoration({
+    String? hintText,
+    String? labelText,
+    Color? accentColor,
+    bool isDense = false,
+  }) {
+    return InputDecoration(
+      hintText: hintText,
+      hintStyle: TextStyle(color: textDim, fontSize: 14),
+      labelText: labelText,
+      labelStyle: labelText != null ? TextStyle(color: textDim, fontSize: 12) : null,
+      filled: true,
+      fillColor: bgElev.withValues(alpha: 0.4),
+      border: _noBorder,
+      enabledBorder: _noBorder,
+      focusedBorder: accentColor != null
+          ? OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: BorderSide(color: accentColor.withValues(alpha: 0.5), width: 1),
+            )
+          : _noBorder,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      isDense: isDense,
+    );
+  }
+}

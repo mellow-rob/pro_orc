@@ -263,19 +263,9 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
                           fontSize: 13,
                           fontFamily: 'SF Mono',
                         ),
-                        decoration: InputDecoration(
+                        decoration: colors.glassInputDecoration(
                           hintText: 'Muster eingeben...',
-                          hintStyle: TextStyle(color: colors.textDim, fontSize: 13),
                           isDense: true,
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 10,
-                          ),
-                          filled: true,
-                          fillColor: colors.bgElev.withValues(alpha: 0.4),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            borderSide: BorderSide.none,
-                          ),
                         ),
                         onSubmitted: (_) => _addIgnorePattern(),
                       ),
@@ -310,18 +300,7 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
                       fontSize: 13,
                       fontFamily: 'SF Mono',
                     ),
-                    decoration: InputDecoration(
-                      isDense: true,
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 10,
-                      ),
-                      filled: true,
-                      fillColor: colors.bgElev.withValues(alpha: 0.4),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: BorderSide.none,
-                      ),
-                    ),
+                    decoration: colors.glassInputDecoration(isDense: true),
                     onSubmitted: (_) => _saveGitBinary(),
                   ),
                 ),
@@ -355,7 +334,7 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
                 Switch.adaptive(
                   value: _launchAtLogin,
                   onChanged: _toggleLaunchAtLogin,
-                  activeColor: colors.cyan,
+                  activeTrackColor: colors.cyan,
                 ),
               ],
             ),

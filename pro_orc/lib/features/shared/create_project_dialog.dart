@@ -1,10 +1,12 @@
 import 'dart:io';
-import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path/path.dart' as path;
+import 'package:pro_orc/data/models/gitignore_template.dart';
+import 'package:pro_orc/data/models/project_type.dart';
 import 'package:pro_orc/data/services/project_creator_service.dart';
+import 'package:pro_orc/features/shell/glass_dialog.dart';
 import 'package:pro_orc/providers/database_provider.dart';
 import 'package:pro_orc/theme/n3_colors.dart';
 
@@ -44,7 +46,7 @@ class _CreateProjectDialogState extends ConsumerState<CreateProjectDialog>
   bool _claudeMd = true;
   bool _terminal = true;
   bool _codeRemSleep = false;
-  String _gitignoreTemplate = 'none';
+  GitignoreTemplate _gitignoreTemplate = GitignoreTemplate.none;
 
   // Research tab toggles
   bool _notion = true;
@@ -123,7 +125,7 @@ class _CreateProjectDialogState extends ConsumerState<CreateProjectDialog>
           _claudeMd = true;
           _terminal = true;
           _codeRemSleep = false;
-          _gitignoreTemplate = 'none';
+          _gitignoreTemplate = GitignoreTemplate.none;
         } else {
           _notion = true;
           _researchTerminal = true;
@@ -193,11 +195,11 @@ class _CreateProjectDialogState extends ConsumerState<CreateProjectDialog>
       scanDir: _selectedScanDir!,
       folderName: _derivedFolderName,
       displayName: _nameController.text.trim(),
-      projectType: isCode ? 'code' : 'research',
+      projectType: isCode ? ProjectType.code : ProjectType.research,
       gitInit: isCode ? _gitInit : false,
       gsdSkeleton: isCode ? _gsdSkeleton : false,
       claudeMd: isCode ? _claudeMd : false,
-      gitignoreTemplate: isCode ? _gitignoreTemplate : 'none',
+      gitignoreTemplate: isCode ? _gitignoreTemplate : GitignoreTemplate.none,
     );
 
     if (!mounted) return;
@@ -248,43 +250,26 @@ class _CreateProjectDialogState extends ConsumerState<CreateProjectDialog>
     final colors = Theme.of(context).extension<AppColors>()!;
     final accent = _accentColor(colors);
 
-    return Dialog(
-      backgroundColor: Colors.transparent,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 480),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(14),
-          child: BackdropFilter(
-            blendMode: BlendMode.src,
-            filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-            child: Container(
-              decoration: BoxDecoration(
-                color: colors.bgSurf,
-                borderRadius: BorderRadius.circular(14),
-              ),
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildHeader(colors, accent),
-                  const SizedBox(height: 16),
-                  _buildTabBar(colors, accent),
-                  const SizedBox(height: 20),
-                  _buildNameField(colors, accent),
-                  const SizedBox(height: 4),
-                  _buildFolderPreview(colors),
-                  const SizedBox(height: 16),
-                  _buildZielordnerDropdown(colors, accent),
-                  const SizedBox(height: 8),
-                  _buildToggles(colors, accent),
-                  const SizedBox(height: 24),
-                  _buildButtons(colors, accent),
-                ],
-              ),
-            ),
-          ),
-        ),
+    return GlassDialog(
+      maxWidth: 480,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildHeader(colors, accent),
+          const SizedBox(height: 16),
+          _buildTabBar(colors, accent),
+          const SizedBox(height: 20),
+          _buildNameField(colors, accent),
+          const SizedBox(height: 4),
+          _buildFolderPreview(colors),
+          const SizedBox(height: 16),
+          _buildZielordnerDropdown(colors, accent),
+          const SizedBox(height: 8),
+          _buildToggles(colors, accent),
+          const SizedBox(height: 24),
+          _buildButtons(colors, accent),
+        ],
       ),
     );
   }
@@ -351,25 +336,9 @@ class _CreateProjectDialogState extends ConsumerState<CreateProjectDialog>
       autofocus: true,
       style: TextStyle(color: colors.textPri, fontSize: 14),
       cursorColor: accent,
-      decoration: InputDecoration(
+      decoration: colors.glassInputDecoration(
         hintText: 'Projektname',
-        hintStyle: TextStyle(color: colors.textDim, fontSize: 14),
-        filled: true,
-        fillColor: colors.bgElev.withValues(alpha: 0.4),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide.none,
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide.none,
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: accent.withValues(alpha: 0.5), width: 1),
-        ),
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        accentColor: accent,
       ),
       onChanged: _updateDerivedName,
     );
@@ -412,25 +381,9 @@ class _CreateProjectDialogState extends ConsumerState<CreateProjectDialog>
       dropdownColor: colors.bgElev,
       style: TextStyle(color: colors.textPri, fontSize: 14),
       iconEnabledColor: colors.textDim,
-      decoration: InputDecoration(
+      decoration: colors.glassInputDecoration(
         labelText: 'Zielordner',
-        labelStyle: TextStyle(color: colors.textDim, fontSize: 12),
-        filled: true,
-        fillColor: colors.bgElev.withValues(alpha: 0.4),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide.none,
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide.none,
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: accent.withValues(alpha: 0.5), width: 1),
-        ),
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        accentColor: accent,
       ),
       items: _scanDirs.map((dir) {
         return DropdownMenuItem<String>(
@@ -561,39 +514,22 @@ class _CreateProjectDialogState extends ConsumerState<CreateProjectDialog>
   Widget _buildGitignoreDropdown(AppColors colors, Color accent) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 2),
-      child: DropdownButtonFormField<String>(
+      child: DropdownButtonFormField<GitignoreTemplate>(
         initialValue: _gitignoreTemplate,
         dropdownColor: colors.bgElev,
         style: TextStyle(color: colors.textPri, fontSize: 13),
         iconEnabledColor: colors.textDim,
         isExpanded: true,
-        decoration: InputDecoration(
+        decoration: colors.glassInputDecoration(
           labelText: '.gitignore Template',
-          labelStyle: TextStyle(color: colors.textDim, fontSize: 11),
-          filled: true,
-          fillColor: colors.bgElev.withValues(alpha: 0.4),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: BorderSide.none,
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: BorderSide.none,
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide:
-                BorderSide(color: accent.withValues(alpha: 0.5), width: 1),
-          ),
-          contentPadding:
-              const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          accentColor: accent,
           isDense: true,
         ),
         items: const [
-          DropdownMenuItem(value: 'none', child: Text('Kein .gitignore')),
-          DropdownMenuItem(value: 'flutter', child: Text('Flutter')),
-          DropdownMenuItem(value: 'nodejs', child: Text('Node.js')),
-          DropdownMenuItem(value: 'python', child: Text('Python')),
+          DropdownMenuItem(value: GitignoreTemplate.none, child: Text('Kein .gitignore')),
+          DropdownMenuItem(value: GitignoreTemplate.flutter, child: Text('Flutter')),
+          DropdownMenuItem(value: GitignoreTemplate.nodejs, child: Text('Node.js')),
+          DropdownMenuItem(value: GitignoreTemplate.python, child: Text('Python')),
         ],
         onChanged: (value) {
           if (value != null) setState(() => _gitignoreTemplate = value);

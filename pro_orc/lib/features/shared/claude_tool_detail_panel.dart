@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import 'package:pro_orc/data/models/agent_category.dart';
 import 'package:pro_orc/data/models/claude_tool_model.dart';
 import 'package:pro_orc/features/shell/glass_card.dart';
 import 'package:pro_orc/theme/n3_colors.dart';
@@ -439,7 +440,7 @@ class _AgentDetailContent extends StatelessWidget {
             children: [
               _InfoRow(
                 label: 'Kategorie',
-                value: agent.category == 'gsd' ? 'GSD' : 'Allgemein',
+                value: agent.category == AgentCategory.gsd ? 'GSD' : 'Allgemein',
                 colors: colors,
               ),
               if (agent.model != null)

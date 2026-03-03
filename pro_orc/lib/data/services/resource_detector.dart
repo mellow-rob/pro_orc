@@ -77,8 +77,8 @@ Future<List<ExternalResource>> detectExternalResources(
   return resources;
 }
 
-/// Scans .md files in the project root and .planning/ (max 2 levels deep)
-/// for external URLs not already in [seenUris].
+/// Scans .md files in the project root (flat) and .planning/ (up to 2 levels
+/// deep) for external URLs not already in [seenUris]. Stops after 10 URLs.
 Future<List<ExternalResource>> _scanMdFilesForUrls(
   String projectPath,
   Set<String> seenUris,
@@ -87,14 +87,15 @@ Future<List<ExternalResource>> _scanMdFilesForUrls(
   final skipDomains = {'localhost', '127.0.0.1', 'example.com'};
   final foundUrls = <String, ExternalResource>{};
 
-  Future<void> scanDir(String dirPath, int depth) async {
-    if (depth > 2) return;
+  Future<void> scanDir(String dirPath, int depth, int maxDepth) async {
+    if (depth > maxDepth || foundUrls.length >= 10) return;
     final dir = Directory(dirPath);
     if (!dir.existsSync()) return;
 
     await for (final entity in dir.list(followLinks: false)) {
-      if (entity is Directory && depth < 2) {
-        await scanDir(entity.path, depth + 1);
+      if (foundUrls.length >= 10) return;
+      if (entity is Directory && depth < maxDepth) {
+        await scanDir(entity.path, depth + 1, maxDepth);
       } else if (entity is File && entity.path.endsWith('.md')) {
         try {
           final stat = await entity.stat();
@@ -130,9 +131,9 @@ Future<List<ExternalResource>> _scanMdFilesForUrls(
     }
   }
 
-  // Scan project root (depth 1) and .planning/ (depth 1 + subdirs at depth 2)
-  await scanDir(projectPath, 1);
-  await scanDir(p.join(projectPath, '.planning'), 1);
+  // Scan root .md files (no recursion) then .planning/ with subdirs
+  await scanDir(projectPath, 0, 0);
+  await scanDir(p.join(projectPath, '.planning'), 0, 2);
 
   return foundUrls.values.toList();
 }
@@ -148,7 +149,7 @@ ExternalResource _classifyUrl(String url, String host) {
     );
   }
 
-  if (host.contains('firebase') || host == 'console.firebase.google.com') {
+  if (host.contains('firebase')) {
     return ExternalResource(
       type: ExternalResourceType.other,
       label: 'Firebase-Projekt',

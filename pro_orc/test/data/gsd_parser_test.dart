@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:pro_orc/data/models/gsd_status.dart';
 import 'package:pro_orc/data/services/gsd_parser.dart';
 
 /// Creates a temp project directory with an optional .planning/ subdir
@@ -67,7 +68,7 @@ void main() {
       final result = await parseGsdData(tmp.path);
 
       expect(result.gsd.currentPhase, equals('3 of 5 (API Layer)'));
-      expect(result.gsd.status, equals('building'));
+      expect(result.gsd.status, equals(GsdStatus.building));
       expect(result.gsd.nextStep, equals('Implement auth endpoints'));
     });
 
@@ -87,7 +88,7 @@ Next Step: Write tests
       final result = await parseGsdData(tmp.path);
 
       expect(result.gsd.currentPhase, equals('2 of 4 (Setup)'));
-      expect(result.gsd.status, equals('planning'));
+      expect(result.gsd.status, equals(GsdStatus.planning));
       expect(result.gsd.nextStep, equals('Write tests'));
     });
 
@@ -124,7 +125,7 @@ Next Step: Write tests
       final result = await parseGsdData(tmp.path);
 
       expect(result.gsd.nextStep, equals('Resume after holidays'));
-      expect(result.gsd.status, equals('paused'));
+      expect(result.gsd.status, equals(GsdStatus.paused));
     });
 
     // ------------------------------------------------------------------ //
@@ -132,16 +133,16 @@ Next Step: Write tests
     // ------------------------------------------------------------------ //
     test('deriveStatus normalizes raw status strings', () async {
       final cases = {
-        'In Progress': 'building',
-        'IN PROGRESS': 'building',
-        'building': 'building',
-        'Planning': 'planning',
-        'Research': 'research',
-        'Paused': 'paused',
-        'Done': 'done',
-        'Archived': 'archived',
-        'complete': 'done',
-        'finished': 'done',
+        'In Progress': GsdStatus.building,
+        'IN PROGRESS': GsdStatus.building,
+        'building': GsdStatus.building,
+        'Planning': GsdStatus.planning,
+        'Research': GsdStatus.research,
+        'Paused': GsdStatus.paused,
+        'Done': GsdStatus.done,
+        'Archived': GsdStatus.archived,
+        'complete': GsdStatus.done,
+        'finished': GsdStatus.done,
       };
 
       for (final entry in cases.entries) {
@@ -379,7 +380,7 @@ Other content.
       final result = await parseGsdData(tmp.path);
 
       expect(result.gsd.currentPhase, equals('7 of 11 (Data Layer)'));
-      expect(result.gsd.status, equals('building'));
+      expect(result.gsd.status, equals(GsdStatus.building));
       expect(result.gsd.nextStep, equals('Implement parser'));
       expect(result.gsd.plansCompleted, equals(2));
       expect(result.gsd.plansTotal, equals(4));

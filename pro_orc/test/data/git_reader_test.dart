@@ -4,7 +4,6 @@ import 'package:path/path.dart' as p;
 import 'package:test/test.dart';
 
 import 'package:pro_orc/data/services/git_reader.dart';
-import 'package:pro_orc/data/models/git_data.dart';
 
 /// Creates a temporary git repo with an initial commit and optional remote.
 Future<Directory> createTempGitRepo({String? remote}) async {

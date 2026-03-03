@@ -1,8 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../data/models/project_model.dart';
-import 'database_provider.dart';
-import 'watcher_provider.dart';
+import 'package:pro_orc/data/models/project_model.dart';
+import 'package:pro_orc/providers/database_provider.dart';
+import 'package:pro_orc/providers/watcher_provider.dart';
 
 /// Live project list — rescans on every watcher event.
 /// Watcher events trigger invalidation → rescan → UI rebuild.

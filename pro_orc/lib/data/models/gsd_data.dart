@@ -1,7 +1,8 @@
+import 'package:pro_orc/data/models/gsd_status.dart';
 import 'package:pro_orc/data/models/phase_info.dart';
 
 class GsdData {
-  final String? status; // 'research'|'planning'|'building'|'paused'|'done'|'archived'
+  final GsdStatus? status;
   final String? currentPhase; // e.g. "3 of 5 (API Layer)"
   final String? nextStep;
   final int? phaseProgress; // 0-100

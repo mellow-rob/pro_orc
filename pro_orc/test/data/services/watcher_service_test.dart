@@ -1,10 +1,3 @@
-import 'dart:async';
-import 'dart:io';
-
-import 'package:test/test.dart';
-import 'package:pro_orc/data/services/watcher_service.dart';
-import 'package:watcher/watcher.dart';
-
 /// Integration tests for [WatcherService] using real temp directories.
 ///
 /// These tests verify:
@@ -16,6 +9,15 @@ import 'package:watcher/watcher.dart';
 /// git_reader tests. File watcher tests are inherently timing-sensitive;
 /// generous timeouts are used to absorb OS-level delays.
 @Timeout(Duration(seconds: 30))
+library;
+
+import 'dart:async';
+import 'dart:io';
+
+import 'package:test/test.dart';
+import 'package:pro_orc/data/services/watcher_service.dart';
+import 'package:watcher/watcher.dart';
+
 void main() {
   late Directory tempDir;
   late WatcherService service;

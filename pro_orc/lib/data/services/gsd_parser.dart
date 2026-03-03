@@ -1,9 +1,11 @@
 import 'dart:io';
 
-import '../models/gsd_data.dart';
-import '../models/phase_info.dart';
+import 'package:pro_orc/data/models/gsd_data.dart';
+import 'package:pro_orc/data/models/gsd_status.dart';
+import 'package:pro_orc/data/models/phase_info.dart';
+import 'package:pro_orc/data/models/phase_status.dart';
 
-export '../models/gsd_data.dart';
+export 'package:pro_orc/data/models/gsd_data.dart';
 
 // ---------------------------------------------------------------------------
 // Result type
@@ -114,7 +116,7 @@ Future<GsdParseResult> parseGsdData(String projectPath) async {
 
   // Parse STATE.md
   String? currentPhase;
-  String? status;
+  GsdStatus? status;
   String? nextStep;
   String? version;
   List<String>? decisions;
@@ -221,13 +223,13 @@ Future<GsdParseResult> parseGsdData(String projectPath) async {
           }
 
           // Determine status
-          String phaseStatus;
+          PhaseStatus phaseStatus;
           if (pc > 0 && pc >= pt && pt > 0) {
-            phaseStatus = 'complete';
+            phaseStatus = PhaseStatus.complete;
           } else if (pc > 0 || block.toLowerCase().contains('in progress')) {
-            phaseStatus = 'in_progress';
+            phaseStatus = PhaseStatus.inProgress;
           } else {
-            phaseStatus = 'not_started';
+            phaseStatus = PhaseStatus.notStarted;
           }
 
           phaseList.add(PhaseInfo(
@@ -250,11 +252,11 @@ Future<GsdParseResult> parseGsdData(String projectPath) async {
   int? phasesTotal;
   if (phases != null && phases.isNotEmpty) {
     phasesTotal = phases.length;
-    phasesCompleted = phases.where((p) => p.status == 'complete').length;
+    phasesCompleted = phases.where((p) => p.status == PhaseStatus.complete).length;
 
     // Derive phaseProgress from phases if still null
-    if (phaseProgress == null && phasesCompleted! > 0) {
-      phaseProgress = (phasesCompleted! / phasesTotal! * 100).round();
+    if (phaseProgress == null && phasesCompleted > 0) {
+      phaseProgress = (phasesCompleted / phasesTotal * 100).round();
     }
   }
 
@@ -274,8 +276,8 @@ Future<GsdParseResult> parseGsdData(String projectPath) async {
         if (fracMatch != null) {
           plansCompleted ??= int.tryParse(fracMatch.group(1) ?? '');
           plansTotal ??= int.tryParse(fracMatch.group(2) ?? '');
-          if (plansCompleted != null && plansTotal != null && plansTotal! > 0) {
-            phaseProgress = (plansCompleted! / plansTotal! * 100).round();
+          if (plansCompleted != null && plansTotal != null && plansTotal > 0) {
+            phaseProgress = (plansCompleted / plansTotal * 100).round();
           }
         }
         // Try "N/N phases" or "N/N Phasen"
@@ -300,14 +302,14 @@ Future<GsdParseResult> parseGsdData(String projectPath) async {
     // Try "N of N" from currentPhase for phasesCompleted/Total
     if (phasesCompleted == null && currentPhase != null) {
       final ofMatch = RegExp(r'(\d+)\s+of\s+(\d+)', caseSensitive: false)
-          .firstMatch(currentPhase!);
+          .firstMatch(currentPhase);
       if (ofMatch != null) {
         final current = int.tryParse(ofMatch.group(1) ?? '');
         final total = int.tryParse(ofMatch.group(2) ?? '');
         if (current != null && total != null) {
           phasesTotal = total;
           // If status indicates complete, all phases done
-          if (status == 'done') {
+          if (status == GsdStatus.done) {
             phasesCompleted = total;
           } else {
             // Current phase is in progress, so completed = current - 1
@@ -318,7 +320,7 @@ Future<GsdParseResult> parseGsdData(String projectPath) async {
     }
 
     // Final fallback: if status is done/complete, assume 100%
-    if (phaseProgress == null && status == 'done') {
+    if (phaseProgress == null && status == GsdStatus.done) {
       phaseProgress = 100;
     }
   }
@@ -401,18 +403,20 @@ String? _firstMatch(RegExp pattern, String text) {
   return pattern.firstMatch(text)?.group(1)?.trim();
 }
 
-/// Normalizes a raw status string to one of:
-/// research | planning | building | paused | done | archived
-String _deriveStatus(String raw) {
+/// Normalizes a raw status string to a [GsdStatus] enum value.
+/// Returns null for unrecognized status strings.
+GsdStatus? _deriveStatus(String raw) {
   final lower = raw.toLowerCase();
-  if (lower.contains('research')) { return 'research'; }
-  if (lower.contains('plan')) { return 'planning'; }
-  if (lower.contains('build') || lower.contains('progress')) { return 'building'; }
-  if (lower.contains('pause')) { return 'paused'; }
+  if (lower.contains('research')) return GsdStatus.research;
+  if (lower.contains('plan')) return GsdStatus.planning;
+  if (lower.contains('build') || lower.contains('progress')) return GsdStatus.building;
+  if (lower.contains('pause')) return GsdStatus.paused;
   if (lower.contains('done') ||
       lower.contains('complete') ||
       lower.contains('finish') ||
-      lower.contains('shipped')) { return 'done'; }
-  if (lower.contains('archive')) { return 'archived'; }
-  return lower.trim();
+      lower.contains('shipped')) {
+    return GsdStatus.done;
+  }
+  if (lower.contains('archive')) return GsdStatus.archived;
+  return null;
 }

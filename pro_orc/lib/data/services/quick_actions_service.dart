@@ -7,13 +7,13 @@ class QuickActionsService {
   /// Uses osascript for reliable directory navigation.
   Future<void> openInTerminal(String projectPath) async {
     final script = _terminalScript('cd "$projectPath"');
-    await Process.run('osascript', ['-e', script]);
-    await Process.run('open', ['-a', 'Terminal']);
+    await Process.run('osascript', ['-e', script], runInShell: true);
+    await Process.run('open', ['-a', 'Terminal'], runInShell: true);
   }
 
   /// Reveals project directory in Finder.
   Future<void> openInFinder(String projectPath) async {
-    await Process.run('open', [projectPath]);
+    await Process.run('open', [projectPath], runInShell: true);
   }
 
   /// Opens Terminal.app, cd's into the project directory, and runs
@@ -22,16 +22,16 @@ class QuickActionsService {
     // Escape single quotes in prompt for shell safety
     final escapedPrompt = prompt.replaceAll("'", "'\\''");
     final script = _terminalScript("cd \"$projectPath\" && claude '$escapedPrompt'");
-    await Process.run('osascript', ['-e', script]);
-    await Process.run('open', ['-a', 'Terminal']);
+    await Process.run('osascript', ['-e', script], runInShell: true);
+    await Process.run('open', ['-a', 'Terminal'], runInShell: true);
   }
 
   /// Opens Terminal.app, cd's into the project directory, and runs
   /// `claude /rem-sleep` to trigger memory consolidation.
   Future<void> openRemSleep(String projectPath) async {
     final script = _terminalScript('cd "$projectPath" && claude /rem-sleep');
-    await Process.run('osascript', ['-e', script]);
-    await Process.run('open', ['-a', 'Terminal']);
+    await Process.run('osascript', ['-e', script], runInShell: true);
+    await Process.run('open', ['-a', 'Terminal'], runInShell: true);
   }
 
   /// Opens a URL (GitHub or Notion) in the system default browser.

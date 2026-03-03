@@ -5,9 +5,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:path/path.dart' as p;
 import 'package:pro_orc/data/models/phase_info.dart';
+import 'package:pro_orc/data/models/phase_status.dart';
 import 'package:pro_orc/data/models/project_model.dart';
+import 'package:pro_orc/data/models/project_type.dart';
 import 'package:pro_orc/features/agents/agent_card.dart';
 import 'package:pro_orc/features/shared/claude_tool_detail_panel.dart';
+import 'package:pro_orc/data/services/quick_actions_service.dart';
+import 'package:pro_orc/features/shared/quick_actions.dart';
 import 'package:pro_orc/features/shared/status_badge.dart';
 import 'package:pro_orc/features/shell/glass_card.dart';
 import 'package:pro_orc/providers/claude_tools_provider.dart';
@@ -56,7 +60,7 @@ class ProjectDetailPanel extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = Theme.of(context).extension<AppColors>()!;
     final screenSize = MediaQuery.of(context).size;
-    final accent = project.projectType == 'research' ? colors.fuch : colors.cyan;
+    final accent = project.projectType == ProjectType.research ? colors.fuch : colors.cyan;
 
     return Center(
       child: Material(
@@ -120,7 +124,7 @@ class ProjectDetailPanel extends ConsumerWidget {
               shape: BoxShape.circle,
             ),
             child: Icon(
-              project.projectType == 'research'
+              project.projectType == ProjectType.research
                   ? LucideIcons.beaker100
                   : LucideIcons.codeXml100,
               color: accent,
@@ -428,12 +432,12 @@ class ProjectDetailPanel extends ConsumerWidget {
 
   Widget _buildPhaseRow(AppColors colors, Color accent, PhaseInfo phase) {
     final (icon, iconColor) = switch (phase.status) {
-      'complete' => (LucideIcons.circleCheck100, const Color(0xFF22C55E)),
-      'in_progress' => (LucideIcons.circlePlay100, accent),
-      _ => (LucideIcons.circle100, colors.textDim),
+      PhaseStatus.complete => (LucideIcons.circleCheck100, const Color(0xFF22C55E)),
+      PhaseStatus.inProgress => (LucideIcons.circlePlay100, accent),
+      PhaseStatus.notStarted => (LucideIcons.circle100, colors.textDim),
     };
 
-    final isCurrent = phase.status == 'in_progress';
+    final isCurrent = phase.status == PhaseStatus.inProgress;
 
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
@@ -554,31 +558,8 @@ class ProjectDetailPanel extends ConsumerWidget {
     );
   }
 
-  Widget _buildQuickActions(AppColors colors, Color accent, dynamic qa) {
-    final actions = <_QuickAction>[
-      _QuickAction(
-        icon: LucideIcons.terminal100,
-        label: 'Terminal',
-        onPressed: () => qa.openInTerminal(project.path),
-      ),
-      _QuickAction(
-        icon: LucideIcons.folder100,
-        label: 'Finder',
-        onPressed: () => qa.openInFinder(project.path),
-      ),
-      if (project.git?.githubUrl != null)
-        _QuickAction(
-          icon: LucideIcons.externalLink100,
-          label: 'GitHub',
-          onPressed: () => qa.openUrl(project.git!.githubUrl!),
-        ),
-      if (project.gsd?.notionUrl != null)
-        _QuickAction(
-          icon: LucideIcons.fileText100,
-          label: 'Notion',
-          onPressed: () => qa.openUrl(project.gsd!.notionUrl!),
-        ),
-    ];
+  Widget _buildQuickActions(AppColors colors, Color accent, QuickActionsService qa) {
+    final actions = buildProjectQuickActions(project, qa);
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.start,
@@ -814,7 +795,7 @@ class _QuickActionButton extends StatefulWidget {
     required this.colors,
   });
 
-  final _QuickAction action;
+  final QuickAction action;
   final Color accent;
   final AppColors colors;
 
@@ -854,7 +835,7 @@ class _QuickActionButtonState extends State<_QuickActionButton> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  widget.action.label,
+                  widget.action.tooltip,
                   style: TextStyle(
                     color: _hovered ? widget.accent : widget.colors.textDim,
                     fontSize: 10,
@@ -1061,15 +1042,3 @@ class _MdFileRowState extends State<_MdFileRow> {
   }
 }
 
-/// Internal action definition for the quick action button row.
-class _QuickAction {
-  const _QuickAction({
-    required this.icon,
-    required this.label,
-    required this.onPressed,
-  });
-
-  final IconData icon;
-  final String label;
-  final VoidCallback onPressed;
-}

@@ -1,8 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../data/db/app_database.dart';
-import '../data/services/project_scanner.dart';
-import '../data/services/quick_actions_service.dart';
+import 'package:pro_orc/data/db/app_database.dart';
+import 'package:pro_orc/data/services/project_scanner.dart';
+import 'package:pro_orc/data/services/quick_actions_service.dart';
 
 /// Singleton AppDatabase instance. keepAlive — lives for entire app lifetime.
 final appDatabaseProvider = Provider<AppDatabase>((ref) {

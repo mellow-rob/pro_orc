@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:path/path.dart' as path;
+import 'package:pro_orc/data/models/gitignore_template.dart';
+import 'package:pro_orc/data/models/project_type.dart';
 
 /// Result of a project creation operation.
 ///
@@ -35,11 +37,11 @@ Future<ProjectCreationResult> createProject({
   required String scanDir,
   required String folderName, // Already kebab-case
   required String displayName, // Original user input
-  required String projectType, // 'code' or 'research'
+  required ProjectType projectType,
   bool gitInit = false,
   bool gsdSkeleton = false,
   bool claudeMd = false,
-  String gitignoreTemplate = 'none', // 'flutter', 'nodejs', 'python', 'none'
+  GitignoreTemplate gitignoreTemplate = GitignoreTemplate.none,
 }) async {
   final projectPath = path.join(scanDir, folderName);
   final warnings = <String>[];
@@ -99,7 +101,7 @@ Future<ProjectCreationResult> createProject({
   }
 
   // --- 4. .gitignore ---
-  if (gitignoreTemplate != 'none') {
+  if (gitignoreTemplate != GitignoreTemplate.none) {
     try {
       final content = _gitignoreContent(gitignoreTemplate);
       if (content != null) {
@@ -111,7 +113,7 @@ Future<ProjectCreationResult> createProject({
   }
 
   // --- 5. Research README.md ---
-  if (projectType == 'research' && !gsdSkeleton) {
+  if (projectType == ProjectType.research && !gsdSkeleton) {
     try {
       await File(path.join(projectPath, 'README.md')).writeAsString(
         '# $displayName\n\n[Projektbeschreibung hier einfuegen]\n',
@@ -299,9 +301,9 @@ String _claudeMdContent(String displayName) => '''
 [Konventionen hier definieren]
 ''';
 
-String? _gitignoreContent(String template) {
+String? _gitignoreContent(GitignoreTemplate template) {
   switch (template) {
-    case 'flutter':
+    case GitignoreTemplate.flutter:
       return '''
 .dart_tool/
 .packages
@@ -314,7 +316,7 @@ build/
 *.lock
 .DS_Store
 ''';
-    case 'nodejs':
+    case GitignoreTemplate.nodejs:
       return '''
 node_modules/
 dist/
@@ -327,7 +329,7 @@ build/
 .idea/
 coverage/
 ''';
-    case 'python':
+    case GitignoreTemplate.python:
       return '''
 __pycache__/
 *.py[cod]
@@ -341,7 +343,7 @@ build/
 .idea/
 .vscode/
 ''';
-    default:
+    case GitignoreTemplate.none:
       return null;
   }
 }

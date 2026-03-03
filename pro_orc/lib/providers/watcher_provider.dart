@@ -4,8 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path/path.dart' as p;
 import 'package:watcher/watcher.dart';
 
-import '../data/services/watcher_service.dart';
-import 'database_provider.dart';
+import 'package:pro_orc/data/services/watcher_service.dart';
+import 'package:pro_orc/providers/database_provider.dart';
 
 /// File watcher stream — emits debounced WatchEvents for all scan directories
 /// plus the Claude projects directory (for memory status changes).
@@ -19,7 +19,7 @@ final watcherProvider = StreamProvider<WatchEvent>((ref) async* {
 
   // Also watch Claude projects dir for memory changes (rem-sleep updates)
   final claudeProjectsDir =
-      p.join(Platform.environment['HOME']!, '.claude', 'projects');
+      p.join(Platform.environment['HOME'] ?? '/tmp', '.claude', 'projects');
   final allDirs = [...scanDirs, claudeProjectsDir];
 
   final service = WatcherService.multi(allDirs);

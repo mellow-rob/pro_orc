@@ -9,7 +9,7 @@ Future<bool> showLaunchAtLoginDialog(BuildContext context) async {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
         side: BorderSide(
-          color: const Color(0xFF00E5FF).withOpacity(0.2),
+          color: const Color(0xFF00E5FF).withValues(alpha: 0.2),
         ),
       ),
       title: const Text(

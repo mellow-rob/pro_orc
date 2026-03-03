@@ -1,6 +1,7 @@
 import 'package:pro_orc/data/models/gsd_data.dart';
 import 'package:pro_orc/data/models/git_data.dart';
 import 'package:pro_orc/data/models/memory_data.dart';
+import 'package:pro_orc/data/models/project_type.dart';
 
 /// Metadata for a .md file discovered in a project directory.
 class MdFileInfo {
@@ -21,7 +22,7 @@ class ProjectModel {
   final String folderId; // folder name, canonical ID
   final String displayName; // PROJECT.md H1 or folder name fallback
   final String path; // absolute path
-  final String? projectType; // null = unclassified
+  final ProjectType? projectType; // null = unclassified
   final String? description; // from PROJECT.md or CLAUDE.md
   final GsdData? gsd; // null if no .planning/
   final GitData? git; // null if not a git repo
