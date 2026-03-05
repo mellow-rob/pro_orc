@@ -214,7 +214,7 @@ class ProjectDetailPanel extends ConsumerWidget {
                 Icon(LucideIcons.arrowRight100, color: accent, size: 14),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: Text(
+                  child: SelectableText(
                     gsd!.nextStep!,
                     style: TextStyle(color: colors.textPri, fontSize: 14),
                   ),
@@ -225,14 +225,10 @@ class ProjectDetailPanel extends ConsumerWidget {
 
         // --- Beschreibung ---
         if (project.description != null)
-          _SectionCard(
+          _DescriptionSection(
             colors: colors,
             accent: accent,
-            title: 'BESCHREIBUNG',
-            child: Text(
-              project.description!,
-              style: TextStyle(color: colors.textSec, fontSize: 14, height: 1.5),
-            ),
+            description: project.description!,
           ),
 
         // --- Dateien (.md Hierarchie) ---
@@ -733,6 +729,139 @@ class _DecisionsSectionState extends State<_DecisionsSection> {
                 ),
               ),
             ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Expandable description section — short texts always selectable,
+/// long texts (>5 lines) collapsed by default with expand/collapse toggle.
+class _DescriptionSection extends StatefulWidget {
+  const _DescriptionSection({
+    required this.colors,
+    required this.accent,
+    required this.description,
+  });
+
+  final AppColors colors;
+  final Color accent;
+  final String description;
+
+  @override
+  State<_DescriptionSection> createState() => _DescriptionSectionState();
+}
+
+class _DescriptionSectionState extends State<_DescriptionSection> {
+  bool _expanded = false;
+
+  TextStyle get _textStyle => TextStyle(
+        color: widget.colors.textSec,
+        fontSize: 14,
+        height: 1.6,
+      );
+
+  bool get _needsExpansion {
+    final painter = TextPainter(
+      text: TextSpan(text: widget.description, style: _textStyle),
+      maxLines: 5,
+      textDirection: TextDirection.ltr,
+    )..layout(maxWidth: 624);
+    final exceeded = painter.didExceedMaxLines;
+    painter.dispose();
+    return exceeded;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final needsToggle = _needsExpansion;
+
+    return _SectionCard(
+      colors: widget.colors,
+      accent: widget.accent,
+      title: 'BESCHREIBUNG',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (!needsToggle || _expanded)
+            SelectableText(
+              widget.description,
+              style: _textStyle,
+            )
+          else
+            Text(
+              widget.description,
+              style: _textStyle,
+              maxLines: 5,
+              overflow: TextOverflow.ellipsis,
+            ),
+          if (needsToggle)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: _ExpandToggleButton(
+                expanded: _expanded,
+                colors: widget.colors,
+                accent: widget.accent,
+                onTap: () => setState(() => _expanded = !_expanded),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Toggle button with hover effect for expand/collapse sections.
+class _ExpandToggleButton extends StatefulWidget {
+  const _ExpandToggleButton({
+    required this.expanded,
+    required this.colors,
+    required this.accent,
+    required this.onTap,
+  });
+
+  final bool expanded;
+  final AppColors colors;
+  final Color accent;
+  final VoidCallback onTap;
+
+  @override
+  State<_ExpandToggleButton> createState() => _ExpandToggleButtonState();
+}
+
+class _ExpandToggleButtonState extends State<_ExpandToggleButton> {
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = _hovered ? widget.accent : widget.colors.textDim;
+
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              widget.expanded
+                  ? LucideIcons.chevronDown100
+                  : LucideIcons.chevronRight100,
+              color: color,
+              size: 14,
+            ),
+            const SizedBox(width: 4),
+            Text(
+              widget.expanded ? 'Weniger anzeigen' : 'Mehr anzeigen',
+              style: TextStyle(
+                color: color,
+                fontSize: 12,
+                fontWeight: FontWeight.w400,
+              ),
+            ),
           ],
         ),
       ),
