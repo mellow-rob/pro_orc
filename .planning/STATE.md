@@ -10,12 +10,12 @@ See: .planning/PROJECT.md (updated 2026-03-05)
 ## Current Position
 
 Milestone: v1.5 Import, Detail-Panel & Memory-Tab
-Phase: 19 — Detail-Panel Typography
+Phase: 20 — Folder Import
 Plan: —
-Status: Roadmap created, ready for phase planning
-Last activity: 2026-03-05 — Roadmap created for v1.5
+Status: Phase 19 complete, ready for phase 20 planning
+Last activity: 2026-03-05 — Phase 19 Detail-Panel Typography complete
 
-Progress: ░░░░░░░░░░░░░░░░░░░░ 0% (0/3 phases)
+Progress: ██████░░░░░░░░░░░░░░ 33% (1/3 phases)
 
 ## Performance Metrics
 
@@ -46,6 +46,10 @@ v1.2 decisions archived to milestones/v1.2-ROADMAP.md.
 v1.3 decisions archived to milestones/v1.3-ROADMAP.md.
 v1.4 decisions archived to milestones/v1.4-ROADMAP.md.
 
+**v1.5 Phase 19:**
+- LayoutBuilder statt hardcoded 624px fuer TextPainter-Breite
+- Beschreibungslimit von 200 auf 500 Zeichen (200 reichte nie fuer 5 Zeilen)
+
 ### Pending Todos
 
 - Update ~/.zshrc to add `/opt/homebrew/share/flutter/bin` to PATH (or symlink to expected `/Users/rob/code/flutter`)
@@ -65,5 +69,5 @@ None
 ## Session Continuity
 
 Last session: 2026-03-05
-Stopped at: Roadmap created for v1.5
-Resume with: `/gsd:plan-phase 19`
+Stopped at: Phase 19 complete
+Resume with: `/gsd:plan-phase 20`
