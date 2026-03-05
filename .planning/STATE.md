@@ -1,3 +1,19 @@
+---
+gsd_state_version: 1.0
+milestone: v1.5
+milestone_name: Import, Detail-Panel & Memory-Tab
+status: planning
+stopped_at: Phase 19 complete
+last_updated: "2026-03-05T10:07:19.924Z"
+last_activity: 2026-03-05 — Phase 19 Detail-Panel Typography complete
+progress:
+  total_phases: 3
+  completed_phases: 1
+  total_plans: 1
+  completed_plans: 1
+  percent: 33
+---
+
 # Project State
 
 ## Project Reference

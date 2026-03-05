@@ -352,7 +352,7 @@ Future<GsdParseResult> parseGsdData(String projectPath) async {
         final firstPara = desc.split('\n\n').first.trim();
         // Strip bold markers
         desc = firstPara.replaceAllMapped(_rBold, (m) => m.group(1)!);
-        // Truncate to 200 chars
+        // Truncate to 500 chars
         if (desc.length > 500) desc = desc.substring(0, 500);
         description = desc.isEmpty ? null : desc;
       }
