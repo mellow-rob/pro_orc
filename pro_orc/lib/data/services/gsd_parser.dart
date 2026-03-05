@@ -77,11 +77,17 @@ final _rNotion = RegExp(r'<!--\s*notion:\s*(https?://[^\s>]+)\s*-->', caseSensit
 // PROJECT.md — H1 heading (first match)
 final _rH1 = RegExp(r'^#\s+(.+)$', multiLine: true);
 
-// PROJECT.md — Description section heading then first paragraph
+// PROJECT.md / CLAUDE.md — Description section heading then first paragraph
 final _rDescSection = RegExp(
-  r'^##\s+(?:Core Value|Kernwert|Was ist das|What This Is|What is this)\s*\n+([\s\S]+?)(?:\n\n|\n##|$)',
+  r'^##\s+(?:Core Value|Kernwert|Was ist das|What This Is|What is this|Project Overview|Project Purpose|Projektbeschreibung|One-Liner)\s*\n+([\s\S]+?)(?:\n\n|\n##|$)',
   multiLine: true,
   caseSensitive: false,
+);
+
+// Fallback: first non-empty paragraph after H1 heading (no ## required)
+final _rAfterH1 = RegExp(
+  r'^#\s+.+\n+([^\n#][^\n]*)',
+  multiLine: true,
 );
 
 // Strip bold markers **text**
@@ -98,7 +104,8 @@ final _rBold = RegExp(r'\*\*([^*]+)\*\*');
 Future<GsdParseResult> parseGsdData(String projectPath) async {
   final planningDir = Directory('$projectPath/.planning');
   if (!await planningDir.exists()) {
-    return GsdParseResult(gsd: GsdData.empty);
+    // Non-GSD project — still try to extract name + description from root files
+    return _parseNonGsdProject(projectPath);
   }
 
   // Read all three files concurrently
@@ -361,6 +368,14 @@ Future<GsdParseResult> parseGsdData(String projectPath) async {
     }
   }
 
+  // Fallback: try CLAUDE.md for description if PROJECT.md had none
+  if (description == null) {
+    final claudeContent = await _safeRead('$projectPath/CLAUDE.md');
+    if (claudeContent != null) {
+      description = _extractDescription(claudeContent);
+    }
+  }
+
   final gsd = GsdData(
     status: status,
     currentPhase: currentPhase,
@@ -401,6 +416,69 @@ Future<String?> _safeRead(String path) async {
 /// Returns the first capture group of [pattern] in [text], trimmed.
 String? _firstMatch(RegExp pattern, String text) {
   return pattern.firstMatch(text)?.group(1)?.trim();
+}
+
+/// Extracts a description from content using the standard heading patterns.
+/// Falls back to first paragraph after H1 if no matching section found.
+String? _extractDescription(String content) {
+  // Strategy 1: Known section headings
+  final descMatch = _rDescSection.firstMatch(content);
+  String? desc;
+  if (descMatch != null) {
+    desc = descMatch.group(1)?.trim() ?? '';
+    desc = desc.split('\n\n').first.trim();
+  }
+
+  // Strategy 2: First paragraph after H1
+  if (desc == null || desc.isEmpty) {
+    final h1Match = _rAfterH1.firstMatch(content);
+    if (h1Match != null) {
+      desc = h1Match.group(1)?.trim();
+    }
+  }
+
+  if (desc == null || desc.isEmpty) return null;
+  desc = desc.replaceAllMapped(_rBold, (m) => m.group(1)!);
+  if (desc.length > 500) desc = desc.substring(0, 500);
+  // Filter out placeholder text
+  if (desc.contains('[Projektbeschreibung hier einfuegen]')) return null;
+  return desc.isEmpty ? null : desc;
+}
+
+/// Parses a non-GSD project (no .planning/) — extracts name + description
+/// from root PROJECT.md or CLAUDE.md.
+Future<GsdParseResult> _parseNonGsdProject(String projectPath) async {
+  String? displayName;
+  String? description;
+
+  // Try PROJECT.md first, then CLAUDE.md
+  final projectContent = await _safeRead('$projectPath/PROJECT.md');
+  if (projectContent != null) {
+    final h1 = _rH1.firstMatch(projectContent);
+    if (h1 != null) displayName = h1.group(1)?.trim();
+    description = _extractDescription(projectContent);
+  }
+
+  if (description == null) {
+    final claudeContent = await _safeRead('$projectPath/CLAUDE.md');
+    if (claudeContent != null) {
+      if (displayName == null) {
+        final h1 = _rH1.firstMatch(claudeContent);
+        if (h1 != null) {
+          final name = h1.group(1)?.trim();
+          // Don't use generic "CLAUDE.md" as display name
+          if (name != null && name != 'CLAUDE.md') displayName = name;
+        }
+      }
+      description = _extractDescription(claudeContent);
+    }
+  }
+
+  return GsdParseResult(
+    gsd: GsdData.empty,
+    displayName: displayName,
+    description: description,
+  );
 }
 
 /// Normalizes a raw status string to a [GsdStatus] enum value.

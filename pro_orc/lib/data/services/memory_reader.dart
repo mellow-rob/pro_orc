@@ -9,7 +9,7 @@ import 'package:pro_orc/data/models/memory_data.dart';
 /// Replaces every `/` and `_` with `-` (matching Claude's actual behavior).
 /// Example: `/Users/rob/code/my_app` becomes `-Users-rob-code-my-app`.
 String encodeProjectPath(String projectPath) {
-  return projectPath.replaceAll('/', '-').replaceAll('_', '-');
+  return projectPath.replaceAll('/', '-').replaceAll('_', '-').replaceAll(' ', '-');
 }
 
 /// Checks if a MEMORY.md exists at the given Claude project directory.

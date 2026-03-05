@@ -53,6 +53,17 @@ class _ImportProjectDialogState extends ConsumerState<ImportProjectDialog> {
   void initState() {
     super.initState();
     _selectedType = widget.analysis.detectedType;
+    _applyTypeDefaults(_selectedType);
+  }
+
+  void _applyTypeDefaults(ProjectType type) {
+    if (type == ProjectType.research) {
+      _gsdSkeleton = false;
+      _gitInit = false;
+    } else {
+      _gsdSkeleton = true;
+      _gitInit = true;
+    }
   }
 
   Color _accent(AppColors colors) =>
@@ -220,7 +231,10 @@ class _ImportProjectDialogState extends ConsumerState<ImportProjectDialog> {
             ],
             selected: {_selectedType},
             onSelectionChanged: (values) {
-              setState(() => _selectedType = values.first);
+              setState(() {
+                _selectedType = values.first;
+                _applyTypeDefaults(_selectedType);
+              });
             },
             style: ButtonStyle(
               foregroundColor: WidgetStateProperty.resolveWith((states) {

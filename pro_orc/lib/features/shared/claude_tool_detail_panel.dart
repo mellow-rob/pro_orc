@@ -35,7 +35,7 @@ Future<void> showAgentDetail(BuildContext context, AgentData agent) =>
 Future<void> _showClaudeToolDetail(BuildContext context, Widget content) async {
   await showGeneralDialog(
     context: context,
-    barrierDismissible: true,
+    barrierDismissible: false,
     barrierLabel: 'Close',
     barrierColor: Colors.black54,
     transitionDuration: const Duration(milliseconds: 300),

@@ -260,11 +260,14 @@ class ProjectScanner {
   }
 
   /// Returns true if [path] looks like a project directory
-  /// (has .planning/ or .git/ subdirectory).
+  /// (has .planning/, .git/, or CLAUDE.md).
   Future<bool> _isProjectDir(String path) async {
     final planning = Directory(p.join(path, '.planning'));
     final git = Directory(p.join(path, '.git'));
-    return await planning.exists() || await git.exists();
+    final claudeMd = File(p.join(path, 'CLAUDE.md'));
+    return await planning.exists() ||
+        await git.exists() ||
+        await claudeMd.exists();
   }
 
   /// Returns true if [name] matches any of the [patterns].

@@ -282,6 +282,20 @@ class _CodeTabState extends ConsumerState<CodeTab> {
     final dir = await getDirectoryPath();
     if (dir == null || !mounted) return;
 
+    // Duplicate check — prevent importing an already-known project
+    final projects = ref.read(projectsProvider).value ?? [];
+    final alreadyExists = projects.any((p) => p.path == dir);
+    if (alreadyExists) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Projekt ist bereits im Dashboard vorhanden'),
+          duration: Duration(seconds: 4),
+        ),
+      );
+      return;
+    }
+
     final db = ref.read(appDatabaseProvider);
     final scanDirs = await db.getScanDirs();
     final analysis = await analyzeFolder(dir, scanDirs);
@@ -290,7 +304,7 @@ class _CodeTabState extends ConsumerState<CodeTab> {
 
     final result = await showDialog<Map<String, dynamic>>(
       context: context,
-      barrierDismissible: true,
+      barrierDismissible: false,
       barrierColor: Colors.black54,
       builder: (context) => ImportProjectDialog(
         analysis: analysis,
@@ -311,7 +325,7 @@ class _CodeTabState extends ConsumerState<CodeTab> {
   Future<void> _openCreateDialog(BuildContext context, String initialTab) async {
     final result = await showDialog<Map<String, dynamic>>(
       context: context,
-      barrierDismissible: true,
+      barrierDismissible: false,
       barrierColor: Colors.black54,
       builder: (context) => CreateProjectDialog(initialTab: initialTab),
     );

@@ -27,7 +27,7 @@ import 'package:pro_orc/theme/n3_colors.dart';
 Future<void> showProjectDetail(BuildContext context, ProjectModel project) async {
   await showGeneralDialog(
     context: context,
-    barrierDismissible: true,
+    barrierDismissible: false,
     barrierLabel: 'Close',
     barrierColor: Colors.black54,
     transitionDuration: const Duration(milliseconds: 300),

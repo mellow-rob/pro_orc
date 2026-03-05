@@ -73,6 +73,7 @@ void showProjectContextMenu({
       if (context.mounted) {
         showDialog<bool>(
           context: context,
+          barrierDismissible: false,
           builder: (_) => DeleteProjectDialog(project: project),
         );
       }
