@@ -762,12 +762,12 @@ class _DescriptionSectionState extends State<_DescriptionSection> {
         height: 1.6,
       );
 
-  bool get _needsExpansion {
+  bool _needsExpansion(double maxWidth) {
     final painter = TextPainter(
       text: TextSpan(text: widget.description, style: _textStyle),
       maxLines: 5,
       textDirection: TextDirection.ltr,
-    )..layout(maxWidth: 624);
+    )..layout(maxWidth: maxWidth);
     final exceeded = painter.didExceedMaxLines;
     painter.dispose();
     return exceeded;
@@ -775,38 +775,42 @@ class _DescriptionSectionState extends State<_DescriptionSection> {
 
   @override
   Widget build(BuildContext context) {
-    final needsToggle = _needsExpansion;
-
     return _SectionCard(
       colors: widget.colors,
       accent: widget.accent,
       title: 'BESCHREIBUNG',
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (!needsToggle || _expanded)
-            SelectableText(
-              widget.description,
-              style: _textStyle,
-            )
-          else
-            Text(
-              widget.description,
-              style: _textStyle,
-              maxLines: 5,
-              overflow: TextOverflow.ellipsis,
-            ),
-          if (needsToggle)
-            Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: _ExpandToggleButton(
-                expanded: _expanded,
-                colors: widget.colors,
-                accent: widget.accent,
-                onTap: () => setState(() => _expanded = !_expanded),
-              ),
-            ),
-        ],
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final needsToggle = _needsExpansion(constraints.maxWidth);
+
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (!needsToggle || _expanded)
+                SelectableText(
+                  widget.description,
+                  style: _textStyle,
+                )
+              else
+                Text(
+                  widget.description,
+                  style: _textStyle,
+                  maxLines: 5,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              if (needsToggle)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: _ExpandToggleButton(
+                    expanded: _expanded,
+                    colors: widget.colors,
+                    accent: widget.accent,
+                    onTap: () => setState(() => _expanded = !_expanded),
+                  ),
+                ),
+            ],
+          );
+        },
       ),
     );
   }
