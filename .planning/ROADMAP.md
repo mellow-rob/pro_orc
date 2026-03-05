@@ -103,7 +103,11 @@ Plans:
   3. Wenn der importierte Ordner ausserhalb aller bekannten Scan-Verzeichnisse liegt, wird das Parent-Verzeichnis automatisch als neues Scan-Dir hinzugefuegt und der Watcher neu gestartet
   4. Wenn der importierte Ordner bereits innerhalb eines bestehenden Scan-Dirs liegt, zeigt das Dashboard eine Warnung ("Dieser Ordner wird bereits gescannt") statt Duplikate zu erzeugen
   5. Nach erfolgreichem Import erscheint das Projekt sofort im korrekten Tab (Code oder Research) ohne manuelles Neuladen
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 20-01-PLAN.md — Importer Service: scaffoldProject, inferProjectType, analyzeFolder mit TDD
+- [ ] 20-02-PLAN.md — Import UI: Popup-Menue, ImportProjectDialog, Tab-Wiring + Human Verify
 
 ### Phase 21: Memory Tab
 **Goal**: User hat einen eigenen Tab mit Uebersicht aller Memory-Files, kann Inhalte lesen und Memory-Actions pro Projekt ausfuehren
@@ -139,5 +143,5 @@ Plans:
 | 17. Deletion Core | v1.4 | 2/2 | Complete | 2026-02-27 |
 | 18. External Resource Cleanup | v1.4 | 2/2 | Complete | 2026-02-27 |
 | 19. Detail-Panel Typography | 1/1 | Complete    | 2026-03-05 | - |
-| 20. Folder Import | v1.5 | 0/? | Not started | - |
+| 20. Folder Import | v1.5 | 0/2 | Not started | - |
 | 21. Memory Tab | v1.5 | 0/? | Not started | - |
