@@ -9,6 +9,7 @@ import 'package:pro_orc/data/models/project_type.dart';
 import 'package:pro_orc/data/services/gsd_parser.dart';
 import 'package:pro_orc/data/services/git_reader.dart';
 import 'package:pro_orc/data/services/memory_reader.dart';
+import 'package:pro_orc/data/services/project_importer_service.dart';
 
 // ---------------------------------------------------------------------------
 // Errors
@@ -209,63 +210,9 @@ class ProjectScanner {
   // Private helpers
   // ---------------------------------------------------------------------------
 
-  /// Code project marker files — if any exist, it's a code project.
-  static const _codeMarkers = [
-    'pubspec.yaml',
-    'package.json',
-    'Cargo.toml',
-    'go.mod',
-    'pom.xml',
-    'build.gradle',
-    'CMakeLists.txt',
-    'Makefile',
-    'requirements.txt',
-    'pyproject.toml',
-    'setup.py',
-    'Gemfile',
-    'mix.exs',
-    'composer.json',
-    'tsconfig.json',
-    'eslint.config.mjs',
-    'next.config.js',
-    'next.config.ts',
-    'vite.config.ts',
-    'vite.config.js',
-  ];
-
-  /// Infers project type from folder contents.
-  ///
-  /// Checks for common build/config files that indicate a code project.
-  /// If none are found, the project is classified as research.
-  Future<ProjectType> _inferType(String projectPath) async {
-    for (final marker in _codeMarkers) {
-      final file = File(p.join(projectPath, marker));
-      if (await file.exists()) return ProjectType.code;
-    }
-    // Also check for common code subdirectories
-    for (final dir in ['lib', 'src', 'app', 'bin']) {
-      final d = Directory(p.join(projectPath, dir));
-      if (await d.exists()) return ProjectType.code;
-    }
-
-    // Check one level of subdirectories for code markers.
-    // Handles monorepo/umbrella projects (e.g. project_orchestration/pro_orc/).
-    final rootDir = Directory(projectPath);
-    try {
-      await for (final entity in rootDir.list()) {
-        if (entity is Directory) {
-          for (final marker in _codeMarkers) {
-            final file = File(p.join(entity.path, marker));
-            if (await file.exists()) return ProjectType.code;
-          }
-        }
-      }
-    } catch (_) {
-      // Ignore errors — fall through to research
-    }
-
-    return ProjectType.research;
-  }
+  /// Delegates to shared [inferProjectType] from project_importer_service.
+  Future<ProjectType> _inferType(String projectPath) =>
+      inferProjectType(projectPath);
 
   /// Lists all direct child directories of [scanDir], filtering out hidden
   /// directories and those matching [ignorePatterns].

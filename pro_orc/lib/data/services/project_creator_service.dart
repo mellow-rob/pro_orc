@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:path/path.dart' as path;
 import 'package:pro_orc/data/models/gitignore_template.dart';
 import 'package:pro_orc/data/models/project_type.dart';
+import 'package:pro_orc/data/services/project_importer_service.dart';
 
 /// Result of a project creation operation.
 ///
@@ -66,53 +67,19 @@ Future<ProjectCreationResult> createProject({
     );
   }
 
-  // --- 2. GSD Skeleton ---
-  if (gsdSkeleton) {
-    try {
-      final planningDir = Directory(path.join(projectPath, '.planning'));
-      await planningDir.create(recursive: true);
+  // --- 2-5. Scaffold files (GSD, CLAUDE.md, .gitignore) ---
+  final scaffoldResult = await scaffoldProject(
+    projectPath: projectPath,
+    displayName: displayName,
+    gsdSkeleton: gsdSkeleton,
+    claudeMd: claudeMd,
+    gitignoreTemplate: gitignoreTemplate,
+    // git init is handled by scaffoldProject too, but we also need
+    // the research README which is create-specific
+  );
+  warnings.addAll(scaffoldResult.warnings);
 
-      await File(path.join(planningDir.path, 'PROJECT.md')).writeAsString(
-        _gsdProjectMd(displayName),
-      );
-      await File(path.join(planningDir.path, 'STATE.md')).writeAsString(
-        _gsdStateMd(),
-      );
-      await File(path.join(planningDir.path, 'ROADMAP.md')).writeAsString(
-        _gsdRoadmapMd(displayName),
-      );
-      await File(path.join(planningDir.path, 'REQUIREMENTS.md')).writeAsString(
-        _gsdRequirementsMd(displayName),
-      );
-    } catch (e) {
-      warnings.add('GSD Skeleton konnte nicht erstellt werden: $e');
-    }
-  }
-
-  // --- 3. CLAUDE.md ---
-  if (claudeMd) {
-    try {
-      await File(path.join(projectPath, 'CLAUDE.md')).writeAsString(
-        _claudeMdContent(displayName),
-      );
-    } catch (e) {
-      warnings.add('CLAUDE.md konnte nicht erstellt werden: $e');
-    }
-  }
-
-  // --- 4. .gitignore ---
-  if (gitignoreTemplate != GitignoreTemplate.none) {
-    try {
-      final content = _gitignoreContent(gitignoreTemplate);
-      if (content != null) {
-        await File(path.join(projectPath, '.gitignore')).writeAsString(content);
-      }
-    } catch (e) {
-      warnings.add('.gitignore konnte nicht erstellt werden: $e');
-    }
-  }
-
-  // --- 5. Research README.md ---
+  // --- 5b. Research README.md (create-specific, not in scaffoldProject) ---
   if (projectType == ProjectType.research && !gsdSkeleton) {
     try {
       await File(path.join(projectPath, 'README.md')).writeAsString(
@@ -199,151 +166,6 @@ Future<ProcessResult> _runWithTimeout(
   return Future.any([processFuture, timeoutFuture]);
 }
 
-// ---------------------------------------------------------------------------
-// File content templates
-// ---------------------------------------------------------------------------
-
-String _gsdProjectMd(String displayName) => '''
-# $displayName
-
-## Beschreibung
-
-[Projektbeschreibung hier einfuegen]
-
-## Status
-
-Neues Projekt, noch nicht gestartet.
-
-## Ziele
-
-[Projektziele hier definieren]
-''';
-
-String _gsdStateMd() => '''
-# Project State
-
-## Current Position
-
-Phase: -
-Status: Nicht gestartet
-
-## Accumulated Context
-
-### Decisions
-
-[Entscheidungen werden hier dokumentiert]
-
-### Blockers/Concerns
-
-[Keine]
-
-## Session Continuity
-
-Last session: -
-Stopped at: Projekt erstellt
-''';
-
-String _gsdRoadmapMd(String displayName) => '''
-# Roadmap: $displayName
-
-## Phases
-
-[Phasen hier definieren]
-
----
-
-## Milestone Overview
-
-| Milestone | Description | Status |
-|-----------|-------------|--------|
-| v1.0      | MVP         | planned |
-''';
-
-String _gsdRequirementsMd(String displayName) => '''
-# Requirements: $displayName
-
-## Functional Requirements
-
-| ID   | Requirement | Priority | Status  |
-|------|-------------|----------|---------|
-| F-01 | [Erste Anforderung] | high | open |
-
-## Non-Functional Requirements
-
-| ID   | Requirement | Priority | Status  |
-|------|-------------|----------|---------|
-| N-01 | [Erste nicht-funktionale Anforderung] | medium | open |
-
-## Out of Scope
-
-[Was explizit nicht Teil dieses Projekts ist]
-''';
-
-String _claudeMdContent(String displayName) => '''
-# CLAUDE.md
-
-## Project Overview
-
-**$displayName** — [Projektbeschreibung hier einfuegen]
-
-## Build & Run Commands
-
-```bash
-# [Build-Befehle hier einfuegen]
-```
-
-## Architecture
-
-[Architektur hier beschreiben]
-
-## Conventions
-
-[Konventionen hier definieren]
-''';
-
-String? _gitignoreContent(GitignoreTemplate template) {
-  switch (template) {
-    case GitignoreTemplate.flutter:
-      return '''
-.dart_tool/
-.packages
-build/
-.flutter-plugins
-.flutter-plugins-dependencies
-*.iml
-.idea/
-.vscode/
-*.lock
-.DS_Store
-''';
-    case GitignoreTemplate.nodejs:
-      return '''
-node_modules/
-dist/
-build/
-.env
-.env.local
-*.log
-.DS_Store
-.vscode/
-.idea/
-coverage/
-''';
-    case GitignoreTemplate.python:
-      return '''
-__pycache__/
-*.py[cod]
-.env
-.venv/
-venv/
-dist/
-build/
-*.egg-info/
-.DS_Store
-.idea/
-.vscode/
-''';
-    case GitignoreTemplate.none:
-      return null;
-  }
-}
+// File content templates moved to project_importer_service.dart
+// (gsdProjectMd, gsdStateMd, gsdRoadmapMd, gsdRequirementsMd,
+//  claudeMdContent, gitignoreContent)
