@@ -17,10 +17,10 @@ Requirements for milestone v1.5: Import, Detail-Panel & Memory-Tab.
 ### Folder Import
 
 - [ ] **IMP-01**: User kann ueber den Add+ Button einen existierenden Ordner per macOS Folder Picker auswaehlen
-- [ ] **IMP-02**: Projekttyp (Code/Research) wird automatisch via bestehender _inferType()-Logik erkannt
-- [ ] **IMP-03**: Fehlende Dateien (GSD skeleton, CLAUDE.md, .gitignore, git init) werden automatisch angelegt
-- [ ] **IMP-04**: Ordner ausserhalb bekannter Scan-Verzeichnisse fuehren zur Erweiterung der Scan-Dirs (Parent-Verzeichnis)
-- [ ] **IMP-05**: Duplikat-Erkennung: Ordner innerhalb bestehender Scan-Dirs zeigen Warnung statt erneutes Hinzufuegen
+- [x] **IMP-02**: Projekttyp (Code/Research) wird automatisch via bestehender _inferType()-Logik erkannt
+- [x] **IMP-03**: Fehlende Dateien (GSD skeleton, CLAUDE.md, .gitignore, git init) werden automatisch angelegt
+- [x] **IMP-04**: Ordner ausserhalb bekannter Scan-Verzeichnisse fuehren zur Erweiterung der Scan-Dirs (Parent-Verzeichnis)
+- [x] **IMP-05**: Duplikat-Erkennung: Ordner innerhalb bestehender Scan-Dirs zeigen Warnung statt erneutes Hinzufuegen
 - [ ] **IMP-06**: Import-Vorschau zeigt erkannten Zustand (Typ, vorhandene Dateien, geplante Aktionen) vor Bestaetigung
 - [ ] **IMP-07**: Nach Import erscheint das Projekt sofort im korrekten Tab (Live-Update via Watcher-Neustart)
 
@@ -64,10 +64,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DPL-03 | Phase 19 | Pending |
 | DPL-04 | Phase 19 | Pending |
 | IMP-01 | Phase 20 | Pending |
-| IMP-02 | Phase 20 | Pending |
-| IMP-03 | Phase 20 | Pending |
-| IMP-04 | Phase 20 | Pending |
-| IMP-05 | Phase 20 | Pending |
+| IMP-02 | Phase 20 | Complete |
+| IMP-03 | Phase 20 | Complete |
+| IMP-04 | Phase 20 | Complete |
+| IMP-05 | Phase 20 | Complete |
 | IMP-06 | Phase 20 | Pending |
 | IMP-07 | Phase 20 | Pending |
 | MEM-01 | Phase 21 | Pending |

@@ -143,5 +143,5 @@ Plans:
 | 17. Deletion Core | v1.4 | 2/2 | Complete | 2026-02-27 |
 | 18. External Resource Cleanup | v1.4 | 2/2 | Complete | 2026-02-27 |
 | 19. Detail-Panel Typography | 1/1 | Complete    | 2026-03-05 | - |
-| 20. Folder Import | v1.5 | 0/2 | Not started | - |
+| 20. Folder Import | 1/2 | In Progress|  | - |
 | 21. Memory Tab | v1.5 | 0/? | Not started | - |

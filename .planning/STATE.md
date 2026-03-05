@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: Import, Detail-Panel & Memory-Tab
-status: planning
-stopped_at: Phase 20 context gathered
-last_updated: "2026-03-05T11:07:15.194Z"
-last_activity: 2026-03-05 — Phase 19 Detail-Panel Typography complete
+status: building
+stopped_at: Completed 20-01-PLAN.md
+last_updated: "2026-03-05T11:32:14Z"
+last_activity: 2026-03-05 — Phase 20 Plan 01 Importer Service complete
 progress:
   total_phases: 3
   completed_phases: 1
@@ -27,9 +27,9 @@ See: .planning/PROJECT.md (updated 2026-03-05)
 
 Milestone: v1.5 Import, Detail-Panel & Memory-Tab
 Phase: 20 — Folder Import
-Plan: —
-Status: Phase 19 complete, ready for phase 20 planning
-Last activity: 2026-03-05 — Phase 19 Detail-Panel Typography complete
+Plan: 1 of 4 complete
+Status: Building — Plan 01 Importer Service complete
+Last activity: 2026-03-05 — Phase 20 Plan 01 Importer Service complete
 
 Progress: ██████░░░░░░░░░░░░░░ 33% (1/3 phases)
 
@@ -66,6 +66,11 @@ v1.4 decisions archived to milestones/v1.4-ROADMAP.md.
 - LayoutBuilder statt hardcoded 624px fuer TextPainter-Breite
 - Beschreibungslimit von 200 auf 500 Zeichen (200 reichte nie fuer 5 Zeilen)
 
+**v1.5 Phase 20:**
+- Templates als public top-level functions in importer service
+- scaffoldProject auto-committed nur wenn .git existiert UND Dateien erstellt
+- p.isWithin() fuer scan-dir containment mit trailing slash normalization
+
 ### Pending Todos
 
 - Update ~/.zshrc to add `/opt/homebrew/share/flutter/bin` to PATH (or symlink to expected `/Users/rob/code/flutter`)
@@ -84,6 +89,6 @@ None
 
 ## Session Continuity
 
-Last session: 2026-03-05T11:07:15.191Z
-Stopped at: Phase 20 context gathered
-Resume with: `/gsd:plan-phase 20`
+Last session: 2026-03-05T11:32:14Z
+Stopped at: Completed 20-01-PLAN.md
+Resume with: `/gsd:execute-phase 20` (plan 02 next)
