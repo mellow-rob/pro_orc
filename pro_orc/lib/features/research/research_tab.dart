@@ -1,19 +1,22 @@
+import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:drift/drift.dart' show Value;
 import 'package:path/path.dart' as p;
 import 'package:pro_orc/data/db/app_database.dart';
-import 'package:pro_orc/providers/database_provider.dart';
 import 'package:pro_orc/data/models/project_model.dart';
 import 'package:pro_orc/data/models/project_type.dart';
 import 'package:pro_orc/data/services/project_creator_service.dart';
+import 'package:pro_orc/data/services/project_importer_service.dart';
 import 'package:pro_orc/data/services/quick_actions_service.dart';
 import 'package:pro_orc/features/research/research_project_card.dart';
 import 'package:pro_orc/features/shared/add_project_card.dart';
 import 'package:pro_orc/features/shared/create_project_dialog.dart';
+import 'package:pro_orc/features/shared/import_project_dialog.dart';
 import 'package:pro_orc/features/shared/empty_state.dart';
 import 'package:pro_orc/features/shared/hidden_projects_banner.dart';
 import 'package:pro_orc/features/shared/project_detail_panel.dart';
+import 'package:pro_orc/providers/database_provider.dart';
 import 'package:pro_orc/providers/hidden_projects_provider.dart';
 import 'package:pro_orc/providers/projects_provider.dart';
 import 'package:pro_orc/theme/n3_colors.dart';
@@ -155,8 +158,8 @@ class _ResearchTabState extends ConsumerState<ResearchTab> {
                         delegate: SliverChildBuilderDelegate(
                           (context, index) => AddProjectCard(
                             accentColor: colors.fuch,
-                            onTap: () =>
-                                _openCreateDialog(context, 'research'),
+                            onTapWithPosition: (ctx, pos) =>
+                                _showAddMenu(ctx, pos, 'research'),
                           ),
                           childCount: 1,
                         ),
@@ -175,7 +178,8 @@ class _ResearchTabState extends ConsumerState<ResearchTab> {
                   if (index == visible.length) {
                     return AddProjectCard(
                       accentColor: colors.fuch,
-                      onTap: () => _openCreateDialog(context, 'research'),
+                      onTapWithPosition: (ctx, pos) =>
+                          _showAddMenu(ctx, pos, 'research'),
                     );
                   }
                   return ResearchProjectCard(
@@ -202,6 +206,83 @@ class _ResearchTabState extends ConsumerState<ResearchTab> {
 
   void _showDetail(BuildContext context, ProjectModel project) {
     showProjectDetail(context, project);
+  }
+
+  Future<void> _showAddMenu(
+      BuildContext context, Offset position, String tabType) async {
+    final colors = Theme.of(context).extension<AppColors>()!;
+    final overlay =
+        Overlay.of(context).context.findRenderObject() as RenderBox;
+    final result = await showMenu<String>(
+      context: context,
+      color: colors.bgElev,
+      position: RelativeRect.fromRect(
+        Rect.fromLTWH(position.dx, position.dy, 0, 0),
+        Offset.zero & overlay.size,
+      ),
+      items: [
+        PopupMenuItem(
+          value: 'create',
+          child: Row(
+            children: [
+              Icon(Icons.add, color: colors.textSec, size: 18),
+              const SizedBox(width: 8),
+              Text('Neues Projekt',
+                  style: TextStyle(color: colors.textPri, fontSize: 13)),
+            ],
+          ),
+        ),
+        PopupMenuItem(
+          value: 'import',
+          child: Row(
+            children: [
+              Icon(Icons.folder_open, color: colors.textSec, size: 18),
+              const SizedBox(width: 8),
+              Text('Ordner importieren',
+                  style: TextStyle(color: colors.textPri, fontSize: 13)),
+            ],
+          ),
+        ),
+      ],
+    );
+
+    if (!mounted || result == null) return;
+
+    if (result == 'create') {
+      await _openCreateDialog(context, tabType);
+    } else if (result == 'import') {
+      await _openImportFlow(context);
+    }
+  }
+
+  Future<void> _openImportFlow(BuildContext context) async {
+    final dir = await getDirectoryPath();
+    if (dir == null || !mounted) return;
+
+    final db = ref.read(appDatabaseProvider);
+    final scanDirs = await db.getScanDirs();
+    final analysis = await analyzeFolder(dir, scanDirs);
+
+    if (!mounted) return;
+
+    final result = await showDialog<Map<String, dynamic>>(
+      context: context,
+      barrierDismissible: true,
+      barrierColor: Colors.black54,
+      builder: (context) => ImportProjectDialog(
+        analysis: analysis,
+        scanDirs: scanDirs,
+      ),
+    );
+
+    if (result != null && result['success'] == true && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Projekt importiert'),
+          duration: Duration(seconds: 3),
+        ),
+      );
+    }
   }
 
   Future<void> _openCreateDialog(BuildContext context, String initialTab) async {

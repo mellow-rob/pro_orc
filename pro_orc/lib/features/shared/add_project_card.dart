@@ -3,6 +3,10 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:pro_orc/theme/n3_colors.dart';
 
+/// Callback signature for tap events that include position information.
+typedef PositionTapCallback = void Function(
+    BuildContext context, Offset globalPosition);
+
 /// Ghost GlassCard that invites the user to create a new project.
 ///
 /// Appears as the last card in Code and Research tab grids. Uses a lower
@@ -12,16 +16,16 @@ import 'package:pro_orc/theme/n3_colors.dart';
 ///
 /// Parameters:
 /// - [accentColor]: Cyan for Code tab, Fuchsia for Research tab.
-/// - [onTap]: Fired when user clicks the card. Parent wires to dialog opening.
+/// - [onTapWithPosition]: Fired with context and tap position for popup menu.
 class AddProjectCard extends StatefulWidget {
   const AddProjectCard({
     super.key,
     required this.accentColor,
-    required this.onTap,
+    required this.onTapWithPosition,
   });
 
   final Color accentColor;
-  final VoidCallback onTap;
+  final PositionTapCallback onTapWithPosition;
 
   @override
   State<AddProjectCard> createState() => _AddProjectCardState();
@@ -54,7 +58,8 @@ class _AddProjectCardState extends State<AddProjectCard> {
       onEnter: (_) => setState(() => _isHovered = true),
       onExit: (_) => setState(() => _isHovered = false),
       child: GestureDetector(
-        onTap: widget.onTap,
+        onTapUp: (details) =>
+            widget.onTapWithPosition(context, details.globalPosition),
         child: AnimatedScale(
           scale: _isHovered ? 1.02 : 1.0,
           duration: _animDuration,
