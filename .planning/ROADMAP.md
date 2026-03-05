@@ -88,7 +88,10 @@ See: milestones/v1.4-ROADMAP.md for full details
   2. User kann beliebige Textpassagen in Beschreibungen mit der Maus markieren und per Cmd+C kopieren
   3. Beschreibungstexte sind auf dem dunklen Glasmorphism-Hintergrund kontrastreich lesbar (WCAG AA konform)
   4. Lange Beschreibungen (>5 Zeilen) werden abgeschnitten mit "Mehr anzeigen" Button angezeigt; Klick expandiert den vollen Text, "Weniger anzeigen" klappt wieder zu
-**Plans**: TBD
+**Plans**: 1 plan
+
+Plans:
+- [ ] 19-01-PLAN.md — Typography + Selektierbarkeit + Expand/Collapse fuer Beschreibung und Naechster Schritt
 
 ### Phase 20: Folder Import
 **Goal**: User kann einen existierenden Projektordner per Folder Picker ins Dashboard importieren — mit automatischer Typ-Erkennung, optionalem Scaffolding und sofortigem Erscheinen im richtigen Tab
@@ -135,6 +138,6 @@ See: milestones/v1.4-ROADMAP.md for full details
 | 16. Notion via Claude | v1.3 | 1/1 | Complete | 2026-02-26 |
 | 17. Deletion Core | v1.4 | 2/2 | Complete | 2026-02-27 |
 | 18. External Resource Cleanup | v1.4 | 2/2 | Complete | 2026-02-27 |
-| 19. Detail-Panel Typography | v1.5 | 0/? | Not started | - |
+| 19. Detail-Panel Typography | v1.5 | 0/1 | Not started | - |
 | 20. Folder Import | v1.5 | 0/? | Not started | - |
 | 21. Memory Tab | v1.5 | 0/? | Not started | - |
