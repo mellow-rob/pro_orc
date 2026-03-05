@@ -2,18 +2,20 @@
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-03-01)
+See: .planning/PROJECT.md (updated 2026-03-05)
 
 **Core value:** Auf einen Blick sehen, wo jedes Projekt steht, was der naechste Schritt ist, und welche Tools zur Verfuegung stehen — ohne Terminal-Hopping oder Notion-Suche.
-**Current focus:** Planning next milestone
+**Current focus:** v1.5 Import, Detail-Panel & Memory-Tab
 
 ## Current Position
 
 Milestone: v1.5 Import, Detail-Panel & Memory-Tab
-Phase: Not started (defining requirements)
+Phase: 19 — Detail-Panel Typography
 Plan: —
-Status: Defining requirements
-Last activity: 2026-03-05 — Milestone v1.5 started
+Status: Roadmap created, ready for phase planning
+Last activity: 2026-03-05 — Roadmap created for v1.5
+
+Progress: ░░░░░░░░░░░░░░░░░░░░ 0% (0/3 phases)
 
 ## Performance Metrics
 
@@ -53,8 +55,15 @@ v1.4 decisions archived to milestones/v1.4-ROADMAP.md.
 
 None
 
+### Research Notes (v1.5)
+
+- Only new dependency: `flutter_markdown_plus ^1.0.7` (needed in Phase 21)
+- Watcher restart pitfall: `ref.invalidate(watcherProvider)` after scan-dir changes (Phase 20)
+- NavigationRail enum refactor in Phase 21 to avoid integer index breakage
+- MarkdownStyleSheet needs full n3urala1 customization (Phase 21)
+
 ## Session Continuity
 
 Last session: 2026-03-05
-Stopped at: Defining v1.5 requirements
-Resume file: None
+Stopped at: Roadmap created for v1.5
+Resume with: `/gsd:plan-phase 19`

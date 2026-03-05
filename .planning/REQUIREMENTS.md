@@ -59,30 +59,30 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DPL-01 | — | Pending |
-| DPL-02 | — | Pending |
-| DPL-03 | — | Pending |
-| DPL-04 | — | Pending |
-| IMP-01 | — | Pending |
-| IMP-02 | — | Pending |
-| IMP-03 | — | Pending |
-| IMP-04 | — | Pending |
-| IMP-05 | — | Pending |
-| IMP-06 | — | Pending |
-| IMP-07 | — | Pending |
-| MEM-01 | — | Pending |
-| MEM-02 | — | Pending |
-| MEM-03 | — | Pending |
-| MEM-04 | — | Pending |
-| MEM-05 | — | Pending |
-| MEM-06 | — | Pending |
-| MEM-07 | — | Pending |
+| DPL-01 | Phase 19 | Pending |
+| DPL-02 | Phase 19 | Pending |
+| DPL-03 | Phase 19 | Pending |
+| DPL-04 | Phase 19 | Pending |
+| IMP-01 | Phase 20 | Pending |
+| IMP-02 | Phase 20 | Pending |
+| IMP-03 | Phase 20 | Pending |
+| IMP-04 | Phase 20 | Pending |
+| IMP-05 | Phase 20 | Pending |
+| IMP-06 | Phase 20 | Pending |
+| IMP-07 | Phase 20 | Pending |
+| MEM-01 | Phase 21 | Pending |
+| MEM-02 | Phase 21 | Pending |
+| MEM-03 | Phase 21 | Pending |
+| MEM-04 | Phase 21 | Pending |
+| MEM-05 | Phase 21 | Pending |
+| MEM-06 | Phase 21 | Pending |
+| MEM-07 | Phase 21 | Pending |
 
 **Coverage:**
 - v1.5 requirements: 18 total
-- Mapped to phases: 0
-- Unmapped: 18 (pending roadmap creation)
+- Mapped to phases: 18
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-05*
-*Last updated: 2026-03-05 after initial definition*
+*Last updated: 2026-03-05 after roadmap creation*
