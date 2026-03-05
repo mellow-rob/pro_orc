@@ -9,11 +9,11 @@ See: .planning/PROJECT.md (updated 2026-03-01)
 
 ## Current Position
 
-Milestone: No active milestone
-Phase: -
-Plan: -
-Status: Complete
-Last activity: 2026-03-01 — Archived v1.4 Projekt-Loeschfunktion milestone
+Milestone: v1.5 Import, Detail-Panel & Memory-Tab
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-03-05 — Milestone v1.5 started
 
 ## Performance Metrics
 
@@ -55,6 +55,6 @@ None
 
 ## Session Continuity
 
-Last session: 2026-03-01
-Stopped at: Archived v1.4 milestone
+Last session: 2026-03-05
+Stopped at: Defining v1.5 requirements
 Resume file: None

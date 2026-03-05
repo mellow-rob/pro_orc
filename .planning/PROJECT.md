@@ -45,7 +45,18 @@ Auf einen Blick sehen, wo jedes Projekt steht, was der naechste Schritt ist, und
 
 ### Active
 
-(Keine — bereit fuer naechsten Milestone)
+- Existierenden Ordner per Folder Picker importieren (Auto-Scaffold, Scan-Dir erweitern) — v1.5
+- Detail-Panel Beschreibungstexte lesbar machen (Typografie, Layout) — v1.5
+- Memory-Tab mit Uebersicht aller Memory-Files, Vorschau und Quick Actions — v1.5
+
+## Current Milestone: v1.5 Import, Detail-Panel & Memory-Tab
+
+**Goal:** Existierende Ordner importieren, Detail-Panel Lesbarkeit verbessern, und neuen Memory-Tab mit Uebersicht und Actions einfuehren.
+
+**Target features:**
+- Existierenden Ordner per macOS Folder Picker zum Dashboard hinzufuegen (mit Auto-Scaffolding und Scan-Dir-Erweiterung)
+- Detail-Panel Beschreibungstexte ueberarbeiten fuer bessere Lesbarkeit
+- Neuer Memory-Tab: Uebersicht aller rem-sleep Memory-Files mit Inhalt-Vorschau und Quick Actions (rem-sleep triggern, im Editor oeffnen)
 
 ### Out of Scope
 
@@ -121,4 +132,4 @@ Auf einen Blick sehen, wo jedes Projekt steht, was der naechste Schritt ist, und
 | encodeProjectPath reuse for Claude Memory detection | Exact-path only, no fuzzy scan needed for existence check | ✓ Good — simpler and sufficient |
 
 ---
-*Last updated: 2026-03-01 after v1.4 Projekt-Loeschfunktion milestone*
+*Last updated: 2026-03-05 after starting v1.5 Import, Detail-Panel & Memory-Tab milestone*
