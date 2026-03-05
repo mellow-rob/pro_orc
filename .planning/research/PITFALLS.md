@@ -1,251 +1,132 @@
-# Domain Pitfalls
+# Domain Pitfalls — v1.5 Milestone
 
-**Domain:** Flutter macOS Desktop App — Project Orchestration Dashboard (Pro Orc rewrite from Next.js)
-**Researched:** 2026-02-19
-**Confidence:** MEDIUM-HIGH. Critical pitfalls verified against Flutter GitHub issues and official docs. Some specifics (OKLCH conversions, exact API behavior under Impeller) are MEDIUM — confirmed directionally from multiple sources but not exhaustively tested.
+**Domain:** Adding folder import, detail-panel overhaul, and memory tab to existing Flutter macOS dashboard (Pro Orc)
+**Researched:** 2026-03-05
+**Confidence:** HIGH for integration pitfalls (verified against actual codebase). MEDIUM for markdown rendering specifics (WebSearch + official docs, not Context7-verified).
 
 ---
 
 ## Critical Pitfalls
 
-Mistakes that cause rewrites, crashes, or complete feature failure.
+Mistakes that cause rewrites, data loss, or broken user-facing features.
 
 ---
 
-### Pitfall 1: macOS Sandbox Blocks All Filesystem Access — Silent at Build Time
+### Pitfall 1: WatcherProvider Does Not Restart When Scan Dirs Change
 
-**What goes wrong:** Flutter macOS apps run inside Apple's App Sandbox by default. Any `File.readAsBytes()`, `Directory.list()`, or `FileSystemEntity.watch()` call against paths outside the app's own container (e.g., `~/project_orchestration/`) fails at runtime with `FileSystemException: Cannot open file, OS Error: Operation not permitted, errno = 1`. This is not a compile-time error. Debug builds via `flutter run` may work differently than release builds because the sandbox enforcement differs between configurations.
+**What goes wrong:** The `watcherProvider` is a `StreamProvider` with `ref.keepAlive()` that reads scan dirs from the database at initialization time, creates a `WatcherService.multi(allDirs)`, and then yields its events forever. When a user imports a new folder (adding a new scan directory), `projectsProvider` is invalidated and re-scans correctly, but the watcher is never recreated because it has `keepAlive()`. The new folder is scanned once but never watched for live updates. The user sees the imported project appear but subsequent changes in that folder are invisible until app restart.
 
-**Why it happens:** Flutter generates two entitlement files: `macos/Runner/DebugProfile.entitlements` and `macos/Runner/Release.entitlements`. The debug file includes JIT exceptions needed for development. Developers test with `flutter run`, assume it works, then discover the release build is completely broken because `Release.entitlements` was never updated. For a single-user, direct-distribution (not App Store) app, the sandbox is still active but you have more latitude — you can disable it entirely or add broad entitlements. The official Flutter docs only document user-file-picker access, not programmatic broad access.
+**Why it happens:** The watcher was designed as a permanent singleton in v1.1 (per CONTEXT.md: "keepAlive: never disposed, locked decision"). This was correct when scan dirs were static. Folder import makes scan dirs dynamic at runtime.
 
-**How to avoid:** For a direct-distribution (non-App Store) app, disable the sandbox entirely by removing `com.apple.security.app-sandbox` from **both** entitlement files:
-```xml
-<!-- macos/Runner/DebugProfile.entitlements AND Release.entitlements -->
-<!-- Remove or set to false: -->
-<!-- <key>com.apple.security.app-sandbox</key><true/> -->
-```
-Or, if you want to keep the sandbox for any reason, add:
-```xml
-<key>com.apple.security.files.user-selected.read-write</key><true/>
-```
-But note: `user-selected` only covers paths the user explicitly opened via a file picker — it does NOT cover programmatic access to `~/project_orchestration/`. For Pro Orc's use case (watching a known directory), disabling the sandbox is the right call.
+**Consequences:** Imported projects appear stale. Users think the app is broken because other projects update in real-time but the imported one does not.
 
-**Warning signs:**
-- `flutter run` works but `flutter build macos && open build/macos/Build/Products/Release/ProOrc.app` fails
-- Any `FileSystemException` with `errno = 1` or `errno = 13`
-- App works for the first launch then fails on restart (sandbox container paths differ)
+**Prevention:**
+- When `_saveScanDirs()` completes in settings (or after folder import), also `ref.invalidate(watcherProvider)` to force recreation with the new directory list
+- The old `WatcherService` will be disposed via `ref.onDispose(service.dispose)`, so no resource leak
+- Test: import a folder, modify a file in it, verify the dashboard updates without app restart
+- Alternative: add a method to `WatcherService` to dynamically add a directory to the existing multi-watcher instead of full recreation
 
-**Phase to address:** Phase 1 (Foundation/Setup). Set this before writing a single line of filesystem code. Verify by running the built `.app`, not `flutter run`.
+**Detection:** Dashboard shows imported project but does not reflect file changes made after import.
+
+**Phase to address:** Folder Import phase. This is the first thing to verify after implementing the import flow.
 
 ---
 
-### Pitfall 2: Dart `Process.run()` Cannot Find `git` — PATH Not Inherited from Shell
+### Pitfall 2: Markdown Rendering on Dark Background — Default Styles Are Unreadable
 
-**What goes wrong:** When Flutter macOS apps spawn subprocesses via `Process.run('git', [...])`, they inherit the environment from the macOS Launch Services environment, NOT the user's shell environment. On macOS, the Launch Services PATH is `/usr/bin:/bin:/usr/sbin:/sbin`. If the user installed git via Homebrew (`/opt/homebrew/bin/git` on Apple Silicon, `/usr/local/bin/git` on Intel), `Process.run('git', [...])` throws `ProcessException: No such file or directory` — even though `git` works fine in the terminal.
+**What goes wrong:** Flutter's `flutter_markdown` package (and similar packages like `markdown_widget`) uses `MarkdownStyleSheet.fromTheme()` which pulls from the app's `ThemeData`. However, several elements have hardcoded light-theme assumptions:
+1. **Blockquote background** defaults to `Colors.blue.shade100` (bright light blue) — confirmed open issue flutter/flutter#82020
+2. **Code block background** defaults to a light gray that disappears against dark surfaces
+3. **Table borders** default to dark colors that are invisible on dark backgrounds
+4. **Link colors** may default to Material blue which clashes with the n3urala1 cyan/fuchsia palette
 
-This is a confirmed Dart SDK issue (dart-lang/sdk#38364) and differs from Node.js behavior, where `child_process.exec()` uses the shell and inherits PATH normally.
+For Pro Orc's glassmorphism dark theme with translucent backgrounds, the default stylesheet will produce text blocks that look broken — bright rectangles floating over the dark glass cards.
 
-**Why it happens:** macOS GUI apps launched via `.app` bundles receive a minimal environment from LaunchServices. `flutter run` also spawns the app as a subprocess of the terminal, so it inherits the terminal's PATH — masking the problem during development. The built `.app` does not have this inheritance.
+**Why it happens:** `flutter_markdown` was designed for light themes first. The `fromTheme` constructor adapts text colors but NOT decoration colors (backgrounds, borders). These require explicit `MarkdownStyleSheet` overrides.
 
-**How to avoid:**
+**Consequences:** Memory tab showing MEMORY.md content will have garish light-colored blockquotes and code blocks. Detail panel description text (if rendered as markdown) will clash with the glass card background.
+
+**Prevention:**
+- Build a `MarkdownStyleSheet` that explicitly sets every decoration property using `AppColors`:
 ```dart
-// Option 1: Use the full path (reliable but fragile if Homebrew prefix differs)
-final result = await Process.run('/opt/homebrew/bin/git', ['status', '--porcelain'],
-  workingDirectory: projectPath,
-);
-
-// Option 2: Resolve git path at startup using `which`
-Future<String> resolveGitPath() async {
-  // Try common locations
-  final candidates = [
-    '/opt/homebrew/bin/git',  // Apple Silicon Homebrew
-    '/usr/local/bin/git',     // Intel Homebrew
-    '/usr/bin/git',           // System git (Xcode CLT)
-  ];
-  for (final path in candidates) {
-    if (await File(path).exists()) return path;
-  }
-  throw Exception('git not found. Install Xcode Command Line Tools.');
-}
-
-// Option 3: runInShell: true (uses /bin/sh which sources /etc/paths)
-final result = await Process.run('git', ['status'],
-  workingDirectory: projectPath,
-  runInShell: true,  // /bin/sh inherits /etc/paths — usually enough
-);
-```
-`runInShell: true` is the simplest approach and covers most cases. Cache the resolved git path at app startup, show an error UI if git is not found rather than silently failing.
-
-**Warning signs:**
-- `ProcessException: No such file or directory` when running git commands
-- Works with `flutter run` but fails in the built `.app`
-- Fails on a clean system with only Homebrew git installed
-
-**Phase to address:** Phase 2 (Git Integration). Resolve git path in app initialization code, before any git calls.
-
----
-
-### Pitfall 3: `Process.run()` / `Process.start()` Hangs on macOS Debug Builds (M1)
-
-**What goes wrong:** On Apple Silicon Macs in debug mode, `Process.run()` and `Process.start()` can hang indefinitely after a few iterations. This is a confirmed Flutter issue (#95805). The process is spawned but never completes — `await Process.run()` never resolves, freezing the caller. The issue is intermittent and disappears in release builds or on Intel Macs, making it difficult to diagnose.
-
-**Why it happens:** Suspected interaction between Dart's async runtime and the macOS process management on ARM under the JIT debugger. The issue is not fully resolved as of early 2026.
-
-**How to avoid:**
-- Always use `Process.run()` with a timeout wrapper during development:
-```dart
-Future<ProcessResult> runGitWithTimeout(String gitPath, List<String> args, {
-  required String workingDirectory,
-  Duration timeout = const Duration(seconds: 10),
-}) async {
-  return Process.run(gitPath, args, workingDirectory: workingDirectory)
-    .timeout(timeout, onTimeout: () {
-      throw TimeoutException('git $args timed out after ${timeout.inSeconds}s');
-    });
-}
-```
-- Test git integrations in **release mode** (`flutter run --release`) periodically — debug mode hangs may not appear in release.
-- Keep subprocess calls minimal — avoid calling git on every file change event. Debounce to reduce invocation frequency.
-
-**Warning signs:**
-- App freezes on a screen that triggers git status
-- `await Process.run()` never returns in debug mode
-- CPU spikes with no observable output
-
-**Phase to address:** Phase 2 (Git Integration). Add timeout wrappers around all process invocations. Test in release mode before marking phase complete.
-
----
-
-### Pitfall 4: Dart File Watcher Misses Events and Coalesces Changes — Different from chokidar
-
-**What goes wrong:** Dart's `FileSystemEntity.watch()` and the `watcher` package (the Dart team's high-level alternative) have macOS-specific behaviors that differ significantly from Node.js chokidar:
-
-1. **Directory create events are sometimes omitted** (dart-lang/sdk#62124 — open issue as of 2026)
-2. **Multiple changes in a short window are coalesced into a single event** — you may get one event for 50 file changes
-3. **Events for files just before `watch()` started may arrive** — initial stale events can misfire
-4. **`isDirectory` assertion failures** — the `watcher` package has a known `Failed assertion: '!event.isDirectory': is not true` crash on macOS when directory events arrive (dart-lang/watcher#79)
-
-chokidar provides debounced, per-file events with `awaitWriteFinish`. Dart's watcher is lower-level and more raw.
-
-**How to avoid:**
-- Use the `watcher` package (pub.dev) instead of raw `FileSystemEntity.watch()` — it adds a normalization layer
-- But wrap the `watcher` package with your own debounce (300ms minimum) because event coalescing can cause missed updates
-- Do NOT rely on directory create events — use a polling fallback for directory-level changes if needed
-- Wrap watcher initialization in try/catch — filesystem access may throw if sandbox is still active (see Pitfall 1)
-```dart
-// Debounce wrapper around watcher events
-Timer? _debounce;
-void _onFileChanged(WatchEvent event) {
-  _debounce?.cancel();
-  _debounce = Timer(const Duration(milliseconds: 350), () {
-    _processChange(event);
-  });
-}
-```
-
-**Warning signs:**
-- Dashboard misses updates when many files change simultaneously (e.g., `git checkout`)
-- App crashes with `Failed assertion: '!event.isDirectory': is not true`
-- Spurious events fire on app startup
-
-**Phase to address:** Phase 2 (Filesystem Watching). Implement debouncing from day one.
-
----
-
-### Pitfall 5: Menubar-Only App Requires Swift AppDelegate Changes — Not Dart-Only
-
-**What goes wrong:** A "menubar only" app (no Dock icon, no window — just a status bar item with a popover) cannot be built in pure Dart/Flutter. It requires modifying `macos/Runner/AppDelegate.swift` to:
-1. Set `NSApp.setActivationPolicy(.accessory)` to hide the Dock icon
-2. Create `NSStatusItem` in AppKit
-3. Manage a `NSPopover` containing the Flutter view
-
-The `tray_manager` and `system_tray` packages provide a cross-platform tray icon with a context menu, but they do NOT provide:
-- A popover/window attached to the tray icon (they show a context menu, not a Flutter UI)
-- `LSUIElement` behavior (no Dock icon) — this requires `Info.plist` modification
-
-Developers who expect `tray_manager` to do everything are surprised when the Flutter view is still showing in a separate main window with a Dock icon.
-
-**How to avoid:**
-1. Add `LSUIElement` to `macos/Runner/Info.plist`:
-```xml
-<key>LSUIElement</key>
-<true/>
-```
-2. Modify `AppDelegate.swift` to suppress the default window and create the `NSStatusItem`. Use the community template at https://github.com/mynameiskenlee/flutter_macos_menubar_example as a reference.
-3. Use `tray_manager` for the tray icon management in Dart, but the popover/window behavior requires native Swift code.
-
-**Warning signs:**
-- Dock icon is still visible after adding tray icon
-- Tray icon click shows a right-click context menu instead of a popover window
-- Main app window flashes on startup before being hidden
-
-**Phase to address:** Phase 1 (Foundation/Setup). The AppDelegate architecture must be established before building any Dart UI.
-
----
-
-### Pitfall 6: `BackdropFilter` Glassmorphism Has Multiple Impeller Rendering Bugs
-
-**What goes wrong:** The project requires glassmorphism/blur effects. Flutter's `BackdropFilter(filter: ImageFilter.blur(...))` has documented Impeller rendering issues on macOS:
-
-1. **Performance regression vs. Skia** — Impeller processes the entire screen to implement backdrop blur even when only a small region needs blurring. With multiple blur panels, this creates significant GPU load. Confirmed in flutter/flutter#149368.
-2. **Artifacts at high sigma values** — Sigma values ≥ 40 produce visible rendering artifacts when content scrolls under the blur. Confirmed in flutter/flutter#143947.
-3. **White halo on dark backgrounds** — `BackdropFilter` samples pixels outside its clipped bounds, producing a white glow around blur containers on dark backgrounds. Confirmed in flutter/flutter#173530 — this is directly relevant to a dark-themed glassmorphism dashboard.
-4. **Frame drops after sustained scrolling** — With multiple `BackdropFilter` widgets in a `ListView`, raster thread average degrades from ~6ms (Skia) to ~16ms (Impeller) with spikes to 24ms+ (flutter/flutter#126353).
-
-**How to avoid:**
-- Wrap every `BackdropFilter` in `RepaintBoundary` — this limits the repaint scope and prevents the entire widget tree from being repainted on every frame:
-```dart
-RepaintBoundary(
-  child: ClipRRect(
-    borderRadius: BorderRadius.circular(12),
-    child: BackdropFilter(
-      filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.08),
-        ),
-        child: content,
-      ),
-    ),
+MarkdownStyleSheet(
+  // Text colors from theme
+  p: TextStyle(color: colors.textPri, fontSize: 14, height: 1.6),
+  h1: TextStyle(color: colors.textPri, fontSize: 20, fontWeight: FontWeight.w600),
+  // Code blocks — dark elevated surface
+  codeblockDecoration: BoxDecoration(
+    color: colors.bgElev.withValues(alpha: 0.8),
+    borderRadius: BorderRadius.circular(8),
   ),
+  code: TextStyle(color: colors.cyan, fontFamily: 'SF Mono', fontSize: 13),
+  // Blockquote — accent-tinted container
+  blockquoteDecoration: BoxDecoration(
+    color: colors.cyan.withValues(alpha: 0.06),
+    border: Border(left: BorderSide(color: colors.cyan.withValues(alpha: 0.4), width: 3)),
+    borderRadius: BorderRadius.circular(4),
+  ),
+  // Table
+  tableBorder: TableBorder.all(color: colors.textDim.withValues(alpha: 0.3)),
+  // Links
+  a: TextStyle(color: colors.cyan, decoration: TextDecoration.underline),
 )
 ```
-- Keep blur sigma between 5–15. Values above 20 look bad AND cause performance issues.
-- Avoid `BackdropFilter` inside scrollable lists. Use a static background blur instead.
-- For the white halo issue on dark backgrounds: add an explicit `ClipRRect` or `ClipPath` tightly around the `BackdropFilter`. The bug occurs when the blur samples outside the clip — explicit clipping constrains sampling.
-- As a fallback, simulate glassmorphism with a semi-transparent `Container` + `Border` instead of actual blur — looks 90% as good without the GPU cost.
+- Create this stylesheet as a reusable factory method (e.g., `AppColors.markdownStyle()`) to ensure consistency across detail panel and memory tab
+- Test with real MEMORY.md files that contain code blocks, blockquotes, headers, and links
 
-**Warning signs:**
-- White glow/halo visible around glass cards on dark background
-- Noticeable frame drops when scrolling past blur panels
-- Strange smearing artifacts around blurred regions
+**Detection:** Any bright-colored rectangle or invisible text in the markdown rendering area.
 
-**Phase to address:** Phase 3 (UI/Theming). Establish the glassmorphism pattern once and reuse it — don't let blur be added ad-hoc across components.
+**Phase to address:** Detail-Panel phase (before Memory Tab, since Memory Tab will reuse the same stylesheet).
 
 ---
 
-### Pitfall 7: OKLCH Colors Cannot Be Used Directly in Flutter's `Color` System
+### Pitfall 3: Folder Import Creates Duplicate Projects When Folder Is Already Inside a Scan Dir
 
-**What goes wrong:** The existing web dashboard uses OKLCH color values (e.g., `oklch(0.72 0.19 250)`) via CSS. Flutter's `Color` class uses ARGB integers. There is no native OKLCH support in Flutter's color system. Copying OKLCH values from CSS to Flutter silently produces wrong colors — the values are just interpreted as RGB components, resulting in completely different hues and luminance.
+**What goes wrong:** User imports `/Users/rob/code/my-project` via the folder picker. If `/Users/rob/code` is already a scan directory, `my-project` is already being scanned as a child. Adding `/Users/rob/code/my-project` as a new scan dir creates a duplicate — the project appears twice in the dashboard (once from the parent scan dir, once from the new explicit scan dir).
 
-Additionally, Flutter's wide gamut color support (Display P3) is partial as of early 2026 — it applies to images, not to `Color` instances used in widgets. Using Display P3 OKLCH colors from the CSS design system in Flutter means colors will be clamped to sRGB.
+**Why it happens:** `ProjectScanner.scanAll()` loops through `db.getScanDirs()` and scans each directory for project subdirectories. It does not deduplicate by absolute path across scan directories. The existing `_addScanDir` in settings also does not check for parent/child relationships.
 
-**How to avoid:**
-- At design time, convert all OKLCH values to sRGB hex using a tool like https://oklch.com or a design token pipeline. Accept that the colors will be sRGB approximations.
-- If the exact color fidelity matters, use the `okcolor` or `canary_oklch` pub.dev packages which provide OKLCH-to-sRGB conversion at runtime:
+**Consequences:** Duplicate cards in the dashboard. If the user then deletes one via the delete dialog, it only removes from one scan source. Confusion and data inconsistency.
+
+**Prevention:**
+- Before adding a new scan dir, check two conditions:
+  1. The folder is not already a direct child of an existing scan dir (parent check)
+  2. No existing scan dir is a child of the new folder (child check — importing a parent would subsume existing specific dirs)
+- Show appropriate feedback: "Dieser Ordner wird bereits gescannt (ueber ~/code)" or "Dieser Ordner enthaelt bereits gescannte Verzeichnisse"
+- For the "folder is already scanned" case: still allow import but skip adding to scan dirs — just run auto-scaffolding on the existing project
+- For the "importing a parent" case: warn that this will also scan many other projects
+
+**Detection:** Same project name appears twice in the Code or Research tab grid.
+
+**Phase to address:** Folder Import phase. Add validation before modifying scan dirs.
+
+---
+
+### Pitfall 4: NavigationRail Index Mismatch After Adding Memory Tab
+
+**What goes wrong:** The current `_SideNav` uses a static `_items` list with 4 entries (Code=0, Research=1, Tools=2, Agents=3) and Settings as a special trailing item at index 4. The `IndexedStack` has 5 children. Adding a Memory tab means either:
+- Inserting it into `_items` (shifting indices of everything after it)
+- Appending it at the end (before Settings)
+
+If the Memory tab is inserted at position 3 (between Tools and Agents), Agents becomes index 4, Settings becomes index 5. Any hardcoded `selectedIndex == 4` for Settings breaks. The `onSelect(4)` for Settings now points to Agents.
+
+**Why it happens:** The shell uses integer indices for tab selection rather than an enum or named constants. This is fragile when adding new tabs.
+
+**Consequences:** Clicking Settings opens Agents tab. Or clicking the new Memory tab opens something else entirely. Silent wrong behavior — no crash, just incorrect navigation.
+
+**Prevention:**
+- Refactor tab selection to use an enum:
 ```dart
-// Using okcolor package
-import 'package:okcolor/okcolor.dart';
-final color = OKLCHColor(l: 0.72, c: 0.19, h: 250).toColor();
+enum AppTab { code, research, tools, agents, memory, settings }
 ```
-- For the Pro Orc dark theme, define colors as a `ThemeData` extension with pre-converted sRGB hex values. Do not try to port the CSS OKLCH values directly.
+- Replace `_selectedIndex` int with `AppTab _selectedTab`
+- Map each enum value to its `IndexedStack` child position
+- This makes adding a new tab safe — just add the enum value and its widget, ordering is handled by the enum-to-index mapping
+- If refactoring to enum feels heavy, at minimum define constants: `static const kSettingsIndex = 5;` and update all references when adding the tab
 
-**Warning signs:**
-- Colors in Flutter app look noticeably different from the web version
-- Colors appear as unexpected hues (OKLCH values misinterpreted as RGB)
-- Colors are slightly desaturated (P3 gamut compressed to sRGB)
+**Detection:** Settings button opens wrong tab after adding Memory tab.
 
-**Phase to address:** Phase 3 (UI/Theming). Create a Dart color constants file with pre-converted OKLCH→sRGB hex values before building any UI components.
+**Phase to address:** Memory Tab phase. Refactor the index system BEFORE adding the new tab widget.
 
 ---
 
@@ -253,115 +134,180 @@ final color = OKLCHColor(l: 0.72, c: 0.19, h: 250).toColor();
 
 ---
 
-### Pitfall 8: Platform Channel Native Code Changes Require Full Restart — Not Hot Reload
+### Pitfall 5: Memory Tab File Reading Blocks the UI Thread
 
-**What goes wrong:** Flutter's hot reload does not apply to changes in Swift/Objective-C platform channel code (`macos/Runner/AppDelegate.swift`, any plugin native code). Developers making changes to Swift files expect hot reload to pick them up — it does not. More dangerous: hot reload may succeed without error but use the old native code, making it appear that the Swift change had no effect. This wastes significant debugging time.
+**What goes wrong:** The memory tab needs to read and display MEMORY.md file contents. The existing `memory_reader.dart` uses sync file operations (`existsSync`, `statSync`, `listSync`) because "not hot path, per-project check, simpler code" (per Key Decisions). But the Memory tab will need to read the actual file content of potentially 20+ MEMORY.md files for preview. Reading file contents synchronously on the main isolate will cause jank — especially if memory files are large (some MEMORY.md files can be 10KB+).
 
-**How to avoid:**
-- Establish the rule from day one: **any change to `macos/Runner/*.swift` requires `flutter run` restart, not hot reload**
-- Comment the Swift files prominently: `// Changes to this file require full restart (not hot reload)`
-- Keep Swift code minimal — push logic to Dart wherever possible. The Swift side should only do what is impossible in Dart.
+**Why it happens:** The existing memory reader was designed for existence checks only (`existsSync` + `statSync`), not content reading. Extending it to read content without switching to async will block the UI.
 
-**Warning signs:**
-- Swift changes appear to have no effect after hot reload
-- Tray icon behavior changes not reflected after "r" in the terminal
+**Prevention:**
+- Use `File.readAsString()` (async) for content reading, even if the existence check remains sync
+- Consider reading content lazily — only when the user expands/selects a memory file in the tab, not all at once
+- If showing previews for all memory files, use a `FutureProvider` or compute the previews in batches
+- Truncate preview to first N lines (e.g., 20 lines) to avoid reading entire large files
 
-**Phase to address:** Phase 1 (Foundation/Setup). Establish the development workflow expectation upfront.
+**Detection:** UI freezes briefly when switching to the Memory tab, especially with many projects.
 
----
-
-### Pitfall 9: `tray_manager` Crashes on Menu Click When `app_links` Package Is Present
-
-**What goes wrong:** If the app uses the `app_links` package (for URL scheme handling) alongside `tray_manager`, an older version of `app_links` internally blocks event propagation. This prevents tray menu click events from reaching the Dart handler — clicking a menu item does nothing, or the app crashes with an obscure `NSInvocation` error.
-
-**How to avoid:**
-- If using `app_links`, ensure version >= 6.3.3.
-- Pro Orc does not need URL scheme handling (single-user local app), so do not add `app_links`. If needed later, pin to >= 6.3.3.
-- Verify: after setting up `tray_manager`, click every menu item and confirm the Dart callback fires.
-
-**Warning signs:**
-- Tray menu items are visible but do nothing when clicked
-- Console shows `NSInvocation` or event propagation errors
-
-**Phase to address:** Phase 1 (Foundation/Setup, tray integration).
+**Phase to address:** Memory Tab phase.
 
 ---
 
-### Pitfall 10: `window_manager` App Window Appears Behind Other Windows on First Show
+### Pitfall 6: Memory Path Encoding Edge Cases With Imported Projects
 
-**What goes wrong:** After using `window_manager` to control the Flutter window (show/hide from tray click), the window sometimes appears behind other active windows instead of focusing in front. A known workaround exists but is awkward: temporarily set `alwaysOnTop = true`, then immediately set it back to `false`. This creates a visible flash or flicker.
+**What goes wrong:** Claude's memory path encoding replaces both `/` and `_` with `-`. The existing `encodeProjectPath()` handles this. But imported projects may be anywhere on the filesystem, not just under `~/code/` or `~/project_orchestration/`. Edge cases:
+1. Paths with double hyphens (e.g., `/Users/rob/my--project`) — encoding is ambiguous
+2. Paths with spaces (e.g., `/Users/rob/My Project`) — Claude may encode these differently
+3. Very long paths — the `maxDirLen` constraint in fuzzy matching may reject valid matches
+4. Paths under unusual locations (e.g., `/Volumes/External/projects/foo`) — encoding produces very long dir names
 
-**How to avoid:**
+The existing fuzzy matching uses `maxDirLen = encodedPath.length + 10` which was tuned for `~/code/` paths. Imported projects from other locations may have different Claude encoding patterns.
+
+**Why it happens:** The memory reader was built for a known set of project locations. Folder import makes project locations unpredictable.
+
+**Prevention:**
+- Test memory detection with imported projects from non-standard paths
+- Consider increasing `maxDirLen` tolerance for imported projects, or making it configurable
+- Add a fallback: if no memory is found via path encoding, scan all Claude project directories and check if any contain the project's basename as a suffix
+- Log (debug-level) which strategy matched for memory detection — aids debugging when users report missing memory indicators
+
+**Detection:** Imported projects never show memory indicators even when MEMORY.md exists in `~/.claude/projects/`.
+
+**Phase to address:** Memory Tab phase (since it will exercise memory detection more heavily than the indicator).
+
+---
+
+### Pitfall 7: Auto-Scaffolding on Import Overwrites Existing .planning Files
+
+**What goes wrong:** The folder import feature includes "Auto-Scaffold" — creating `.planning/PROJECT.md`, `STATE.md`, `ROADMAP.md` if they don't exist. But "don't exist" is a tricky check. The project may have `.planning/` with some files but not others. Or it may have GSD files in a different layout (e.g., `docs/` instead of `.planning/`). Blindly checking for `.planning/PROJECT.md` and creating it if absent could:
+1. Create a partial scaffold alongside existing planning docs
+2. Miss that the project already has GSD data in a different location
+
+**Why it happens:** The `GsdParser` already handles multiple fallback paths, but the scaffold creator may not be aware of these fallbacks.
+
+**Prevention:**
+- Before scaffolding, run `GsdParser.parse()` on the imported directory
+- If `GsdData.isEmpty` is false, skip scaffolding entirely — the project already has planning data
+- If empty, check for existing `.planning/` directory — if it exists with any files, ask the user before creating new ones
+- Show a preview of what will be created: "Folgende Dateien werden erstellt: PROJECT.md, STATE.md, ROADMAP.md"
+- Never overwrite existing files
+
+**Detection:** User imports a project and their existing planning docs are supplemented with empty templates, confusing the GSD status display.
+
+**Phase to address:** Folder Import phase.
+
+---
+
+### Pitfall 8: Detail Panel Description Overhaul Breaks Existing Card Layout
+
+**What goes wrong:** The v1.5 goal includes "Detail-Panel Beschreibungstexte lesbar machen." The current `_SectionCard` for "BESCHREIBUNG" renders `project.description` as plain `Text` with `fontSize: 14, height: 1.5`. If this is changed to markdown rendering (to support formatting in descriptions), the widget height changes unpredictably. Descriptions that were 2 lines of plain text may expand to 5+ lines with markdown paragraph spacing. This pushes the scrollable content down, potentially hiding the quick actions row below the fold.
+
+**Why it happens:** Plain text and markdown rendering have different line height, paragraph spacing, and block element padding behaviors. What looks compact as plain text becomes spacious as rendered markdown.
+
+**Prevention:**
+- If switching to markdown rendering: constrain the description section with a `ConstrainedBox(maxHeight: ...)` and make it independently scrollable, OR
+- Keep description as plain text and only use markdown rendering in the Memory tab where content is expected to be long
+- If markdown is used: explicitly set `MarkdownStyleSheet` paragraph spacing to match current `height: 1.5` — default markdown paragraph spacing is larger
+- Test with real project descriptions of varying lengths (1 line to 20+ lines)
+
+**Detection:** Detail panel looks spacious/empty for short descriptions, or quick actions disappear below fold for long ones.
+
+**Phase to address:** Detail-Panel phase.
+
+---
+
+### Pitfall 9: file_selector getDirectoryPath Returns null Without Error on Cancel
+
+**What goes wrong:** The existing `_addScanDir()` in settings already uses `getDirectoryPath()` from `file_selector` correctly (null check on result). But the folder import flow is more complex — it may chain operations after the picker: validate path, check for duplicates, run scaffolding, add to scan dirs, invalidate providers. If any step in this chain assumes the path is non-null because "the picker was shown," it will crash when the user cancels the picker.
+
+**Why it happens:** Developers focus on the happy path (user selects a folder) and forget that cancel returns null, not an exception.
+
+**Prevention:**
+- Return early on null immediately after `getDirectoryPath()`, before any other logic
+- Do not show "importing..." loading state before the picker returns — the user may cancel
+- If using a dialog with the picker, do not close the dialog on picker launch (user may cancel and expect to be back in the dialog)
+
+**Detection:** App crashes or shows error when user opens folder picker then clicks Cancel.
+
+**Phase to address:** Folder Import phase.
+
+---
+
+### Pitfall 10: Memory Tab Accent Color Collision With Existing Tabs
+
+**What goes wrong:** The existing color scheme uses cyan for Code tab, fuchsia for Research tab. If the Memory tab reuses cyan or fuchsia, it becomes visually indistinguishable from an existing tab. If it uses a new color (e.g., violet — already used for memory indicators), that color needs to be added to `AppColors` ThemeExtension and may clash with the glassmorphism backdrop.
+
+**Why it happens:** The n3urala1 color system was designed for two primary accents. Adding a third requires careful palette integration.
+
+**Prevention:**
+- Use violet/purple for the Memory tab — it is already associated with memory via the `MemoryIndicator` (which uses `colors.violet` for fresh memory state)
+- Verify `colors.violet` exists in `AppColors` already (it does, used by `MemoryIndicator`)
+- Test the violet accent against the glassmorphism backdrop — ensure sufficient contrast
+- Keep the same `withValues(alpha: 0.06)` and `withValues(alpha: 0.1)` patterns used by other tab accents for consistency
+
+**Detection:** Memory tab looks identical to another tab, or its accent color is invisible against the dark glass background.
+
+**Phase to address:** Memory Tab phase (UI design decision needed before building the tab).
+
+---
+
+## Minor Pitfalls
+
+---
+
+### Pitfall 11: IndexedStack Keeps All Tab Widgets Alive — Memory Tab May Be Expensive
+
+**What goes wrong:** `ShellScreen` uses `IndexedStack` which builds ALL children but only displays one. The Memory tab will read file contents, parse markdown, and potentially render many widgets. All of this happens even when the user is on the Code tab and has never opened the Memory tab.
+
+**Prevention:**
+- Use lazy initialization inside the Memory tab — only load content on first build or when `selectedIndex` matches
+- Or wrap the Memory tab in a builder that defers initialization:
 ```dart
-await windowManager.show();
-await windowManager.focus();
-// Workaround for z-order bug:
-await windowManager.setAlwaysOnTop(true);
-await Future.delayed(const Duration(milliseconds: 50));
-await windowManager.setAlwaysOnTop(false);
+IndexedStack(
+  index: _selectedIndex,
+  children: [
+    CodeTab(),
+    ResearchTab(),
+    ClaudeToolsTab(),
+    AgentsTab(),
+    _selectedIndex >= 4 ? MemoryTab() : const SizedBox.shrink(),
+    SettingsTab(),
+  ],
+)
 ```
-The delay is necessary — setting `alwaysOnTop` and immediately unsetting it in the same event loop tick has no effect.
+- But note: `SizedBox.shrink()` in `IndexedStack` means the tab loses state when switching away. Better approach is lazy load inside the tab widget itself using a `_initialized` flag.
 
-**Warning signs:**
-- Window appears but is behind Terminal or another app
-- Clicking the tray icon does not bring the window to front
-
-**Phase to address:** Phase 1 (Foundation/Setup).
+**Phase to address:** Memory Tab phase.
 
 ---
 
-### Pitfall 11: State Management Over-Engineering — Riverpod Providers for Everything
+### Pitfall 12: Markdown Package Selection — flutter_markdown vs markdown_widget
 
-**What goes wrong:** Flutter desktop apps are not mobile apps with complex navigation stacks. Pro Orc is a single-view dashboard. Developers coming from React often map the entire state to providers, creating a web of `StateNotifierProvider`, `FutureProvider`, and `StreamProvider` for every piece of data. This creates:
-- Unnecessary complexity for a single-user app with no network state
-- Provider invalidation cascades that trigger excessive rebuilds
-- Harder debugging when providers depend on each other
+**What goes wrong:** `flutter_markdown` (official Flutter package) is simpler but has known dark theme issues and limited customization. `markdown_widget` is more flexible but adds a heavier dependency. Choosing the wrong one leads to either fighting dark theme issues or over-engineering the markdown rendering.
 
-**How to avoid:**
-- Use Riverpod for state that genuinely needs it: the filesystem watch stream, git status per project
-- Use plain Dart classes and `setState` for local widget state
-- Prefer `StreamProvider` over `StateNotifierProvider` for the file watcher — the watch stream IS the state
-- Do not create a provider for every UI preference. Use simple `ValueNotifier` or `InheritedWidget` for theme/display toggles.
+**Prevention:**
+- Use `flutter_markdown` — it is the official package, sufficient for rendering MEMORY.md previews, and the dark theme issues are solvable with a custom `MarkdownStyleSheet` (see Pitfall 2)
+- Do NOT use `markdown_widget` unless `flutter_markdown` proves insufficient after trying the stylesheet approach
+- Pin to a specific version to avoid breaking changes
 
-**Warning signs:**
-- More than 10 providers for a single-view app
-- Providers that only exist to hold a `bool`
-- Calling `ref.invalidate()` in response to every file change
-
-**Phase to address:** Phase 2 (State Architecture). Establish state ownership guidelines before building components.
+**Phase to address:** Detail-Panel phase (when first introducing markdown rendering).
 
 ---
 
-### Pitfall 12: Entitlements Files Not Kept in Sync (Debug vs. Release)
+## Phase-Specific Warnings
 
-**What goes wrong:** Flutter macOS generates two entitlement files: `DebugProfile.entitlements` and `Release.entitlements`. Developers add entitlements to `DebugProfile.entitlements` (because that's where debug tests run), forget to add the same to `Release.entitlements`, and the release build silently breaks. This is documented in the official Flutter macOS building guide and is the most common macOS-specific deployment bug.
-
-Additionally: **never edit entitlements through Xcode's Capabilities UI**. The Xcode UI may create a new entitlements file and switch the build target to use it, leaving the original files unused and creating a confusing three-file situation.
-
-**How to avoid:**
-- Always edit entitlement files directly as XML in a text editor
-- After adding any entitlement, immediately add the same key to BOTH files
-- Add a comment at the top of each file noting the required sync: `<!-- KEEP IN SYNC WITH DebugProfile.entitlements -->`
-- Test release builds (`flutter build macos`) before marking any feature complete
-
-**Warning signs:**
-- Feature works with `flutter run` but not in the built `.app`
-- Strange `Operation not permitted` errors only in release builds
-- Multiple `.entitlements` files in `macos/Runner/` (more than two = Xcode created one)
-
-**Phase to address:** Phase 1 (Foundation/Setup). Establish the entitlement sync rule on day one.
-
----
-
-## Technical Debt Patterns
-
-| Shortcut | Immediate Benefit | Long-term Cost | When Acceptable |
-|----------|-------------------|----------------|-----------------|
-| Using `runInShell: true` without resolving git path | Works on dev machine | Fails on machines where `/bin/sh` doesn't source `/etc/paths` | MVP only — replace with explicit path resolution |
-| Disabling sandbox entirely (`app-sandbox` = false) | Full filesystem access | Cannot distribute via App Store | Acceptable — Pro Orc is direct distribution only |
-| Static sRGB color values instead of OKLCH runtime conversion | Fast to implement | Design drift if OKLCH values change | Acceptable if colors are stored as named constants |
-| Single `StreamController` for all file watch events | Simpler architecture | Cannot filter by directory/type efficiently | Acceptable until there are 50+ projects being watched |
-| `setState` for git status instead of Riverpod | Less boilerplate | Manual refresh triggers, no caching | MVP only — causes UX jank at scale |
+| Phase Topic | Likely Pitfall | Mitigation |
+|-------------|---------------|------------|
+| Folder Import | Watcher not restarted for new dir (Pitfall 1) | Invalidate `watcherProvider` after adding scan dir |
+| Folder Import | Duplicate projects from parent/child scan dirs (Pitfall 3) | Validate path relationships before adding |
+| Folder Import | Scaffold overwrites existing planning docs (Pitfall 7) | Check `GsdParser` result before scaffolding |
+| Folder Import | Cancel on picker crashes chain (Pitfall 9) | Early return on null |
+| Detail-Panel | Markdown blocks unreadable on dark glass (Pitfall 2) | Build custom `MarkdownStyleSheet` from `AppColors` |
+| Detail-Panel | Markdown spacing breaks layout (Pitfall 8) | Constrain height or keep plain text for descriptions |
+| Memory Tab | Index mismatch breaks Settings nav (Pitfall 4) | Refactor to enum-based tab selection |
+| Memory Tab | Sync file reads block UI (Pitfall 5) | Async reads, lazy loading, truncated previews |
+| Memory Tab | Imported project memory not detected (Pitfall 6) | Test non-standard paths, increase `maxDirLen` |
+| Memory Tab | IndexedStack loads all tabs (Pitfall 11) | Lazy initialization pattern |
+| Memory Tab | Accent color collision (Pitfall 10) | Use existing `colors.violet` |
 
 ---
 
@@ -369,37 +315,27 @@ Additionally: **never edit entitlements through Xcode's Capabilities UI**. The X
 
 | Integration | Common Mistake | Correct Approach |
 |-------------|----------------|------------------|
-| `git` subprocess | Using `Process.run('git', ...)` without full path | Resolve git path at startup; use `runInShell: true` as fallback |
-| `tray_manager` | Expecting it to provide a popover/Flutter UI panel | Tray manager handles the icon; window show/hide is separate via `window_manager` |
-| `FileSystemEntity.watch()` | Assuming one event per file save | Always debounce; events may coalesce or arrive multiple times |
-| Entitlements | Editing via Xcode Capabilities UI | Edit XML files directly; keep both files in sync |
-| `BackdropFilter` | Setting sigma > 20 | Keep sigma 5–15; wrap in `RepaintBoundary` |
-| OKLCH colors | Copying CSS values to Dart `Color()` | Pre-convert to sRGB hex; use `okcolor` package if runtime conversion needed |
-| Hot reload | Expecting native Swift changes to hot reload | Native code changes always require full `flutter run` restart |
-
----
-
-## Performance Traps
-
-| Trap | Symptoms | Prevention | When It Breaks |
-|------|----------|------------|----------------|
-| Multiple `BackdropFilter` widgets in scrollable list | Frame drops, raster thread > 16ms | Use static background, not per-card blur | 3+ blur panels simultaneously visible |
-| File watch event triggering git status synchronously | UI freezes on bulk git operations | Debounce file events; run git in background isolate | On any `git checkout` touching 10+ files |
-| `Process.run()` without timeout | App freezes indefinitely | Always use `.timeout()` wrapper | First git call on a slow/locked repo |
-| Rebuilding entire widget tree on every file event | Jank on dashboard with 20+ project cards | Use `StreamProvider` scoped to individual project cards | 15+ projects being watched |
-| Dart `watcher` package without debounce | Excessive git status calls, process contention | 350ms debounce minimum | Any bulk file operation |
+| Folder import + watcher | Assuming watcher auto-detects new scan dirs | Explicitly invalidate `watcherProvider` after `setScanDirs()` |
+| Folder import + scanner | Not deduplicating when imported folder is child of existing scan dir | Check parent/child relationships before adding |
+| Markdown + glassmorphism | Using `fromTheme()` without overriding decoration colors | Build full `MarkdownStyleSheet` with explicit dark-aware decorations |
+| New nav tab + IndexedStack | Using integer indices for tab routing | Use enum-based tab selection to prevent index drift |
+| Memory tab + memory reader | Extending sync reader to read file content | Use async `readAsString()` for content, keep sync for existence |
+| Auto-scaffold + existing projects | Blindly creating template files | Check `GsdParser` results before scaffolding |
 
 ---
 
 ## "Looks Done But Isn't" Checklist
 
-- [ ] **Filesystem access:** Works with `flutter run` — verify it also works in `flutter build macos` built `.app`
-- [ ] **git integration:** Works on dev machine — verify on a machine with only Homebrew git (no system git via Xcode CLT)
-- [ ] **Tray icon:** Shows in menubar — verify clicking opens popover (not context menu), verify no Dock icon visible
-- [ ] **Glassmorphism:** Looks correct on dev display — verify no white halo on dark background on external monitor
-- [ ] **Entitlements:** Debug build works — verify `Release.entitlements` matches `DebugProfile.entitlements`
-- [ ] **File watcher:** Single file change works — verify batch changes (10+ files changed by git) do not cause crash or missed events
-- [ ] **Process timeout:** git calls work on fast machine — verify app does not hang when `git` is not found or repo is locked
+- [ ] **Folder import:** Import a folder, then modify a file in it — verify live update works (watcher restart)
+- [ ] **Folder import:** Import a folder that is already under an existing scan dir — verify no duplicate cards
+- [ ] **Folder import:** Import a folder with existing `.planning/` — verify no files overwritten
+- [ ] **Folder import:** Open picker and cancel — verify no crash or error state
+- [ ] **Markdown rendering:** View a MEMORY.md with code blocks, blockquotes, headers — verify all readable on dark background
+- [ ] **Markdown rendering:** View a long description — verify quick actions still accessible (scroll or constrain)
+- [ ] **Memory tab:** Click Settings icon — verify it still opens Settings (not Agents or Memory)
+- [ ] **Memory tab:** Switch to Code tab, modify a file, switch back to Memory — verify no stale state
+- [ ] **Memory tab:** Import a project from `/Volumes/External/...` — verify memory indicator works
+- [ ] **Memory tab:** App has 20+ projects — verify Memory tab does not cause jank on first load
 
 ---
 
@@ -407,58 +343,31 @@ Additionally: **never edit entitlements through Xcode's Capabilities UI**. The X
 
 | Pitfall | Recovery Cost | Recovery Steps |
 |---------|---------------|----------------|
-| Sandbox blocking filesystem | LOW | Edit both `.entitlements` files, rebuild — no code changes |
-| git PATH not found in release build | LOW | Add `runInShell: true` or resolve path at startup |
-| Process hang on M1 debug | LOW | Add `.timeout()` wrappers; test in release mode |
-| File watcher missing events | MEDIUM | Add debounce + polling fallback for directory changes |
-| Menubar architecture wrong (tray vs window) | HIGH | Requires Swift AppDelegate rewrite — do this right in Phase 1 |
-| BackdropFilter white halo throughout UI | MEDIUM | Wrap each in `ClipRRect` + `RepaintBoundary` — tedious but mechanical |
-| OKLCH colors wrong throughout UI | MEDIUM | Pre-convert all values; update color constants file centrally |
-| Entitlement debug/release mismatch discovered late | LOW-MEDIUM | Add missing entitlements to Release.entitlements; rebuild |
-
----
-
-## Pitfall-to-Phase Mapping
-
-| Pitfall | Prevention Phase | Verification |
-|---------|------------------|--------------|
-| Sandbox/entitlements setup | Phase 1 (Foundation) | Run built `.app` before any other code |
-| Menubar-only architecture (LSUIElement + AppDelegate) | Phase 1 (Foundation) | No Dock icon visible; tray icon opens popover |
-| Entitlement debug/release sync | Phase 1 (Foundation) | `diff DebugProfile.entitlements Release.entitlements` |
-| `window_manager` z-order workaround | Phase 1 (Foundation) | Tray click brings window to front reliably |
-| `tray_manager` + `app_links` conflict | Phase 1 (Foundation) | All tray menu items trigger Dart callbacks |
-| Platform channel hot reload limitation | Phase 1 (Foundation) | Team workflow documented |
-| git PATH resolution in built app | Phase 2 (Git Integration) | Test on machine with Homebrew-only git |
-| `Process.run()` hang/timeout | Phase 2 (Git Integration) | All git calls have `.timeout(Duration(seconds: 10))` |
-| File watcher event coalescing | Phase 2 (Filesystem Watch) | Test with `git checkout` on 50-file branch |
-| Dart watcher `isDirectory` assertion crash | Phase 2 (Filesystem Watch) | Trigger directory create events; app should not crash |
-| State management over-engineering | Phase 2 (State Architecture) | Provider count reviewed before adding more |
-| OKLCH color conversion | Phase 3 (UI/Theming) | Visual comparison between web and Flutter versions |
-| BackdropFilter white halo | Phase 3 (UI/Theming) | Dark background with blur panel — no white halo |
-| BackdropFilter performance | Phase 3 (UI/Theming) | Flutter DevTools raster thread < 8ms with blur panels |
+| Watcher not restarted (1) | LOW | Add `ref.invalidate(watcherProvider)` to scan dir save — one line fix |
+| Markdown dark theme (2) | LOW | Create `MarkdownStyleSheet` factory — mechanical, no logic changes |
+| Duplicate projects (3) | MEDIUM | Add path validation logic, update UI to show warning — testable in isolation |
+| Nav index mismatch (4) | LOW-MEDIUM | Refactor to enum — mechanical but touches shell_screen + any direct index references |
+| Sync file reads (5) | LOW | Switch to async `readAsString` — straightforward refactor |
+| Memory path encoding (6) | MEDIUM | Requires testing with diverse paths, may need heuristic tuning |
+| Scaffold overwrites (7) | LOW | Add existence check before file creation — simple guard |
+| Layout break from markdown (8) | LOW | Constrain height or revert to plain text — quick decision |
+| Picker cancel crash (9) | LOW | Add null guard — one line fix |
+| Accent color (10) | LOW | Use existing violet — design decision, not code change |
 
 ---
 
 ## Sources
 
-- Flutter macOS Building guide (official, verified): https://docs.flutter.dev/platform-integration/macos/building
-- Flutter issue #95805 — Process hangs on M1 debug mode: https://github.com/flutter/flutter/issues/95805
-- Dart SDK issue #38364 — PATH not resolved on macOS for Process: https://github.com/dart-lang/sdk/issues/38364
-- Flutter issue #89837 — Process.run crashes built macOS app: https://github.com/flutter/flutter/issues/89837
-- Flutter issue #66920 — FileSystemException cannot open file (sandbox): https://github.com/flutter/flutter/issues/66920
-- Flutter issue #122796 — macOS app sandbox behavior with flutter run: https://github.com/flutter/flutter/issues/122796
-- Dart SDK issue #62124 — macOS watcher omits directory create events: https://github.com/dart-lang/sdk/issues/62124
-- dart-lang/watcher issue #79 — isDirectory assertion failure on macOS: https://github.com/dart-lang/watcher/issues/79
-- Flutter issue #149368 — Impeller backdrop blur processes entire screen: https://github.com/flutter/flutter/issues/149368
-- Flutter issue #143947 — Impeller blur artifacts at high sigma: https://github.com/flutter/flutter/issues/143947
-- Flutter issue #173530 — BackdropFilter white halo on dark backgrounds: https://github.com/flutter/flutter/issues/173530
-- Flutter issue #126353 — Impeller BackdropFilter performance degradation: https://github.com/flutter/flutter/issues/126353
-- Flutter issue #113368 — Flutter crashes after tray menu interaction: https://github.com/flutter/flutter/issues/113368
-- tray_manager package — app_links compatibility note: https://pub.dev/packages/tray_manager
-- macOS menubar-only Flutter template: https://github.com/mynameiskenlee/flutter_macos_menubar_example
-- Flutter wide gamut color migration guide: https://docs.flutter.dev/release/breaking-changes/wide-gamut-framework
-- okcolor package (OKLCH to Flutter Color): https://pub.dev/packages/okcolor
+- [flutter_markdown blockquoteDecoration dark theme issue #82020](https://github.com/flutter/flutter/issues/82020)
+- [flutter_markdown font color theme brightness issue #162784](https://github.com/flutter/flutter/issues/162784)
+- [MarkdownStyleSheet API docs](https://pub.dev/documentation/flutter_markdown/latest/flutter_markdown/MarkdownStyleSheet-class.html)
+- [Material 3 Theme for Markdown (Rody Davis gist)](https://gist.github.com/rodydavis/01a87320cf8522241515507e5ee53ac5)
+- [file_picker macOS sandbox-off issue #1845](https://github.com/miguelpruivo/flutter_file_picker/issues/1845)
+- [file_selector package](https://pub.dev/packages/file_selector)
+- [NavigationRail hard destination count issue #104913](https://github.com/flutter/flutter/issues/104913)
+- [watcher package — directory event limitations](https://github.com/dart-lang/watcher/issues/1)
+- Codebase analysis: `shell_screen.dart`, `watcher_provider.dart`, `app_database.dart`, `settings_tab.dart`, `project_detail_panel.dart`, `memory_reader.dart`, `memory_indicator.dart`
 
 ---
-*Pitfalls research for: Flutter macOS Desktop — Pro Orc Project Orchestration Dashboard*
-*Researched: 2026-02-19*
+*Pitfalls research for: Pro Orc v1.5 — Folder Import, Detail-Panel, Memory Tab*
+*Researched: 2026-03-05*
