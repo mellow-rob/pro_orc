@@ -1,37 +1,37 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.5
-milestone_name: Import, Detail-Panel & Memory-Tab
-status: building
-stopped_at: Completed 20-01-PLAN.md
-last_updated: "2026-03-05T11:32:14Z"
-last_activity: 2026-03-05 — Phase 20 Plan 01 Importer Service complete
+milestone: v2.0
+milestone_name: Open Source Public Release
+status: planning
+stopped_at: Defining requirements
+last_updated: "2026-03-06T08:30:00Z"
+last_activity: 2026-03-06 — Milestone v2.0 started
 progress:
-  total_phases: 3
-  completed_phases: 1
-  total_plans: 1
-  completed_plans: 1
-  percent: 33
+  total_phases: 5
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-03-05)
+See: .planning/PROJECT.md (updated 2026-03-06)
 
 **Core value:** Auf einen Blick sehen, wo jedes Projekt steht, was der naechste Schritt ist, und welche Tools zur Verfuegung stehen — ohne Terminal-Hopping oder Notion-Suche.
-**Current focus:** v1.5 Import, Detail-Panel & Memory-Tab
+**Current focus:** v2.0 Open Source Public Release
 
 ## Current Position
 
-Milestone: v1.5 Import, Detail-Panel & Memory-Tab
-Phase: 20 — Folder Import
-Plan: 1 of 4 complete
-Status: Building — Plan 01 Importer Service complete
-Last activity: 2026-03-05 — Phase 20 Plan 01 Importer Service complete
+Milestone: v2.0 Open Source Public Release
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-03-06 — Milestone v2.0 started
 
-Progress: ██████░░░░░░░░░░░░░░ 33% (1/3 phases)
+Progress: ░░░░░░░░░░░░░░░░░░░░ 0% (0/5 phases)
 
 ## Performance Metrics
 
@@ -71,6 +71,14 @@ v1.4 decisions archived to milestones/v1.4-ROADMAP.md.
 - scaffoldProject auto-committed nur wenn .git existiert UND Dateien erstellt
 - p.isWithin() fuer scan-dir containment mit trailing slash normalization
 
+**v1.5 Phase 21:**
+- Gestrichen — Obsidian Vault ersetzt Memory-Tab-Funktion
+
+**v2.0:**
+- Produktvision: Dashboard + Launcher, kein Terminal-Ersatz
+- Zielgruppe: Technisch versierte Nicht-Entwickler
+- Personas: Lisa (Gruenderin), Markus (Berater), Tom (Designer)
+
 ### Pending Todos
 
 - Update ~/.zshrc to add `/opt/homebrew/share/flutter/bin` to PATH (or symlink to expected `/Users/rob/code/flutter`)
@@ -80,15 +88,8 @@ v1.4 decisions archived to milestones/v1.4-ROADMAP.md.
 
 None
 
-### Research Notes (v1.5)
-
-- Only new dependency: `flutter_markdown_plus ^1.0.7` (needed in Phase 21)
-- Watcher restart pitfall: `ref.invalidate(watcherProvider)` after scan-dir changes (Phase 20)
-- NavigationRail enum refactor in Phase 21 to avoid integer index breakage
-- MarkdownStyleSheet needs full n3urala1 customization (Phase 21)
-
 ## Session Continuity
 
-Last session: 2026-03-05T11:32:14Z
-Stopped at: Completed 20-01-PLAN.md
-Resume with: `/gsd:execute-phase 20` (plan 02 next)
+Last session: 2026-03-06T08:30:00Z
+Stopped at: Defining requirements for v2.0
+Resume with: Continue requirements definition and roadmap creation

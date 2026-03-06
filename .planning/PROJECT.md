@@ -45,18 +45,26 @@ Auf einen Blick sehen, wo jedes Projekt steht, was der naechste Schritt ist, und
 
 ### Active
 
-- Existierenden Ordner per Folder Picker importieren (Auto-Scaffold, Scan-Dir erweitern) — v1.5
-- Detail-Panel Beschreibungstexte lesbar machen (Typografie, Layout) — v1.5
-- Memory-Tab mit Uebersicht aller Memory-Files, Vorschau und Quick Actions — v1.5
+- Prominenter Claude-Button statt Terminal-Button auf Projektkarten — v2.0
+- Settings GUI fuer ~/.claude/settings.json (Tools, MCP Server, Modell) — v2.0
+- Skill/Plugin Browser Upgrade mit Pro-Projekt-Status und Quick Actions — v2.0
+- Onboarding & First Run mit Claude Code Detection und Setup-Wizard — v2.0
+- Open Source Polish (README, Screenshots, Contributing Guide, LICENSE) — v2.0
 
-## Current Milestone: v1.5 Import, Detail-Panel & Memory-Tab
+## Current Milestone: v2.0 Open Source Public Release
 
-**Goal:** Existierende Ordner importieren, Detail-Panel Lesbarkeit verbessern, und neuen Memory-Tab mit Uebersicht und Actions einfuehren.
+**Goal:** Pro Orc als vollwertiges Open Source Produkt veroeffentlichen — mit Claude-Button, Settings GUI, erweitertem Tool-Browser, Onboarding und professioneller Dokumentation.
+
+**Vision:** Der visuelle Einstieg in Claude Code — Projekte verwalten, Sessions starten, Tools ueberblicken. Das Terminal bleibt die Arbeitsumgebung, Pro Orc macht den Weg dorthin einfacher.
+
+**Zielgruppe:** Technisch versierte Nicht-Entwickler (Gruender, Berater, Designer) die Claude Code nutzen wollen.
 
 **Target features:**
-- Existierenden Ordner per macOS Folder Picker zum Dashboard hinzufuegen (mit Auto-Scaffolding und Scan-Dir-Erweiterung)
-- Detail-Panel Beschreibungstexte ueberarbeiten fuer bessere Lesbarkeit
-- Neuer Memory-Tab: Uebersicht aller rem-sleep Memory-Files mit Inhalt-Vorschau und Quick Actions (rem-sleep triggern, im Editor oeffnen)
+- Claude-Button als primaere Action auf Projektkarten (startet `claude` im Terminal)
+- Grafische Oberflaeche fuer Claude Code Settings (erlaubte Tools, MCP Server, Modell)
+- Erweiterter Skill/Plugin Browser mit Pro-Projekt-Status und Quick Actions
+- Onboarding-Flow fuer Erstbenutzer (Claude Code Detection, Setup-Wizard, guided Import)
+- Professionelle Open Source Praesenz (README, Screenshots, Contributing Guide, LICENSE, Homebrew)
 
 ### Out of Scope
 
@@ -79,6 +87,7 @@ Auf einen Blick sehen, wo jedes Projekt steht, was der naechste Schritt ist, und
 - v1.2 shipped Memory Indicator: +459 LOC Dart, 20 files changed (2026-02-24)
 - v1.3 shipped Project Creator: +1,320 LOC Dart, 6 files changed (2026-02-26)
 - v1.4 shipped Projekt-Loeschfunktion: +1,931 LOC Dart, 17 files changed (2026-02-27)
+- v1.5 shipped Import & Detail-Panel: Folder Import, Typography improvements (2026-03-05)
 - v1.0 reference implementation in `pro-orc/` (Next.js) — superseded by Flutter rewrite
 - Flutter app in `pro_orc/` directory — ~12,400 LOC Dart
 - Dashboard discovers 22+ projects across code/ and research/ directories
@@ -131,5 +140,8 @@ Auf einen Blick sehen, wo jedes Projekt steht, was der naechste Schritt ist, und
 | Post-deletion summary replaces dialog body in-place | _showSummary flag avoids push/pop navigation complexity | ✓ Good — simple state toggle |
 | encodeProjectPath reuse for Claude Memory detection | Exact-path only, no fuzzy scan needed for existence check | ✓ Good — simpler and sufficient |
 
+| Phase 21 gestrichen (Memory Tab) | Obsidian Vault ersetzt Memory-Tab-Funktion | ✓ Good — simpler architecture |
+| v2.0 Produktvision: Dashboard + Launcher | Pro Orc als Einstiegspunkt fuer Claude Code, nicht Terminal-Ersatz | Pending |
+
 ---
-*Last updated: 2026-03-05 after starting v1.5 Import, Detail-Panel & Memory-Tab milestone*
+*Last updated: 2026-03-06 after starting v2.0 Open Source Public Release milestone*

@@ -7,7 +7,7 @@
 - ✅ **v1.2 Memory Indicator** — Phases 12-13 (shipped 2026-02-24)
 - ✅ **v1.3 Project Creator** — Phases 14-16 (shipped 2026-02-26)
 - ✅ **v1.4 Projekt-Loeschfunktion** — Phases 17-18 (shipped 2026-03-01)
-- 🚧 **v1.5 Import, Detail-Panel & Memory-Tab** — Phases 19-21 (in progress)
+- ✅ **v1.5 Import & Detail-Panel** — Phases 19-20 (shipped 2026-03-05)
 
 ## Phases
 
@@ -69,56 +69,27 @@ See: milestones/v1.4-ROADMAP.md for full details
 
 </details>
 
-### 🚧 v1.5 Import, Detail-Panel & Memory-Tab (In Progress)
+### ✅ v1.5 Import & Detail-Panel (SHIPPED 2026-03-05)
 
-**Milestone Goal:** Existierende Ordner importieren, Detail-Panel Lesbarkeit verbessern, und neuen Memory-Tab mit Uebersicht und Actions einfuehren.
+**Milestone Goal:** Existierende Ordner importieren und Detail-Panel Lesbarkeit verbessern.
 
 - [x] **Phase 19: Detail-Panel Typography** - Beschreibungstexte lesbar machen mit Zeilenhoehe, Selektierbarkeit, Kontrast und Expand/Collapse (completed 2026-03-05)
-- [ ] **Phase 20: Folder Import** - Existierende Ordner per macOS Folder Picker importieren mit Auto-Scaffold und Scan-Dir-Erweiterung
-- [ ] **Phase 21: Memory Tab** - Neuer Tab mit Master-Detail Layout, Memory-Vorschau, Quick Actions und Enum-basierter Navigation
+- [x] **Phase 20: Folder Import** - Existierende Ordner per macOS Folder Picker importieren mit Auto-Scaffold und Scan-Dir-Erweiterung (completed 2026-03-05)
+
+~~Phase 21: Memory Tab~~ — gestrichen, Obsidian Vault ersetzt die Funktion.
 
 ## Phase Details
 
-### Phase 19: Detail-Panel Typography
-**Goal**: User kann Beschreibungstexte im Detail-Panel komfortabel lesen, selektieren und bei langen Texten ein-/ausklappen
-**Depends on**: Phase 18 (v1.4 complete)
-**Requirements**: DPL-01, DPL-02, DPL-03, DPL-04
-**Success Criteria** (what must be TRUE):
-  1. Beschreibungstexte im Detail-Panel haben sichtbar erhoehten Zeilenabstand (1.6+) und sind deutlich lesbarer als vorher
-  2. User kann beliebige Textpassagen in Beschreibungen mit der Maus markieren und per Cmd+C kopieren
-  3. Beschreibungstexte sind auf dem dunklen Glasmorphism-Hintergrund kontrastreich lesbar (WCAG AA konform)
-  4. Lange Beschreibungen (>5 Zeilen) werden abgeschnitten mit "Mehr anzeigen" Button angezeigt; Klick expandiert den vollen Text, "Weniger anzeigen" klappt wieder zu
-**Plans**: 1 plan
+### Phase 19: Detail-Panel Typography ✅
+**Completed**: 2026-03-05
+**Plans**: 1/1 complete
 
-Plans:
-- [ ] 19-01-PLAN.md — Typography + Selektierbarkeit + Expand/Collapse fuer Beschreibung und Naechster Schritt
+### Phase 20: Folder Import ✅
+**Completed**: 2026-03-05
+**Plans**: 2/2 complete
 
-### Phase 20: Folder Import
-**Goal**: User kann einen existierenden Projektordner per Folder Picker ins Dashboard importieren — mit automatischer Typ-Erkennung, optionalem Scaffolding und sofortigem Erscheinen im richtigen Tab
-**Depends on**: Phase 19
-**Requirements**: IMP-01, IMP-02, IMP-03, IMP-04, IMP-05, IMP-06, IMP-07
-**Success Criteria** (what must be TRUE):
-  1. User klickt auf Add+ Karte, waehlt "Importieren", und ein nativer macOS Folder Picker oeffnet sich; nach Auswahl eines Ordners erscheint eine Vorschau mit erkanntem Typ (Code/Research), vorhandenen Dateien und geplanten Scaffold-Aktionen
-  2. Fehlende Standard-Dateien (GSD skeleton, CLAUDE.md, .gitignore, git init) werden nach Bestaetigung automatisch angelegt ohne bestehende Dateien zu ueberschreiben
-  3. Wenn der importierte Ordner ausserhalb aller bekannten Scan-Verzeichnisse liegt, wird das Parent-Verzeichnis automatisch als neues Scan-Dir hinzugefuegt und der Watcher neu gestartet
-  4. Wenn der importierte Ordner bereits innerhalb eines bestehenden Scan-Dirs liegt, zeigt das Dashboard eine Warnung ("Dieser Ordner wird bereits gescannt") statt Duplikate zu erzeugen
-  5. Nach erfolgreichem Import erscheint das Projekt sofort im korrekten Tab (Code oder Research) ohne manuelles Neuladen
-**Plans**: 2 plans
-
-Plans:
-- [ ] 20-01-PLAN.md — Importer Service: scaffoldProject, inferProjectType, analyzeFolder mit TDD
-- [ ] 20-02-PLAN.md — Import UI: Popup-Menue, ImportProjectDialog, Tab-Wiring + Human Verify
-
-### Phase 21: Memory Tab
-**Goal**: User hat einen eigenen Tab mit Uebersicht aller Memory-Files, kann Inhalte lesen und Memory-Actions pro Projekt ausfuehren
-**Depends on**: Phase 20
-**Requirements**: MEM-01, MEM-02, MEM-03, MEM-04, MEM-05, MEM-06, MEM-07
-**Success Criteria** (what must be TRUE):
-  1. NavigationRail zeigt einen neuen Memory-Tab mit eigenem Icon; Tab-Wechsel funktioniert zuverlaessig (auch Settings bleibt erreichbar) dank Enum-basierter Tab-Selektion statt Integer-Indices
-  2. Memory-Tab zeigt eine Projektliste mit Memory-Status (vorhanden/nicht vorhanden) und Freshness-Indikator (Datum der letzten Konsolidierung); Klick auf ein Projekt zeigt rechts den MEMORY.md Inhalt als Markdown-Vorschau
-  3. User kann per Quick Action rem-sleep im Terminal fuer das ausgewaehlte Projekt triggern und das Memory-File im Standard-Editor oeffnen
-  4. Projekte ohne Memory werden in einer separaten Sektion aufgelistet mit "rem-sleep starten" Action zum Erstellen der ersten Memory
-  5. Memory-Tab laedt ohne spuerbares Ruckeln auch bei 20+ Projekten (async Datei-Lesen, Lazy Loading bei Selektion)
+### ~~Phase 21: Memory Tab~~ — GESTRICHEN
+**Grund**: Obsidian Vault ersetzt die geplante Memory-Tab-Funktion. rem-sleep und Memory-Verwaltung laufen ueber Obsidian.
 
 ## Progress
 
@@ -142,6 +113,6 @@ Plans:
 | 16. Notion via Claude | v1.3 | 1/1 | Complete | 2026-02-26 |
 | 17. Deletion Core | v1.4 | 2/2 | Complete | 2026-02-27 |
 | 18. External Resource Cleanup | v1.4 | 2/2 | Complete | 2026-02-27 |
-| 19. Detail-Panel Typography | 1/1 | Complete    | 2026-03-05 | - |
-| 20. Folder Import | 1/2 | In Progress|  | - |
-| 21. Memory Tab | v1.5 | 0/? | Not started | - |
+| 19. Detail-Panel Typography | v1.5 | 1/1 | Complete | 2026-03-05 |
+| 20. Folder Import | v1.5 | 2/2 | Complete | 2026-03-05 |
+| ~~21. Memory Tab~~ | v1.5 | — | Gestrichen | — |
