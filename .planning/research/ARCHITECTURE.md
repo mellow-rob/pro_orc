@@ -1,345 +1,426 @@
 # Architecture Patterns
 
-**Domain:** v1.5 Feature Integration (Folder Import, Detail-Panel, Memory Tab)
-**Researched:** 2026-03-05
-**Confidence:** HIGH -- based on direct codebase analysis of all integration points
+**Domain:** v2.0 Feature Integration for native macOS Flutter Dashboard
+**Researched:** 2026-03-06
 
-## Executive Summary
+## Recommended Architecture
 
-All three v1.5 features integrate cleanly into the existing three-layer architecture without requiring structural changes. The codebase already has the primitives needed: `file_selector` for folder picking, `MemoryData` for memory reading, and `_SectionCard` for detail-panel layout. The work is additive -- new files, minor modifications to existing ones, zero refactors.
-
-## Current System Overview
+The existing 3-layer architecture (Presentation -> Riverpod Providers -> Pure Dart Services) remains unchanged. All v2.0 features integrate as new components within existing layers, with no structural changes needed.
 
 ```
-ShellScreen (_SideNav + IndexedStack)
-  index 0: CodeTab        -- grid of CodeProjectCards
-  index 1: ResearchTab    -- grid of ResearchProjectCards
-  index 2: ClaudeToolsTab -- skills/MCP/plugins inventory
-  index 3: AgentsTab      -- agent cards
-  index 4: SettingsTab    -- scan dirs, ignore patterns, git path, autostart
-
-projectsProvider (FutureProvider<List<ProjectModel>>)
-  -> ref.listen(watcherProvider) -> invalidateSelf on FS events
-  -> projectScannerProvider.scanAll()
-    -> GsdParser, GitReader, readMemoryData
-    -> _inferType, _extractUsedAgents, _scanMdFiles
-
-watcherProvider (StreamProvider, keepAlive)
-  -> WatcherService.multi([...scanDirs, ~/.claude/projects/])
-
-AppDatabase (Drift SQLite v2)
-  -> getScanDirs(), getConfig(), getProjectSettings()
-  -> setScanDirs(), upsertProjectSettings()
+ShellScreen (IndexedStack with 5 tabs -- NO new tabs)
+  |
+  +-- CodeTab / ResearchTab (existing)
+  |     +-- CodeProjectCard / ResearchProjectCard
+  |           +-- Quick Actions row  <-- MODIFY: add Claude-Button as primary
+  |
+  +-- ClaudeToolsTab (existing)      <-- EXTEND: per-project filter, toggle actions
+  |
+  +-- AgentsTab (existing)
+  |
+  +-- SettingsTab (existing)         <-- EXTEND: new Claude Settings section
+  |
+  +-- OnboardingWizard (NEW)         <-- modal dialog over ShellScreen, not a tab
 ```
 
-## v1.5 Integration Map
+### New vs Modified Components
+
+| Layer | Component | Action | Rationale |
+|-------|-----------|--------|-----------|
+| **Service** | `claude_settings_service.dart` | CREATE | Read/write ~/.claude/settings.json + settings.local.json |
+| **Service** | `claude_detector_service.dart` | CREATE | Detect Claude CLI installation, version, config state |
+| **Model** | `claude_settings_model.dart` | CREATE | Typed model for settings.json structure, preserves raw JSON |
+| **Provider** | `claude_settings_provider.dart` | CREATE | FutureProvider wrapping ClaudeSettingsService, invalidated by existing claudeToolsWatcher |
+| **Provider** | `onboarding_provider.dart` | CREATE | StateNotifierProvider tracking onboarding completion (persisted in Drift) |
+| **Widget** | `claude_settings_section.dart` | CREATE | Settings tab section for Claude config |
+| **Widget** | `onboarding_wizard.dart` | CREATE | Multi-step GlassDialog wizard |
+| **Widget** | `quick_actions.dart` | MODIFY | Add Claude-Button as first action |
+| **Widget** | `quick_actions_service.dart` | MODIFY | Add `openClaude(projectPath)` method |
+| **Widget** | `settings_tab.dart` | MODIFY | Insert ClaudeSettingsSection between existing sections |
+| **Widget** | `claude_tools_tab.dart` | MODIFY | Add per-project filter dropdown, quick actions on tool cards |
+| **Widget** | `skill_card.dart` / `plugin_card.dart` | MODIFY | Add enable/disable toggle, open action |
+| **Widget** | `shell_screen.dart` | MODIFY | Replace _checkFirstLaunch with onboarding check |
+| **DB** | `app_config_table.dart` | MODIFY | Add `onboarding_completed` column (Drift migration v3) |
+
+### Component Boundaries
+
+| Component | Responsibility | Communicates With |
+|-----------|---------------|-------------------|
+| `ClaudeSettingsService` | Read/write/validate ~/.claude/settings.json and settings.local.json. Preserves unknown JSON fields on write-back. | Filesystem only (dart:io) |
+| `ClaudeDetectorService` | Check `claude` CLI exists via `which`, get version, check config health | Process.run, filesystem |
+| `claudeSettingsProvider` | Expose settings as reactive state, invalidate on FS changes | ClaudeSettingsService, claudeToolsWatcherProvider (existing) |
+| `onboardingProvider` | Track first-run state, step completion | AppDatabase (Drift) |
+| `OnboardingWizard` | Multi-step setup flow with Claude detection | ClaudeDetectorService, claudeSettingsProvider |
+| `ClaudeSettingsSection` | GUI for editing Claude config within Settings tab | claudeSettingsProvider |
+
+## Data Flow Changes per Feature
+
+### 1. Claude-Button (Minimal Change -- 2 files, ~20 LOC)
 
 ```
-FEATURE 1: Folder Import
-  Touch: CodeTab, ResearchTab (new _openImportDialog method)
-         new ImportProjectDialog widget
-         new importProject() service function
-         AppDatabase.getScanDirs/setScanDirs (existing, no changes)
-         projectsProvider (invalidate after import -- existing pattern)
-
-FEATURE 2: Detail-Panel Text Improvements
-  Touch: ProjectDetailPanel._buildBody (existing widget, modify in place)
-         _SectionCard (existing, minor style tweaks)
-         No new files, no new providers, no new services
-
-FEATURE 3: Memory Tab
-  Touch: ShellScreen._SideNav._items (add entry at index 4)
-         ShellScreen IndexedStack (add MemoryTab at index 4, Settings -> 5)
-         new MemoryTab widget
-         new memoryFilesProvider (FutureProvider)
-         new memory_files_scanner.dart service
-         existing memory_reader.dart (reuse readMemoryData/encodeProjectPath)
-         existing watcherProvider (already watches ~/.claude/projects/)
+CodeProjectCard / ResearchProjectCard
+  -> buildProjectQuickActions()  -- Claude action inserted at index 0
+    -> QuickActionsService.openClaude(projectPath)
+      -> osascript: tell Terminal to do script "cd X && claude"
+      -> open -a Terminal
 ```
 
-## Component Boundaries
+The Claude-Button replaces Terminal as the primary (leftmost) action. Terminal moves to second position. No new providers needed -- just a new method on QuickActionsService and a reorder in `buildProjectQuickActions()`.
 
-### Feature 1: Folder Import
-
-| Component | Layer | Status | Responsibility |
-|-----------|-------|--------|----------------|
-| `ImportProjectDialog` | Presentation | NEW | Folder picker UI, scaffold toggle options, scan-dir expansion logic |
-| `importProject()` | Service | NEW | Validate folder, optionally scaffold .planning/, persist projectType |
-| `CodeTab._openImportDialog()` | Presentation | MODIFY | Wire up import dialog, same pattern as `_openCreateDialog()` |
-| `ResearchTab._openImportDialog()` | Presentation | MODIFY | Same pattern, passes `initialTab: 'research'` |
-| `AddProjectCard` | Presentation | MODIFY | Add second action (import) or long-press/context menu |
-| `AppDatabase` | Data | EXISTING | `getScanDirs()`, `setScanDirs()`, `upsertProjectSettings()` -- no changes |
-| `projectsProvider` | Provider | EXISTING | `ref.invalidate()` after import -- no changes |
-
-**Data Flow:**
-
-```
-User taps "Import" on Add+ card
-  -> ImportProjectDialog opens
-  -> macOS NSOpenPanel (file_selector getDirectoryPath)
-  -> User picks existing folder
-  -> importProject() validates folder
-    -> optionally creates .planning/ scaffold (GSD skeleton)
-    -> checks if folder is inside a scan dir
-    -> if NOT inside a scan dir: adds parent dir to scan dirs via db.setScanDirs()
-    -> persists projectType via db.upsertProjectSettings()
-  -> Dialog pops with result
-  -> Tab invalidates projectsProvider
-  -> watcher picks up FS changes automatically
-```
-
-**Key Decision: Scan-Dir Expansion Strategy**
-
-When the selected folder is NOT inside an existing scan dir, the importer must decide how to make it visible. Two options:
-
-1. **Add the folder's parent as a new scan dir** -- Matches existing multi-dir scanning model. If user picks `/Users/rob/other/my-project`, add `/Users/rob/other/` as a scan dir. This also discovers sibling projects.
-
-2. **Add the exact folder path as a scan dir** -- More surgical, but breaks the "scan dir contains projects as children" model that `_listProjectPaths` expects.
-
-**Recommendation: Option 1** (add parent). It preserves the existing scanner architecture where scan dirs contain project subdirectories. The scanner already handles multi-dir via `getScanDirs()` and `WatcherService.multi()`. If the user wants only that one project, they can ignore siblings via ignore patterns.
-
-**Integration with Existing CreateProjectDialog:**
-
-The import dialog should be a separate widget (not merged into CreateProjectDialog) because the UX flow is fundamentally different:
-- Create: name input -> toggles -> filesystem creation
-- Import: folder picker -> detection of existing state -> optional scaffolding
-
-However, the post-import action pattern (persist projectType, invalidate provider, open Terminal) is identical to CreateProjectDialog's flow and should reuse the same code path in the tabs.
-
-### Feature 2: Detail-Panel Text Improvements
-
-| Component | Layer | Status | Responsibility |
-|-----------|-------|--------|----------------|
-| `ProjectDetailPanel._buildBody()` | Presentation | MODIFY | Improved text rendering for BESCHREIBUNG section |
-| `_SectionCard` | Presentation | MODIFY | Typography tweaks (optional) |
-
-**Current State of Description Rendering (line 227-235 of project_detail_panel.dart):**
-
+**New method on QuickActionsService:**
 ```dart
-// Current: plain Text widget, single style
-if (project.description != null)
-  _SectionCard(
-    colors: colors,
-    accent: accent,
-    title: 'BESCHREIBUNG',
-    child: Text(
-      project.description!,
-      style: TextStyle(color: colors.textSec, fontSize: 14, height: 1.5),
+/// Opens Terminal.app, cd's into the project directory, and starts
+/// an interactive Claude Code session.
+Future<void> openClaude(String projectPath) async {
+  final script = _terminalScript('cd "$projectPath" && claude');
+  await Process.run('osascript', ['-e', script], runInShell: true);
+  await Process.run('open', ['-a', 'Terminal'], runInShell: true);
+}
+```
+
+**Modified `buildProjectQuickActions()`:**
+```dart
+List<QuickAction> buildProjectQuickActions(ProjectModel project, QuickActionsService qa) {
+  return [
+    // Claude-Button is PRIMARY (first position, prominent icon)
+    QuickAction(
+      icon: LucideIcons.sparkles100,
+      tooltip: 'Claude',
+      onPressed: () => qa.openClaude(project.path),
     ),
-  ),
+    QuickAction(
+      icon: LucideIcons.terminal100,
+      tooltip: 'Terminal',
+      onPressed: () => qa.openInTerminal(project.path),
+    ),
+    // ... rest unchanged (Finder, GitHub, Notion, Memory)
+  ];
+}
 ```
 
-**What Needs to Change:**
+This follows the proven osascript pattern from `openRemSleep()` (v1.2) and `openClaudeWithPrompt()` which already exist in the service.
 
-The `description` field comes from `GsdParser` which extracts a plain string from PROJECT.md. The text is rendered as a single unstyled paragraph. For long descriptions this becomes a wall of text.
-
-Improvements (all within the existing widget, no new components):
-1. **Line height increase**: `height: 1.5` -> `height: 1.7` for better readability
-2. **Paragraph splitting**: Split on `\n\n` and render as separate `Text` widgets with spacing
-3. **Max-lines with expand**: Show first ~5 lines with "Mehr anzeigen" toggle for very long descriptions
-4. **Font size**: `fontSize: 14` is fine, add `letterSpacing: 0.1` for legibility
-5. **Optional: Simple markdown rendering**: Bold (`**text**`) and bullet points via `TextSpan` parsing
-
-**Recommended approach:** Replace the single `Text` widget with a `_DescriptionSection` stateful widget that:
-- Splits on `\n\n` for paragraph breaks
-- Supports `**bold**` via `TextSpan` parsing
-- Supports `- bullet` lines with indentation
-- Has expand/collapse for descriptions > 200 chars
-
-This stays within the existing presentation layer -- no new providers or services.
-
-### Feature 3: Memory Tab
-
-| Component | Layer | Status | Responsibility |
-|-----------|-------|--------|----------------|
-| `MemoryTab` | Presentation | NEW | Grid/list of memory file cards with preview and actions |
-| `MemoryFileCard` | Presentation | NEW | Individual memory card showing project name, content preview, staleness |
-| `memoryFilesProvider` | Provider | NEW | FutureProvider that scans all memory files |
-| `scanAllMemoryFiles()` | Service | NEW | Scan `~/.claude/projects/*/memory/MEMORY.md` |
-| `MemoryFileModel` | Model | NEW | Project name, memory path, content preview, mtime, isStale |
-| `ShellScreen._SideNav._items` | Presentation | MODIFY | Add Memory entry at index 4 |
-| `ShellScreen.IndexedStack` | Presentation | MODIFY | Add MemoryTab(), Settings becomes index 5 |
-| `watcherProvider` | Provider | EXISTING | Already watches `~/.claude/projects/`, auto-invalidates |
-
-**Data Flow:**
+### 2. Settings GUI (4 new files, 2 modified, ~400 LOC estimated)
 
 ```
-MemoryTab builds
-  -> ref.watch(memoryFilesProvider)
-  -> scanAllMemoryFiles()
-    -> list ~/.claude/projects/*/memory/MEMORY.md
-    -> for each: decode project path from dir name
-    -> read first ~500 chars as content preview
-    -> compute isStale (>7 days)
-    -> resolve project displayName by matching against projectsProvider
-  -> returns List<MemoryFileModel>
-  -> MemoryTab renders grid of MemoryFileCards
+SettingsTab
+  -> ClaudeSettingsSection (new widget, inserted between Git-Pfad and Autostart sections)
+    -> ref.watch(claudeSettingsProvider)
+      -> ClaudeSettingsService.readSettings()
+        -> File('~/.claude/settings.json').readAsString()
+        -> jsonDecode -> ClaudeSettingsModel
 
-MemoryFileCard actions:
-  - "rem-sleep" -> QuickActionsService.openRemSleep(projectPath)
-  - "Im Editor oeffnen" -> Process.run('open', [memoryPath])
-  - Tap card -> expand content preview or show full content in dialog
+User edits (toggle plugin, change effort level):
+  -> ClaudeSettingsService.writeSettings(updatedModel)
+    -> jsonEncode -> File('~/.claude/settings.json').writeAsString()
+    -> ref.invalidate(claudeSettingsProvider)
+    -> claudeToolsWatcher fires on FS change -> claudeToolsProvider also refreshes
 ```
 
-**Provider Architecture:**
-
+**ClaudeSettingsModel structure (mirrors settings.json):**
 ```dart
-// New provider -- follows exact pattern of projectsProvider
-final memoryFilesProvider = FutureProvider<List<MemoryFileModel>>((ref) async {
-  // Listen to watcher events (watcher already monitors ~/.claude/projects/)
-  ref.listen(watcherProvider, (previous, next) {
-    if (next.hasValue) {
-      ref.invalidateSelf();
-    }
-  });
+class ClaudeSettingsModel {
+  final Map<String, bool> enabledPlugins;
+  final Map<String, dynamic> mcpServers;
+  final Map<String, dynamic>? hooks;
+  final Map<String, dynamic>? statusLine;
+  final String? effortLevel;  // "low", "medium", "high"
+  final Map<String, dynamic>? permissions;  // from settings.local.json
+  // Raw JSON preserved for unknown fields -- NEVER lose user data
+  final Map<String, dynamic> rawJson;
+  final Map<String, dynamic>? rawLocalJson;
 
-  return scanAllMemoryFiles();
+  // Factory: parse known fields from raw JSON
+  factory ClaudeSettingsModel.fromJson(
+    Map<String, dynamic> raw, [Map<String, dynamic>? rawLocal]
+  );
+
+  // Merge known fields back into raw JSON for write-back
+  Map<String, dynamic> toMergedJson();
+}
+```
+
+**Critical design decision:** The service MUST preserve ALL fields in settings.json, not just the ones we model. Read full JSON, modify known fields, write back complete JSON. Claude adds new settings fields frequently (hooks, statusLine, effortLevel all appeared in recent months). Strict parsing that ignores unknown fields would cause data loss.
+
+**Provider (follows exact existing pattern):**
+```dart
+final claudeSettingsProvider = FutureProvider<ClaudeSettingsModel>((ref) async {
+  // Reuse existing watcher -- ~/.claude/ changes trigger refresh
+  ref.listen(claudeToolsWatcherProvider, (_, next) {
+    if (next.hasValue) ref.invalidateSelf();
+  });
+  return ClaudeSettingsService().readSettings();
 });
 ```
 
-This mirrors the existing `projectsProvider` pattern exactly: FutureProvider + ref.listen on watcherProvider for automatic invalidation.
+**Settings GUI sections to expose:**
+1. **Effort Level** -- dropdown (low/medium/high), maps to `effortLevel` key
+2. **Enabled Plugins** -- toggle list, maps to `enabledPlugins` map
+3. **MCP Servers** -- read-only list with enable indicator (write = advanced, defer)
+4. **Hooks** -- read-only display (too complex to edit in GUI)
+5. **Permissions** -- from settings.local.json, read-only display
 
-**Project Path Decoding:**
+### 3. Skill/Plugin Browser Upgrade (3-4 files modified, ~200 LOC estimated)
 
-The `encodeProjectPath()` function in `memory_reader.dart` converts `/Users/rob/code/my-app` to `-Users-rob-code-my-app`. The memory tab scanner needs the reverse: given a dir name like `-Users-rob-code-my-app`, derive the original project path. This is lossy (both `/` and `_` become `-`) but workable:
+```
+ClaudeToolsTab (existing)
+  -> Add project filter dropdown at top
+    -> Populated from ref.watch(projectsProvider)
+    -> "Alle Projekte" default, then per-project filtering
+  -> SkillCard / PluginCard (existing)
+    -> Add enable/disable toggle
+      -> Writes to settings.json via claudeSettingsProvider + ClaudeSettingsService
+    -> Add "Oeffnen" action
+      -> Skills: open dir in Finder via QuickActionsService.openInFinder
+      -> Plugins: open marketplace URL via QuickActionsService.openUrl
+```
 
-1. The dir name starts with `-Users-rob-` (known home dir prefix)
-2. Cross-reference with `projectsProvider` data: for each memory dir, find the project whose `encodeProjectPath(project.path)` matches (or ends-with matches)
-3. If no match, display the raw dir name as fallback
+The enable/disable toggle on plugin cards writes to `enabledPlugins` in settings.json. This requires `ClaudeSettingsService` from Phase 2, making Phase 2 a hard dependency.
 
-**NavigationRail Index Changes:**
+**Per-project filtering approach:**
+- Dropdown shows project names from `projectsProvider`
+- Selected project -> check that project's `.claude/settings.local.json` for project-specific tool config
+- Show which tools are active globally vs per-project
+- If no project selected, show global state (current behavior)
 
-Current indices: Code=0, Research=1, Tools=2, Agents=3, Settings=4
-After: Code=0, Research=1, Tools=2, Agents=3, Memory=4, Settings=5
+### 4. Onboarding (3 new files, 3 modified, ~500 LOC estimated)
 
-The `_SideNav._items` list gets a new entry. Settings remains pinned to bottom via the Spacer + manual NavItem pattern (line 186-197 of shell_screen.dart). This is a clean insertion -- no logic depends on hardcoded indices except the `_selectedIndex` state variable and the `IndexedStack` children list, which grow together.
+```
+ShellScreen.initState()
+  -> _checkOnboarding() (replaces _checkFirstLaunch)
+    -> db.getConfig().onboardingCompleted
+    -> if not completed:
+      -> showDialog(OnboardingWizard)
+        -> Step 1: Willkommen + Claude CLI Detection
+          -> ClaudeDetectorService.detectClaude()
+            -> Process.run('which', ['claude'], runInShell: true)
+            -> Process.run('claude', ['--version'], runInShell: true)
+        -> Step 2: Scan-Ordner einrichten
+          -> Reuse file_selector getDirectoryPath
+          -> Add selected dirs to DB via existing db.setScanDirs
+        -> Step 3: Erster Projekt-Import (optional)
+          -> Reuse ImportProjectDialog or simplified version
+        -> Step 4: Autostart (moved from current launch_dialog.dart)
+          -> launch_at_startup enable/disable
+      -> on complete: db.updateConfig(onboardingCompleted: true)
+```
+
+**Key insight:** The existing `_checkFirstLaunch()` in ShellScreen already implements this exact pattern: check SharedPreferences flag -> show dialog -> set flag. Onboarding replaces it entirely. The autostart question becomes Step 4 of the wizard instead of a standalone dialog.
+
+**ClaudeDetectorService:**
+```dart
+class ClaudeDetectorService {
+  /// Check if `claude` CLI is installed and accessible.
+  Future<ClaudeInstallStatus> detect() async {
+    try {
+      final which = await Process.run('which', ['claude'], runInShell: true);
+      if (which.exitCode != 0) return ClaudeInstallStatus.notFound;
+
+      final version = await Process.run('claude', ['--version'], runInShell: true);
+      final versionStr = version.stdout.toString().trim();
+
+      final hasSettings = await File('$_claudeDir/settings.json').exists();
+
+      return ClaudeInstallStatus(
+        installed: true,
+        path: which.stdout.toString().trim(),
+        version: versionStr,
+        hasConfig: hasSettings,
+      );
+    } catch (_) {
+      return ClaudeInstallStatus.notFound;
+    }
+  }
+}
+```
+
+**Drift migration v3 (single column addition):**
+```dart
+// In app_database.dart schemaVersion getter:
+@override
+int get schemaVersion => 3;
+
+// In migration():
+if (from < 3) {
+  await m.addColumn(appConfig, appConfig.onboardingCompleted);
+}
+```
 
 ## Patterns to Follow
 
-### Pattern 1: Dialog-Returns-Action-Flags (from v1.3)
-**What:** Dialog collects user intent, pops with a Map of flags. The tab (caller) executes the actual side effects after dialog closes.
-**When:** Import dialog should return `{projectPath, projectType, wantsTerminal, wantsRemSleep}`.
-**Why:** Avoids `mounted` lifecycle issues in dialog context. Proven pattern from CreateProjectDialog.
-
-### Pattern 2: Top-Level Service Functions (from memory_reader, deletion_service)
-**What:** `importProject()` as a top-level async function, not a class method.
-**When:** Stateless operations that don't need injected dependencies.
-**Why:** Consistent with `readMemoryData()`, `deleteProject()`, `createProject()`.
-
-### Pattern 3: FutureProvider + ref.listen Invalidation (from projectsProvider)
-**What:** `memoryFilesProvider` watches `watcherProvider` and self-invalidates on FS events.
-**When:** Any provider that should refresh on filesystem changes.
-**Why:** Established reactive pattern. The watcher already monitors `~/.claude/projects/`.
-
-### Pattern 4: Nullable Model Fields (from ProjectModel)
-**What:** `MemoryFileModel` uses nullable fields for optional data (`String? projectDisplayName`, `String? contentPreview`).
-**When:** Data that may or may not be available depending on filesystem state.
-**Why:** Consistent with `ProjectModel.gsd`, `ProjectModel.git`, `ProjectModel.memory`.
-
-### Pattern 5: MarkdownBody with Custom StyleSheet for Memory Preview
-**What:** Use `flutter_markdown_plus` MarkdownBody (not Markdown) for inline rendering without its own scroll.
-**When:** Memory detail panel showing full MEMORY.md content.
+### Pattern 1: Service reads JSON, preserves unknown fields
+**What:** Read full JSON map, extract known fields into typed model, keep raw map for write-back.
+**When:** Any service that reads/writes user config files (settings.json).
+**Why:** Claude adds new config fields regularly. Strict parsing loses data on write-back.
 **Example:**
 ```dart
-MarkdownBody(
-  data: content,
-  styleSheet: MarkdownStyleSheet(
-    p: TextStyle(color: colors.textPri, fontSize: 14, height: 1.6),
-    h1: TextStyle(color: colors.textPri, fontSize: 20, fontWeight: FontWeight.w600),
-    code: TextStyle(color: colors.cyan, fontFamily: 'monospace'),
-    codeblockDecoration: BoxDecoration(
-      color: colors.bgElev,
-      borderRadius: BorderRadius.circular(8),
-    ),
-  ),
-)
+Future<void> writeSettings(ClaudeSettingsModel settings) async {
+  // Merge known fields back into raw JSON -- preserves unknown fields
+  final merged = {...settings.rawJson, ...settings.toMergedJson()};
+  await File(_settingsPath).writeAsString(
+    const JsonEncoder.withIndent('  ').convert(merged),
+  );
+}
 ```
+
+### Pattern 2: Extend existing providers via composition
+**What:** New providers that depend on existing watcher infrastructure.
+**When:** Adding reactive state that should refresh when ~/.claude/ changes.
+**Why:** claudeToolsWatcherProvider already monitors all of ~/.claude/. No new watchers needed.
+
+### Pattern 3: Onboarding as modal dialog, not route
+**What:** Show onboarding as a modal dialog over ShellScreen.
+**When:** First-run experience.
+**Why:** Matches existing launch_dialog.dart pattern. App stays functional underneath. No navigation stack complexity. `barrierDismissible: false` keeps focus (proven in v1.4).
+
+### Pattern 4: Quick action insertion order = visual priority
+**What:** First QuickAction in list renders leftmost on cards.
+**When:** Adding Claude-Button.
+**Why:** Users scan left-to-right. Primary action (Claude) goes first. This is the entire product vision: "dashboard as Claude launcher."
+
+### Pattern 5: _buildSection for Settings subsections
+**What:** Reuse the existing `SettingsTab._buildSection()` helper for the Claude settings section.
+**When:** Adding ClaudeSettingsSection to SettingsTab.
+**Why:** Visual consistency. The helper already handles icon, title, subtitle, GlassCard wrapping.
 
 ## Anti-Patterns to Avoid
 
-### Anti-Pattern 1: Merging Import into CreateProjectDialog
-**What:** Adding an "import existing" mode to the create dialog.
-**Why bad:** CreateProjectDialog is already complex (300+ lines, tab switching, toggle management). Import has a fundamentally different flow (pick first, then configure). Merging creates a confusing multi-modal dialog.
-**Instead:** Separate `ImportProjectDialog` widget. Share post-action code in the tab's handler method.
+### Anti-Pattern 1: Separate config file for Pro Orc's Claude preferences
+**What:** Creating a Pro Orc-owned config file to store Claude-related settings.
+**Why bad:** Duplicates source of truth. ~/.claude/settings.json IS the config. Changes made in Pro Orc must be visible to Claude CLI and vice versa.
+**Instead:** Read/write ~/.claude/settings.json directly. Pro Orc's own preferences stay in Drift DB.
 
-### Anti-Pattern 2: Adding Memory Tab Provider Dependency on projectsProvider
-**What:** Making `memoryFilesProvider` depend on `projectsProvider` to resolve display names.
-**Why bad:** Creates a dependency chain where memory tab can't load if project scanning fails. Memory files exist independently of whether their projects are in scan dirs.
-**Instead:** `memoryFilesProvider` scans independently. If you want display names, do a best-effort match in the presentation layer (widget reads both providers).
+### Anti-Pattern 2: Strict JSON schema validation on settings.json
+**What:** Failing or ignoring unknown fields in settings.json.
+**Why bad:** The actual settings.json contains `hooks`, `statusLine`, `effortLevel`, `enabledPlugins` -- fields that were added over time. A strict schema would break on new Claude releases.
+**Instead:** Keep raw JSON map, overlay typed fields. Write merged result. Treat unknown fields as pass-through.
 
-### Anti-Pattern 3: Heavy Markdown Rendering for Description Section
-**What:** Using `flutter_markdown_plus` for the detail-panel description section.
-**Why bad:** Descriptions are short plain text from PROJECT.md. Full markdown rendering is overkill for a few paragraphs and adds visual inconsistency with the rest of the detail panel's custom-styled sections.
-**Instead:** Lightweight hand-rolled parser using `TextSpan` for bold and manual bullet indentation. Reserve `flutter_markdown_plus` for the Memory tab where full MEMORY.md content benefits from proper markdown rendering.
+### Anti-Pattern 3: New FileSystemWatcher for settings changes
+**What:** Creating a separate watcher for ~/.claude/settings.json.
+**Why bad:** `claudeToolsWatcherProvider` already watches ~/.claude/ directory recursively. Adding another watcher creates redundant FS events and potential race conditions.
+**Instead:** Reuse `claudeToolsWatcherProvider`. Settings changes already trigger it.
 
-### Anti-Pattern 4: Changing IndexedStack to Navigator
-**What:** Replacing IndexedStack with a Navigator for the memory tab.
-**Why bad:** IndexedStack preserves widget state across tab switches. Navigator would rebuild each tab on every visit.
-**Instead:** Keep IndexedStack, just add the new tab. This is the established pattern.
+### Anti-Pattern 4: Navigation-based onboarding (push/replace routes)
+**What:** Using Navigator.push for onboarding screens.
+**Why bad:** Menubar-only app with complex window lifecycle. Dialog pattern is proven (launch_dialog, create_project_dialog, delete_project_dialog, import_project_dialog all use it).
+**Instead:** Modal dialog with internal step state (`_currentStep` int, stepper-style content switching).
 
-### Anti-Pattern 5: Creating a New Window for Memory Preview
-**What:** Opening memory preview in a separate macOS window.
-**Why bad:** `desktop_multi_window` adds significant complexity. Inconsistent with existing detail panel pattern.
-**Instead:** Use the same modal dialog pattern as `showProjectDetail()` -- slide-up + fade animation with `showGeneralDialog`.
+### Anti-Pattern 5: Claude version parsing with format assumptions
+**What:** Parsing `claude --version` output with regex assuming stable format.
+**Why bad:** CLI output format changes between versions. Version string format is not guaranteed.
+**Instead:** Check exit code 0 = installed. Store raw version string for display. Don't parse into semver.
 
-## New Files Summary
+### Anti-Pattern 6: Writing settings.json on every keystroke
+**What:** Real-time sync of text fields to settings.json.
+**Why bad:** File writes trigger FS watcher events -> provider invalidation -> full UI rebuild. Creates thrashing.
+**Instead:** Debounce writes. Use "Speichern" button for text fields (matches existing Git-Pfad pattern in SettingsTab). Toggles can write immediately (single field change).
 
-| File | Layer | Purpose |
-|------|-------|---------|
-| `lib/features/memory/memory_tab.dart` | Presentation | Memory tab with grid of memory file cards |
-| `lib/features/memory/memory_file_card.dart` | Presentation | Individual memory file card widget |
-| `lib/data/models/memory_file_model.dart` | Model | Memory file data (path, preview, mtime, projectName) |
-| `lib/data/services/memory_files_scanner.dart` | Service | Scan ~/.claude/projects/ for all MEMORY.md files |
-| `lib/providers/memory_files_provider.dart` | Provider | FutureProvider for memory files list |
-| `lib/features/shared/import_project_dialog.dart` | Presentation | Import existing folder dialog |
-| `lib/data/services/import_service.dart` | Service | Validate + scaffold imported folder |
+## Integration Points -- Full Reuse Map
 
-## Modified Files Summary
+| Existing Code | Reuse For | How |
+|---------------|-----------|-----|
+| `QuickActionsService` | Claude-Button | Add `openClaude()` method (same osascript pattern as `openRemSleep`) |
+| `buildProjectQuickActions()` | Claude-Button ordering | Insert Claude action at index 0 |
+| `claudeToolsWatcherProvider` | Settings + tool browser reactivity | `ref.listen` for invalidation (identical to `claudeToolsProvider` pattern) |
+| `ClaudeToolsScanner._scanPlugins()` | Settings GUI plugin display | Already reads `enabledPlugins` -- model shared |
+| `ClaudeToolsScanner._scanMcpServers()` | Settings GUI MCP display | Already reads `mcpServers` -- model shared |
+| `SettingsTab._buildSection()` | Claude settings section layout | Reuse exact same section builder (icon + title + subtitle + GlassCard) |
+| `GlassDialog` | Onboarding wizard | Multi-step dialog with internal state |
+| `_checkFirstLaunch()` in ShellScreen | Onboarding trigger | Replace with onboarding check (same SharedPreferences/DB flag pattern) |
+| `projectsProvider` | Tool browser project filter | Dropdown source for per-project filtering |
+| `AppDatabase` + Drift migrations | Onboarding state | Add `onboarding_completed` column (migration v3) |
+| `file_selector.getDirectoryPath()` | Onboarding scan-dir setup | Already imported, used in Settings and Import |
+| `QuickActionsService.openInFinder()` | Skill "open" action | Direct reuse |
+| `QuickActionsService.openUrl()` | Plugin marketplace link | Direct reuse |
+
+## Files to Create
+
+| File | Layer | Purpose | Est. LOC |
+|------|-------|---------|----------|
+| `lib/data/services/claude_settings_service.dart` | Service | Read/write ~/.claude/settings.json with raw JSON preservation | ~120 |
+| `lib/data/services/claude_detector_service.dart` | Service | Detect Claude CLI, version, config health | ~60 |
+| `lib/data/models/claude_settings_model.dart` | Model | Typed model for settings.json | ~80 |
+| `lib/providers/claude_settings_provider.dart` | Provider | FutureProvider wrapping settings service | ~15 |
+| `lib/providers/onboarding_provider.dart` | Provider | StateNotifier for onboarding completion | ~25 |
+| `lib/features/settings/claude_settings_section.dart` | Widget | Settings tab section for Claude config | ~250 |
+| `lib/features/shared/onboarding_wizard.dart` | Widget | Multi-step first-run wizard | ~350 |
+
+**Total new:** ~900 LOC across 7 files.
+
+## Files to Modify
 
 | File | Change | Scope |
 |------|--------|-------|
-| `shell_screen.dart` | Add Memory to _SideNav._items, add MemoryTab to IndexedStack, Settings index 4->5 | Small (~10 lines) |
-| `code_tab.dart` | Add `_openImportDialog()` method, wire to Add+ card | Small (~30 lines) |
-| `research_tab.dart` | Same as code_tab.dart | Small (~30 lines) |
-| `project_detail_panel.dart` | Replace description Text with _DescriptionSection widget | Medium (~60 lines) |
-| `add_project_card.dart` | Add import action (second button or context menu) | Small (~15 lines) |
+| `quick_actions_service.dart` | Add `openClaude()` | ~5 lines |
+| `quick_actions.dart` | Insert Claude action at index 0 | ~8 lines |
+| `settings_tab.dart` | Insert ClaudeSettingsSection widget | ~5 lines |
+| `claude_tools_tab.dart` | Add project filter dropdown, pass settings provider | ~40 lines |
+| `skill_card.dart` | Add toggle + open actions | ~30 lines |
+| `plugin_card.dart` | Add enable/disable toggle | ~30 lines |
+| `mcp_server_card.dart` | Add enabled indicator | ~10 lines |
+| `shell_screen.dart` | Replace _checkFirstLaunch with onboarding | ~15 lines |
+| `app_config_table.dart` | Add onboarding_completed column | ~3 lines |
+| `app_database.dart` | Migration v2->v3 | ~10 lines |
 
-## Build Order (Dependency-Driven)
+**Total modified:** ~156 LOC across 10 files.
+
+## Suggested Build Order (Dependency-Driven)
+
+### Phase 1: Claude-Button
+**Dependencies:** None
+**Files:** 2 modified
+**Scope:** ~15 LOC
+**Why first:** Smallest change, highest impact. Validates the core v2.0 vision ("dashboard as Claude launcher"). The `openClaude()` method follows the exact same osascript pattern as 3 existing methods in QuickActionsService. Can ship as a point release immediately.
+
+### Phase 2: Claude Settings Service + GUI
+**Dependencies:** None (reads existing files, uses existing watcher)
+**Files:** 4 new, 2 modified
+**Scope:** ~470 LOC
+**Why second:** ClaudeSettingsService is needed by Phase 3 (Skill/Plugin toggle writes) and Phase 4 (Onboarding config health check). Building it early unblocks both downstream features. The service is fully testable with temp dirs (matches existing test pattern).
+
+### Phase 3: Skill/Plugin Browser Upgrade
+**Dependencies:** ClaudeSettingsService from Phase 2 (for enable/disable writes)
+**Files:** 3-4 modified
+**Scope:** ~110 LOC
+**Why third:** Toggle writes use ClaudeSettingsService.writeSettings(). Per-project filter is independent but logically groups with Settings GUI. Both features make the Claude Tools tab a full management interface rather than read-only inventory.
+
+### Phase 4: Onboarding
+**Dependencies:** ClaudeDetectorService (new, no deps), Drift migration v3
+**Files:** 3 new, 3 modified
+**Scope:** ~460 LOC
+**Why fourth:** Benefits from all other features being complete -- onboarding tour can reference real UI. Needs Drift migration v3 which should be the last schema change to avoid migration churn during development. Replaces existing _checkFirstLaunch cleanly.
+
+### Phase 5: Open Source Polish
+**Dependencies:** All features complete (screenshots need final UI)
+**Files:** Documentation only, 0 code changes
+**Scope:** README.md, CONTRIBUTING.md, LICENSE, screenshots
+**Why last:** Screenshots, README, and guides must reflect the final product. No architecture impact.
 
 ```
-Phase 1: Detail-Panel (zero dependencies, pure widget work)
-  -> Modify project_detail_panel.dart
-  -> No new providers, no new services
-  -> Can be tested visually immediately
-
-Phase 2: Folder Import (depends on existing DB + scanner)
-  -> New: import_service.dart
-  -> New: import_project_dialog.dart
-  -> Modify: code_tab.dart, research_tab.dart, add_project_card.dart
-  -> Leverages existing: AppDatabase.setScanDirs, projectsProvider invalidation
-
-Phase 3: Memory Tab (depends on existing watcher + memory_reader)
-  -> New: memory_file_model.dart
-  -> New: memory_files_scanner.dart
-  -> New: memory_files_provider.dart
-  -> New: memory_tab.dart, memory_file_card.dart
-  -> Modify: shell_screen.dart (new nav item + IndexedStack entry)
+Phase 1 (Claude-Button) ──┐
+                           ├──> Phase 3 (Browser Upgrade)
+Phase 2 (Settings GUI) ───┤
+                           ├──> Phase 4 (Onboarding)
+                           │
+                           └──> Phase 5 (Open Source Polish)
 ```
-
-**Rationale:** Detail-panel first because it has zero dependencies and touches only one file. Folder import second because it extends the existing Add+ card flow (needs to work before Memory tab adds another nav destination). Memory tab last because it is fully self-contained and the nav index change should happen once at the end.
 
 ## Scalability Considerations
 
-| Concern | Current Scale | v1.5 Impact |
+| Concern | Current State | v2.0 Impact |
 |---------|--------------|-------------|
-| Nav items | 5 (Code, Research, Tools, Agents, Settings) | 6 -- still fits in sidebar, no scroll needed |
-| Memory files | ~22 projects scanned | ~22 memory dirs scanned -- same order of magnitude |
-| Watcher dirs | scanDirs + ~/.claude/projects/ | No change -- watcher already monitors memory dir |
-| DB tables | 2 (config, project_settings) | No change -- import uses existing tables |
-| IndexedStack children | 5 widgets | 6 widgets -- negligible memory impact |
+| settings.json reads | ClaudeToolsScanner reads once per watcher cycle | ClaudeSettingsService adds second reader -- OK, same invalidation cycle, no extra FS watches |
+| ~/.claude/ watcher events | Fires on any file change in ~/.claude/ | No additional watchers -- all new features reuse claudeToolsWatcherProvider |
+| Drift DB schema | v2 (2 tables) | v3 (single column addition to app_config) |
+| Tab count | 5 (Code, Research, Tools, Agents, Settings) | No new tabs -- all features extend existing tabs or use modal dialogs |
+| Provider count | 6 (projects, watcher, db, hidden, claudeTools, claudeToolsWatcher) | +2 (claudeSettings, onboarding) -- minimal overhead |
 
 ## Sources
 
-- Direct codebase analysis of all files listed in this document (HIGH confidence)
-- Existing patterns from v1.2 (Memory Indicator), v1.3 (Project Creator), v1.4 (Delete) (HIGH confidence)
-- [flutter_markdown_plus on pub.dev](https://pub.dev/packages/flutter_markdown_plus) (MEDIUM confidence)
+- Direct codebase analysis of all referenced files (HIGH confidence)
+- Live ~/.claude/settings.json inspection showing actual field structure (HIGH confidence)
+- Live ~/.claude/settings.local.json inspection (HIGH confidence)
+- Existing QuickActionsService osascript patterns proven in v1.2-v1.5 (HIGH confidence)
+- Existing ClaudeToolsScanner JSON parsing proven in production (HIGH confidence)
+- Drift migration pattern proven in v1-v2 migration (HIGH confidence)
+- `which claude` returns `/Users/rob/.local/bin/claude` (HIGH confidence -- verified on this machine)

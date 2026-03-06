@@ -1,132 +1,125 @@
-# Domain Pitfalls — v1.5 Milestone
+# Domain Pitfalls — v2.0 Open Source Public Release
 
-**Domain:** Adding folder import, detail-panel overhaul, and memory tab to existing Flutter macOS dashboard (Pro Orc)
-**Researched:** 2026-03-05
-**Confidence:** HIGH for integration pitfalls (verified against actual codebase). MEDIUM for markdown rendering specifics (WebSearch + official docs, not Context7-verified).
+**Domain:** Adding Claude-Button, Settings GUI for external JSON config, Skill/Plugin Browser upgrade, Onboarding wizard, and Open Source polish to existing Flutter macOS dashboard (Pro Orc)
+**Researched:** 2026-03-06
+**Confidence:** HIGH for Claude Code integration pitfalls (verified against actual ~/.claude/ structure and codebase). MEDIUM for open source release concerns (WebSearch + community patterns). HIGH for JSON config race conditions (confirmed by multiple claude-code GitHub issues).
 
 ---
 
 ## Critical Pitfalls
 
-Mistakes that cause rewrites, data loss, or broken user-facing features.
+Mistakes that cause data loss, broken user-facing features, or block the open source release.
 
 ---
 
-### Pitfall 1: WatcherProvider Does Not Restart When Scan Dirs Change
+### Pitfall 1: Settings GUI Writes Corrupt settings.json — Race Condition With Running Claude Code Sessions
 
-**What goes wrong:** The `watcherProvider` is a `StreamProvider` with `ref.keepAlive()` that reads scan dirs from the database at initialization time, creates a `WatcherService.multi(allDirs)`, and then yields its events forever. When a user imports a new folder (adding a new scan directory), `projectsProvider` is invalidated and re-scans correctly, but the watcher is never recreated because it has `keepAlive()`. The new folder is scanned once but never watched for live updates. The user sees the imported project appear but subsequent changes in that folder are invisible until app restart.
+**What goes wrong:** Pro Orc reads `~/.claude/settings.json`, presents it in a GUI, and writes it back when the user saves. But Claude Code also reads and writes this file during active sessions (e.g., when user accepts tool permissions, changes model, or when hooks update). If Pro Orc writes while Claude Code is mid-write, the file gets truncated or contains partial JSON. This is a documented, repeatedly-reported issue in the Claude Code repo (issues #18998, #28847, #28922) — JSON corruption from concurrent access causes "truncated/invalid JSON errors multiple times per day" in multi-session setups.
 
-**Why it happens:** The watcher was designed as a permanent singleton in v1.1 (per CONTEXT.md: "keepAlive: never disposed, locked decision"). This was correct when scan dirs were static. Folder import makes scan dirs dynamic at runtime.
+**Why it happens:** JSON files are rewritten in their entirety on every update — no file locking, no atomic writes. Two processes reading the old state and writing their version means the last writer wins and the first writer's changes are lost. Worse, if writes overlap at the OS level, the file can be left in a partially-written state.
 
-**Consequences:** Imported projects appear stale. Users think the app is broken because other projects update in real-time but the imported one does not.
+**Consequences:** User's Claude Code permissions, MCP server configs, enabled plugins, and hooks get silently corrupted or lost. Claude Code shows cryptic JSON parse errors. User blames Pro Orc.
 
-**Prevention:**
-- When `_saveScanDirs()` completes in settings (or after folder import), also `ref.invalidate(watcherProvider)` to force recreation with the new directory list
-- The old `WatcherService` will be disposed via `ref.onDispose(service.dispose)`, so no resource leak
-- Test: import a folder, modify a file in it, verify the dashboard updates without app restart
-- Alternative: add a method to `WatcherService` to dynamically add a directory to the existing multi-watcher instead of full recreation
+**How to avoid:**
+- Use atomic writes: write to a temp file in the same directory, `fsync`, then `rename` over the original. This is atomic on macOS (APFS/HFS+). Never write directly to `settings.json`.
+- Read-modify-write: always re-read the file immediately before writing, apply only the fields Pro Orc manages, and write back. Never cache the file content and write it later.
+- Consider a merge strategy: Pro Orc should only touch specific top-level keys it manages (e.g., `permissions.allow`, `mcpServers`, `model`). Read the current file, parse it, update only the relevant keys, serialize the entire object back. This preserves keys Claude Code added that Pro Orc doesn't know about.
+- Display a warning if Claude Code is currently running: `pgrep -f "claude"` or check for lock files.
 
-**Detection:** Dashboard shows imported project but does not reflect file changes made after import.
+**Warning signs:** User reports "Claude Code forgot my settings" or "JSON parse error" after using Pro Orc's Settings GUI.
 
-**Phase to address:** Folder Import phase. This is the first thing to verify after implementing the import flow.
-
----
-
-### Pitfall 2: Markdown Rendering on Dark Background — Default Styles Are Unreadable
-
-**What goes wrong:** Flutter's `flutter_markdown` package (and similar packages like `markdown_widget`) uses `MarkdownStyleSheet.fromTheme()` which pulls from the app's `ThemeData`. However, several elements have hardcoded light-theme assumptions:
-1. **Blockquote background** defaults to `Colors.blue.shade100` (bright light blue) — confirmed open issue flutter/flutter#82020
-2. **Code block background** defaults to a light gray that disappears against dark surfaces
-3. **Table borders** default to dark colors that are invisible on dark backgrounds
-4. **Link colors** may default to Material blue which clashes with the n3urala1 cyan/fuchsia palette
-
-For Pro Orc's glassmorphism dark theme with translucent backgrounds, the default stylesheet will produce text blocks that look broken — bright rectangles floating over the dark glass cards.
-
-**Why it happens:** `flutter_markdown` was designed for light themes first. The `fromTheme` constructor adapts text colors but NOT decoration colors (backgrounds, borders). These require explicit `MarkdownStyleSheet` overrides.
-
-**Consequences:** Memory tab showing MEMORY.md content will have garish light-colored blockquotes and code blocks. Detail panel description text (if rendered as markdown) will clash with the glass card background.
-
-**Prevention:**
-- Build a `MarkdownStyleSheet` that explicitly sets every decoration property using `AppColors`:
-```dart
-MarkdownStyleSheet(
-  // Text colors from theme
-  p: TextStyle(color: colors.textPri, fontSize: 14, height: 1.6),
-  h1: TextStyle(color: colors.textPri, fontSize: 20, fontWeight: FontWeight.w600),
-  // Code blocks — dark elevated surface
-  codeblockDecoration: BoxDecoration(
-    color: colors.bgElev.withValues(alpha: 0.8),
-    borderRadius: BorderRadius.circular(8),
-  ),
-  code: TextStyle(color: colors.cyan, fontFamily: 'SF Mono', fontSize: 13),
-  // Blockquote — accent-tinted container
-  blockquoteDecoration: BoxDecoration(
-    color: colors.cyan.withValues(alpha: 0.06),
-    border: Border(left: BorderSide(color: colors.cyan.withValues(alpha: 0.4), width: 3)),
-    borderRadius: BorderRadius.circular(4),
-  ),
-  // Table
-  tableBorder: TableBorder.all(color: colors.textDim.withValues(alpha: 0.3)),
-  // Links
-  a: TextStyle(color: colors.cyan, decoration: TextDecoration.underline),
-)
-```
-- Create this stylesheet as a reusable factory method (e.g., `AppColors.markdownStyle()`) to ensure consistency across detail panel and memory tab
-- Test with real MEMORY.md files that contain code blocks, blockquotes, headers, and links
-
-**Detection:** Any bright-colored rectangle or invisible text in the markdown rendering area.
-
-**Phase to address:** Detail-Panel phase (before Memory Tab, since Memory Tab will reuse the same stylesheet).
+**Phase to address:** Settings GUI phase. This is the most critical architectural decision for the entire phase.
 
 ---
 
-### Pitfall 3: Folder Import Creates Duplicate Projects When Folder Is Already Inside a Scan Dir
+### Pitfall 2: Claude-Button Fails Silently — `claude` Binary Not on GUI App PATH
 
-**What goes wrong:** User imports `/Users/rob/code/my-project` via the folder picker. If `/Users/rob/code` is already a scan directory, `my-project` is already being scanned as a child. Adding `/Users/rob/code/my-project` as a new scan dir creates a duplicate — the project appears twice in the dashboard (once from the parent scan dir, once from the new explicit scan dir).
+**What goes wrong:** The Claude-Button launches `claude` in Terminal.app via osascript. But `claude` is installed at `~/.local/bin/claude` (a symlink to `~/.local/share/claude/versions/X.Y.Z`). macOS GUI apps launched from Finder/Dock/menubar do NOT inherit the user's shell PATH — they get a minimal PATH from `launchd` that does not include `~/.local/bin/`. The existing `runInShell: true` pattern on `Process.run` helps for git (which is in `/usr/bin/` or Homebrew paths sourced by the shell), but `claude` requires the user's full PATH from `.zshrc`/`.zprofile`.
 
-**Why it happens:** `ProjectScanner.scanAll()` loops through `db.getScanDirs()` and scans each directory for project subdirectories. It does not deduplicate by absolute path across scan directories. The existing `_addScanDir` in settings also does not check for parent/child relationships.
+**Why it happens:** This is the same root cause as the existing `runInShell: true` gotcha, but worse. `runInShell: true` makes `Process.run` invoke `/bin/zsh -c "command"` which sources `.zshrc`, getting the full PATH. However, the Claude-Button uses `osascript` to tell Terminal.app to run a command — Terminal.app sources its own login shell PATH, so the command works in Terminal. The pitfall is if anyone tries to use `Process.run('claude', ...)` directly instead of going through Terminal.app.
 
-**Consequences:** Duplicate cards in the dashboard. If the user then deletes one via the delete dialog, it only removes from one scan source. Confusion and data inconsistency.
+**How to avoid:**
+- For the Claude-Button: use `osascript -e 'tell application "Terminal" to do script "cd /path/to/project && claude"'` — Terminal.app will source the user's login shell, so `claude` will be on PATH. This pattern already works for `rem-sleep` in v1.2.
+- For Claude Code detection (onboarding/settings): use `Process.run('which', ['claude'], runInShell: true)` to find the binary. The `runInShell: true` ensures `.zshrc` is sourced and `~/.local/bin` is on PATH.
+- Never hardcode the claude binary path — it's a symlink that changes with every version update.
+- Store the resolved claude path (from `which claude`) in app config, but re-resolve it periodically since the symlink target changes on updates.
 
-**Prevention:**
-- Before adding a new scan dir, check two conditions:
-  1. The folder is not already a direct child of an existing scan dir (parent check)
-  2. No existing scan dir is a child of the new folder (child check — importing a parent would subsume existing specific dirs)
-- Show appropriate feedback: "Dieser Ordner wird bereits gescannt (ueber ~/code)" or "Dieser Ordner enthaelt bereits gescannte Verzeichnisse"
-- For the "folder is already scanned" case: still allow import but skip adding to scan dirs — just run auto-scaffolding on the existing project
-- For the "importing a parent" case: warn that this will also scan many other projects
+**Warning signs:** Claude-Button does nothing when clicked. No Terminal window opens, or Terminal opens but shows "command not found: claude".
 
-**Detection:** Same project name appears twice in the Code or Research tab grid.
-
-**Phase to address:** Folder Import phase. Add validation before modifying scan dirs.
+**Phase to address:** Claude-Button phase. Test on a fresh macOS account that has Claude Code installed but hasn't modified the default PATH setup.
 
 ---
 
-### Pitfall 4: NavigationRail Index Mismatch After Adding Memory Tab
+### Pitfall 3: Hardcoded Personal Paths Leak Into Open Source Release
 
-**What goes wrong:** The current `_SideNav` uses a static `_items` list with 4 entries (Code=0, Research=1, Tools=2, Agents=3) and Settings as a special trailing item at index 4. The `IndexedStack` has 5 children. Adding a Memory tab means either:
-- Inserting it into `_items` (shifting indices of everything after it)
-- Appending it at the end (before Settings)
+**What goes wrong:** The codebase contains `/Users/rob` in multiple places:
+- `ClaudeToolsScanner` has a fallback: `Platform.environment['HOME'] ?? '/Users/rob'`
+- Memory reader path encoding may reference specific directories
+- Test files may contain hardcoded paths
+- Git history contains personal project paths, Notion URLs, API references
 
-If the Memory tab is inserted at position 3 (between Tools and Agents), Agents becomes index 4, Settings becomes index 5. Any hardcoded `selectedIndex == 4` for Settings breaks. The `onSelect(4)` for Settings now points to Agents.
+A contributor clones the repo, builds the app, and it tries to read `/Users/rob/.claude/` on their machine. Worse, the git history exposes personal configuration.
 
-**Why it happens:** The shell uses integer indices for tab selection rather than an enum or named constants. This is fragile when adding new tabs.
+**Why it happens:** Natural accumulation during single-developer development. The hardcoded fallback in ClaudeToolsScanner was a reasonable default during development but is a bug in an open source release.
 
-**Consequences:** Clicking Settings opens Agents tab. Or clicking the new Memory tab opens something else entirely. Silent wrong behavior — no crash, just incorrect navigation.
+**How to avoid:**
+- Search the entire codebase for `/Users/rob` and replace with `Platform.environment['HOME']` or `Platform.environment['USER']`
+- Search for hardcoded Notion URLs, GitHub repo URLs, and any personal identifiers
+- The `ClaudeToolsScanner` fallback should throw an exception rather than fallback to a hardcoded path: `Platform.environment['HOME'] ?? (throw StateError('HOME not set'))`
+- Run `git log --all -p | grep -i "api.key\|secret\|password\|token"` to check git history for secrets
+- If secrets are found in history, use `git filter-branch` or BFG Repo Cleaner before making public
+- Add a pre-release script that scans for personal paths
 
-**Prevention:**
-- Refactor tab selection to use an enum:
-```dart
-enum AppTab { code, research, tools, agents, memory, settings }
-```
-- Replace `_selectedIndex` int with `AppTab _selectedTab`
-- Map each enum value to its `IndexedStack` child position
-- This makes adding a new tab safe — just add the enum value and its widget, ordering is handled by the enum-to-index mapping
-- If refactoring to enum feels heavy, at minimum define constants: `static const kSettingsIndex = 5;` and update all references when adding the tab
+**Warning signs:** Build succeeds on your machine but fails or behaves incorrectly on any other developer's machine.
 
-**Detection:** Settings button opens wrong tab after adding Memory tab.
+**Phase to address:** Open Source Polish phase. Run the full scan as the first task.
 
-**Phase to address:** Memory Tab phase. Refactor the index system BEFORE adding the new tab widget.
+---
+
+### Pitfall 4: settings.json Schema Changes Between Claude Code Versions Break the Settings GUI
+
+**What goes wrong:** The Settings GUI presents fields for `permissions.allow`, `mcpServers`, `model`, `enabledPlugins`, `hooks`, etc. Claude Code updates frequently (version 2.1.70 as of today, with updates every few days). New top-level keys get added regularly (recent additions include `sandbox`, `statusLine`, `effortLevel`, `attribution`, `teammateMode`). If the Settings GUI serializes a fixed schema, it will:
+1. Drop unknown keys on write (losing user's custom settings)
+2. Show stale field lists (missing new options)
+3. Potentially conflict with renamed/deprecated keys (`includeCoAuthoredBy` was deprecated in favor of `attribution`)
+
+**Why it happens:** Claude Code is actively developed with no stability guarantees for settings.json schema. The official JSON schema at `json.schemastore.org/claude-code-settings.json` is updated but Pro Orc would need to track it.
+
+**How to avoid:**
+- Never serialize from a Dart model back to JSON. Instead, treat the file as a `Map<String, dynamic>` — read the full JSON, modify only the keys the GUI controls, write the full map back. Unknown keys pass through untouched.
+- The GUI should only manage a curated subset of settings: `permissions.allow`/`permissions.deny`, `mcpServers`, `model`, `enabledPlugins`. Do NOT try to expose every possible setting.
+- For the `model` field: fetch available model names from a known list but allow freeform input (users may use custom API endpoints with different model names).
+- Display a "raw JSON" view as a fallback for advanced users — let them edit the full file if the GUI doesn't cover their need.
+- Version-check: if `settings.json` contains keys the GUI doesn't recognize, show a subtle info banner: "Einige Einstellungen werden nur in der JSON-Datei angezeigt"
+
+**Warning signs:** User updates Claude Code and their MCP servers or permissions disappear from the Settings GUI.
+
+**Phase to address:** Settings GUI phase. The pass-through architecture must be the foundation, not an afterthought.
+
+---
+
+### Pitfall 5: ~/.claude/ Directory Structure Changes Break the Skill/Plugin Browser
+
+**What goes wrong:** The `ClaudeToolsScanner` reads specific paths:
+- `~/.claude/skills/` for skills (also `~/.agents/skills/`)
+- `~/.claude/plugins/installed_plugins.json` for plugin inventory
+- `~/.claude/plugins/known_marketplaces.json` for marketplace URLs
+- `~/.claude/settings.json` for `enabledPlugins` and `mcpServers`
+- `~/.claude/agents/` for agent definitions
+
+Claude Code reorganizes these paths between major versions. The `~/.agents/skills/` directory already shows this — skills moved from one location to another. If Claude Code moves `installed_plugins.json` or changes its schema, the browser shows "Keine Plugins installiert" with no error.
+
+**Why it happens:** The scanner uses empty catch blocks (`catch (_) {}`) everywhere — any read failure is silently swallowed and returns empty results. This is intentional for graceful degradation but makes it impossible to distinguish "no plugins installed" from "plugins directory moved."
+
+**How to avoid:**
+- Add version detection: check `claude --version` output at startup and log it. If the version jumps significantly, show a warning.
+- Add a health check: if `~/.claude/` exists but `installed_plugins.json` does not, AND `enabledPlugins` in settings.json is non-empty, that's a signal the file moved — show a diagnostic message instead of empty state.
+- Keep the graceful degradation for truly missing directories (fresh install), but distinguish it from unexpected missing files (broken/changed layout).
+- Watch the Claude Code changelog for directory structure changes. Pin the scanner to known-working versions and update when structure changes are detected.
+
+**Warning signs:** After a Claude Code update, the Tools tab suddenly shows zero plugins despite having many installed.
+
+**Phase to address:** Skill/Plugin Browser phase. Add health diagnostics alongside the scanner upgrade.
 
 ---
 
@@ -134,240 +127,262 @@ enum AppTab { code, research, tools, agents, memory, settings }
 
 ---
 
-### Pitfall 5: Memory Tab File Reading Blocks the UI Thread
+### Pitfall 6: Onboarding Wizard Assumes Claude Code Is Installed via npm — Misses Other Install Methods
 
-**What goes wrong:** The memory tab needs to read and display MEMORY.md file contents. The existing `memory_reader.dart` uses sync file operations (`existsSync`, `statSync`, `listSync`) because "not hot path, per-project check, simpler code" (per Key Decisions). But the Memory tab will need to read the actual file content of potentially 20+ MEMORY.md files for preview. Reading file contents synchronously on the main isolate will cause jank — especially if memory files are large (some MEMORY.md files can be 10KB+).
+**What goes wrong:** The onboarding flow needs to detect if Claude Code is installed. Checking `which claude` works for the standard npm global install. But Claude Code can also be installed via:
+- Homebrew: `brew install claude-code` (may use different binary location)
+- Direct download from Anthropic
+- VS Code / Cursor extension (no CLI binary at all)
+- Enterprise managed deployment (custom paths)
 
-**Why it happens:** The existing memory reader was designed for existence checks only (`existsSync` + `statSync`), not content reading. Extending it to read content without switching to async will block the UI.
+If detection only checks `which claude`, users with non-standard installs will see "Claude Code nicht gefunden" even though they use it daily.
 
-**Prevention:**
-- Use `File.readAsString()` (async) for content reading, even if the existence check remains sync
-- Consider reading content lazily — only when the user expands/selects a memory file in the tab, not all at once
-- If showing previews for all memory files, use a `FutureProvider` or compute the previews in batches
-- Truncate preview to first N lines (e.g., 20 lines) to avoid reading entire large files
+**How to avoid:**
+- Check multiple detection signals in order:
+  1. `which claude` (standard install)
+  2. `~/.claude/` directory exists (Claude Code has been used, even if binary not on PATH)
+  3. `~/.local/share/claude/` exists (npm global install artifacts)
+  4. `ls ~/.claude/settings.json` exists (active user)
+- If `~/.claude/` exists but `which claude` fails, the user has Claude Code but it's not on PATH — show a different message: "Claude Code ist installiert, aber nicht im PATH. Fuege ~/.local/bin zu deinem PATH hinzu."
+- Do NOT require Claude Code for Pro Orc to work — it should be useful as a project dashboard even without Claude Code. The onboarding should guide but not gate.
 
-**Detection:** UI freezes briefly when switching to the Memory tab, especially with many projects.
+**Warning signs:** User who actively uses Claude Code gets the "install Claude Code first" screen.
 
-**Phase to address:** Memory Tab phase.
-
----
-
-### Pitfall 6: Memory Path Encoding Edge Cases With Imported Projects
-
-**What goes wrong:** Claude's memory path encoding replaces both `/` and `_` with `-`. The existing `encodeProjectPath()` handles this. But imported projects may be anywhere on the filesystem, not just under `~/code/` or `~/project_orchestration/`. Edge cases:
-1. Paths with double hyphens (e.g., `/Users/rob/my--project`) — encoding is ambiguous
-2. Paths with spaces (e.g., `/Users/rob/My Project`) — Claude may encode these differently
-3. Very long paths — the `maxDirLen` constraint in fuzzy matching may reject valid matches
-4. Paths under unusual locations (e.g., `/Volumes/External/projects/foo`) — encoding produces very long dir names
-
-The existing fuzzy matching uses `maxDirLen = encodedPath.length + 10` which was tuned for `~/code/` paths. Imported projects from other locations may have different Claude encoding patterns.
-
-**Why it happens:** The memory reader was built for a known set of project locations. Folder import makes project locations unpredictable.
-
-**Prevention:**
-- Test memory detection with imported projects from non-standard paths
-- Consider increasing `maxDirLen` tolerance for imported projects, or making it configurable
-- Add a fallback: if no memory is found via path encoding, scan all Claude project directories and check if any contain the project's basename as a suffix
-- Log (debug-level) which strategy matched for memory detection — aids debugging when users report missing memory indicators
-
-**Detection:** Imported projects never show memory indicators even when MEMORY.md exists in `~/.claude/projects/`.
-
-**Phase to address:** Memory Tab phase (since it will exercise memory detection more heavily than the indicator).
+**Phase to address:** Onboarding phase.
 
 ---
 
-### Pitfall 7: Auto-Scaffolding on Import Overwrites Existing .planning Files
+### Pitfall 7: Settings GUI Shows settings.json But User Expects settings.local.json Behavior
 
-**What goes wrong:** The folder import feature includes "Auto-Scaffold" — creating `.planning/PROJECT.md`, `STATE.md`, `ROADMAP.md` if they don't exist. But "don't exist" is a tricky check. The project may have `.planning/` with some files but not others. Or it may have GSD files in a different layout (e.g., `docs/` instead of `.planning/`). Blindly checking for `.planning/PROJECT.md` and creating it if absent could:
-1. Create a partial scaffold alongside existing planning docs
-2. Miss that the project already has GSD data in a different location
+**What goes wrong:** Claude Code has a settings hierarchy with 5 levels of precedence:
+1. Managed settings (highest)
+2. CLI arguments
+3. `.claude/settings.local.json` (per-project, git-ignored)
+4. `.claude/settings.json` (per-project, shared)
+5. `~/.claude/settings.json` (global, lowest)
 
-**Why it happens:** The `GsdParser` already handles multiple fallback paths, but the scaffold creator may not be aware of these fallbacks.
+The Settings GUI edits `~/.claude/settings.json` (global). But a user's project may override these settings via `.claude/settings.json` in the project root. The user changes a permission in Pro Orc's GUI, but it has no effect because a project-level settings file takes precedence. The user thinks the GUI is broken.
 
-**Prevention:**
-- Before scaffolding, run `GsdParser.parse()` on the imported directory
-- If `GsdData.isEmpty` is false, skip scaffolding entirely — the project already has planning data
-- If empty, check for existing `.planning/` directory — if it exists with any files, ask the user before creating new ones
-- Show a preview of what will be created: "Folgende Dateien werden erstellt: PROJECT.md, STATE.md, ROADMAP.md"
-- Never overwrite existing files
+**How to avoid:**
+- Clearly label the GUI as "Globale Einstellungen" — make it obvious these are defaults that projects can override.
+- When showing a project's detail panel, consider reading the project-level `.claude/settings.json` and `.claude/settings.local.json` to show the effective (merged) settings for that project.
+- Do NOT attempt to edit project-level settings from the global Settings GUI — that's a project-specific action that should live in the project detail panel if anywhere.
+- Show a note: "Projekt-spezifische Einstellungen in .claude/settings.json ueberschreiben globale Werte"
 
-**Detection:** User imports a project and their existing planning docs are supplemented with empty templates, confusing the GSD status display.
+**Warning signs:** User changes model in Settings GUI but Claude Code still uses a different model in a specific project.
 
-**Phase to address:** Folder Import phase.
-
----
-
-### Pitfall 8: Detail Panel Description Overhaul Breaks Existing Card Layout
-
-**What goes wrong:** The v1.5 goal includes "Detail-Panel Beschreibungstexte lesbar machen." The current `_SectionCard` for "BESCHREIBUNG" renders `project.description` as plain `Text` with `fontSize: 14, height: 1.5`. If this is changed to markdown rendering (to support formatting in descriptions), the widget height changes unpredictably. Descriptions that were 2 lines of plain text may expand to 5+ lines with markdown paragraph spacing. This pushes the scrollable content down, potentially hiding the quick actions row below the fold.
-
-**Why it happens:** Plain text and markdown rendering have different line height, paragraph spacing, and block element padding behaviors. What looks compact as plain text becomes spacious as rendered markdown.
-
-**Prevention:**
-- If switching to markdown rendering: constrain the description section with a `ConstrainedBox(maxHeight: ...)` and make it independently scrollable, OR
-- Keep description as plain text and only use markdown rendering in the Memory tab where content is expected to be long
-- If markdown is used: explicitly set `MarkdownStyleSheet` paragraph spacing to match current `height: 1.5` — default markdown paragraph spacing is larger
-- Test with real project descriptions of varying lengths (1 line to 20+ lines)
-
-**Detection:** Detail panel looks spacious/empty for short descriptions, or quick actions disappear below fold for long ones.
-
-**Phase to address:** Detail-Panel phase.
+**Phase to address:** Settings GUI phase. Add scope labels to the UI from the start.
 
 ---
 
-### Pitfall 9: file_selector getDirectoryPath Returns null Without Error on Cancel
+### Pitfall 8: Open Source Release Missing Critical Files — LICENSE, CONTRIBUTING, and Code of Conduct
 
-**What goes wrong:** The existing `_addScanDir()` in settings already uses `getDirectoryPath()` from `file_selector` correctly (null check on result). But the folder import flow is more complex — it may chain operations after the picker: validate path, check for duplicates, run scaffolding, add to scan dirs, invalidate providers. If any step in this chain assumes the path is non-null because "the picker was shown," it will crash when the user cancels the picker.
+**What goes wrong:** Personal tools open-sourced without standard community files get ignored or rejected by potential contributors:
+- No `LICENSE` file = legally ambiguous. GitHub shows "No license" warning. Users can't legally use or modify the code.
+- No `CONTRIBUTING.md` = contributors don't know the process. PRs arrive in random formats, with no testing, breaking the build.
+- No `CODE_OF_CONDUCT.md` = no community standards. May be required by some organizations before they allow employees to contribute.
+- No issue templates = bug reports lack reproduction steps, feature requests lack context.
 
-**Why it happens:** Developers focus on the happy path (user selects a folder) and forget that cancel returns null, not an exception.
+**Why it happens:** Solo developers don't need these files for themselves. They're easy to forget because the app works fine without them.
 
-**Prevention:**
-- Return early on null immediately after `getDirectoryPath()`, before any other logic
-- Do not show "importing..." loading state before the picker returns — the user may cancel
-- If using a dialog with the picker, do not close the dialog on picker launch (user may cancel and expect to be back in the dialog)
+**How to avoid:**
+- Choose MIT license (most permissive, standard for dev tools)
+- Create `CONTRIBUTING.md` with: build instructions, test requirements, PR format, German UI string conventions
+- Add `.github/ISSUE_TEMPLATE/` with bug report and feature request templates
+- Add `CODE_OF_CONDUCT.md` (use Contributor Covenant as template)
+- Create a comprehensive `README.md` with: screenshots, install instructions, feature overview, architecture overview, development setup
 
-**Detection:** App crashes or shows error when user opens folder picker then clicks Cancel.
+**Warning signs:** Repository exists publicly but has zero stars, forks, or contributors after weeks.
 
-**Phase to address:** Folder Import phase.
-
----
-
-### Pitfall 10: Memory Tab Accent Color Collision With Existing Tabs
-
-**What goes wrong:** The existing color scheme uses cyan for Code tab, fuchsia for Research tab. If the Memory tab reuses cyan or fuchsia, it becomes visually indistinguishable from an existing tab. If it uses a new color (e.g., violet — already used for memory indicators), that color needs to be added to `AppColors` ThemeExtension and may clash with the glassmorphism backdrop.
-
-**Why it happens:** The n3urala1 color system was designed for two primary accents. Adding a third requires careful palette integration.
-
-**Prevention:**
-- Use violet/purple for the Memory tab — it is already associated with memory via the `MemoryIndicator` (which uses `colors.violet` for fresh memory state)
-- Verify `colors.violet` exists in `AppColors` already (it does, used by `MemoryIndicator`)
-- Test the violet accent against the glassmorphism backdrop — ensure sufficient contrast
-- Keep the same `withValues(alpha: 0.06)` and `withValues(alpha: 0.1)` patterns used by other tab accents for consistency
-
-**Detection:** Memory tab looks identical to another tab, or its accent color is invisible against the dark glass background.
-
-**Phase to address:** Memory Tab phase (UI design decision needed before building the tab).
+**Phase to address:** Open Source Polish phase. These files must exist before the first public commit.
 
 ---
 
-## Minor Pitfalls
+### Pitfall 9: Onboarding Wizard Has No "Skip" — Power Users Trapped in Tutorial
+
+**What goes wrong:** The onboarding wizard detects first run (no scan dirs configured, or a flag in Drift DB) and shows a multi-step setup flow. But the target audience includes developers who already have Claude Code set up and just want the dashboard. If the wizard forces them through "Step 1: Install Claude Code" / "Step 2: Choose scan directories" / "Step 3: Learn the UI", they'll quit the app.
+
+**Why it happens:** Onboarding is designed for the least experienced user. Developers building for non-developers over-compensate and create mandatory tutorials.
+
+**How to avoid:**
+- Every step must have a "Ueberspringen" (skip) button, prominently visible (not a tiny text link)
+- Detect existing setup: if `~/.claude/` exists AND scan dirs are configured in DB, skip onboarding entirely
+- If `~/.claude/` exists but no scan dirs: go directly to "Scan-Ordner waehlen" step, skip Claude Code detection
+- Offer "Alles ueberspringen — ich kenne mich aus" on the first screen
+- Store onboarding completion in Drift DB, not SharedPreferences (already using Drift for all config)
+- Never show onboarding again after completion or skip
+
+**Warning signs:** Experienced users close the app during onboarding and never return.
+
+**Phase to address:** Onboarding phase.
 
 ---
 
-### Pitfall 11: IndexedStack Keeps All Tab Widgets Alive — Memory Tab May Be Expensive
+### Pitfall 10: Claude-Button Opens Multiple Terminal Windows — No Deduplication
 
-**What goes wrong:** `ShellScreen` uses `IndexedStack` which builds ALL children but only displays one. The Memory tab will read file contents, parse markdown, and potentially render many widgets. All of this happens even when the user is on the Code tab and has never opened the Memory tab.
+**What goes wrong:** User clicks Claude-Button on a project card. osascript tells Terminal.app to open a new tab/window and run `cd /path && claude`. User clicks again (maybe they forgot they already opened it). Now two Terminal windows are running `claude` in the same project directory. Claude Code sessions may conflict or produce confusing output.
 
-**Prevention:**
-- Use lazy initialization inside the Memory tab — only load content on first build or when `selectedIndex` matches
-- Or wrap the Memory tab in a builder that defers initialization:
-```dart
-IndexedStack(
-  index: _selectedIndex,
-  children: [
-    CodeTab(),
-    ResearchTab(),
-    ClaudeToolsTab(),
-    AgentsTab(),
-    _selectedIndex >= 4 ? MemoryTab() : const SizedBox.shrink(),
-    SettingsTab(),
-  ],
-)
-```
-- But note: `SizedBox.shrink()` in `IndexedStack` means the tab loses state when switching away. Better approach is lazy load inside the tab widget itself using a `_initialized` flag.
+**Why it happens:** The osascript `do script` command always creates a new Terminal tab/window. There's no built-in way to check if a Terminal tab is already running `claude` in that directory.
 
-**Phase to address:** Memory Tab phase.
+**How to avoid:**
+- Accept this as a minor UX issue — Terminal.app deduplication is not worth the complexity
+- Show visual feedback on the button after clicking: disable for 2-3 seconds, show a checkmark or "Geoeffnet" text to indicate the action was taken
+- Do NOT try to detect running Terminal sessions — that requires accessibility permissions or fragile AppleScript queries
+- Alternative: use `open -a Terminal /path/to/project` which reuses the existing Terminal window, then the user types `claude` themselves. Less convenient but no duplication.
+- Best compromise: on click, show a brief toast/snackbar "Claude-Session in Terminal geoeffnet" to confirm the action happened, reducing accidental double-clicks
+
+**Warning signs:** Users report "clicking Claude opens two terminals" — mostly a confusion issue, not a data loss issue.
+
+**Phase to address:** Claude-Button phase.
 
 ---
 
-### Pitfall 12: Markdown Package Selection — flutter_markdown vs markdown_widget
+### Pitfall 11: README Screenshots Become Stale After UI Changes
 
-**What goes wrong:** `flutter_markdown` (official Flutter package) is simpler but has known dark theme issues and limited customization. `markdown_widget` is more flexible but adds a heavier dependency. Choosing the wrong one leads to either fighting dark theme issues or over-engineering the markdown rendering.
+**What goes wrong:** The README includes screenshots of the dashboard, project cards, settings, and tools tab. Any UI change (new tab, color adjustment, card layout tweak) makes the screenshots outdated. Stale screenshots make the project look unmaintained and confuse new users who see a different UI than documented.
 
-**Prevention:**
-- Use `flutter_markdown` — it is the official package, sufficient for rendering MEMORY.md previews, and the dark theme issues are solvable with a custom `MarkdownStyleSheet` (see Pitfall 2)
-- Do NOT use `markdown_widget` unless `flutter_markdown` proves insufficient after trying the stylesheet approach
-- Pin to a specific version to avoid breaking changes
+**Why it happens:** Screenshots are binary assets that can't be auto-generated. No process exists to update them.
 
-**Phase to address:** Detail-Panel phase (when first introducing markdown rendering).
+**How to avoid:**
+- Create a `scripts/take-screenshots.sh` that uses `screencapture` or Flutter's golden test infrastructure to generate screenshots
+- Store screenshots in a dedicated `docs/screenshots/` directory with version-prefixed names (e.g., `v2.0-dashboard.png`)
+- Add a checklist item to the release process: "Update README screenshots"
+- Keep the number of screenshots small (3-5 max) to minimize maintenance burden
+- Use annotated screenshots (with callout labels) rather than raw captures — they're more informative and slight UI changes don't require immediate updates
 
----
+**Warning signs:** GitHub README shows an old version of the UI.
 
-## Phase-Specific Warnings
-
-| Phase Topic | Likely Pitfall | Mitigation |
-|-------------|---------------|------------|
-| Folder Import | Watcher not restarted for new dir (Pitfall 1) | Invalidate `watcherProvider` after adding scan dir |
-| Folder Import | Duplicate projects from parent/child scan dirs (Pitfall 3) | Validate path relationships before adding |
-| Folder Import | Scaffold overwrites existing planning docs (Pitfall 7) | Check `GsdParser` result before scaffolding |
-| Folder Import | Cancel on picker crashes chain (Pitfall 9) | Early return on null |
-| Detail-Panel | Markdown blocks unreadable on dark glass (Pitfall 2) | Build custom `MarkdownStyleSheet` from `AppColors` |
-| Detail-Panel | Markdown spacing breaks layout (Pitfall 8) | Constrain height or keep plain text for descriptions |
-| Memory Tab | Index mismatch breaks Settings nav (Pitfall 4) | Refactor to enum-based tab selection |
-| Memory Tab | Sync file reads block UI (Pitfall 5) | Async reads, lazy loading, truncated previews |
-| Memory Tab | Imported project memory not detected (Pitfall 6) | Test non-standard paths, increase `maxDirLen` |
-| Memory Tab | IndexedStack loads all tabs (Pitfall 11) | Lazy initialization pattern |
-| Memory Tab | Accent color collision (Pitfall 10) | Use existing `colors.violet` |
+**Phase to address:** Open Source Polish phase.
 
 ---
+
+## Technical Debt Patterns
+
+Shortcuts that seem reasonable but create long-term problems.
+
+| Shortcut | Immediate Benefit | Long-term Cost | When Acceptable |
+|----------|-------------------|----------------|-----------------|
+| Writing full settings.json from Dart model | Simple serialization | Drops unknown keys, breaks on schema changes | Never — always use map-based read-modify-write |
+| Hardcoding `~/.claude/` paths | Quick development | Breaks for non-standard installs, XDG compliance | Only as default fallback with environment variable override |
+| Empty catch blocks in scanner | Graceful degradation | Can't distinguish "not installed" from "broken" | Only for truly optional features, never for primary functionality |
+| Storing onboarding state in SharedPreferences | Simple boolean flag | Already using Drift for all other config, creates two sources of truth | Never — use Drift consistently |
+| Skipping file locking for settings.json writes | Simpler code | Data corruption from concurrent Claude Code access | Never — atomic writes are mandatory |
 
 ## Integration Gotchas
 
+Common mistakes when connecting Pro Orc to Claude Code's ecosystem.
+
 | Integration | Common Mistake | Correct Approach |
 |-------------|----------------|------------------|
-| Folder import + watcher | Assuming watcher auto-detects new scan dirs | Explicitly invalidate `watcherProvider` after `setScanDirs()` |
-| Folder import + scanner | Not deduplicating when imported folder is child of existing scan dir | Check parent/child relationships before adding |
-| Markdown + glassmorphism | Using `fromTheme()` without overriding decoration colors | Build full `MarkdownStyleSheet` with explicit dark-aware decorations |
-| New nav tab + IndexedStack | Using integer indices for tab routing | Use enum-based tab selection to prevent index drift |
-| Memory tab + memory reader | Extending sync reader to read file content | Use async `readAsString()` for content, keep sync for existence |
-| Auto-scaffold + existing projects | Blindly creating template files | Check `GsdParser` results before scaffolding |
+| settings.json read/write | Deserializing to typed model, serializing back | Read as `Map<String, dynamic>`, modify specific keys, write back as map |
+| settings.json concurrent access | Direct file write (overwrite) | Atomic write: temp file + fsync + rename |
+| Claude binary detection | `which claude` only | Multi-signal: `which claude` + `~/.claude/` exists + `~/.local/share/claude/` exists |
+| Settings precedence | Editing global and expecting project-level effect | Label as "Globale Einstellungen", show effective per-project settings separately |
+| Plugin inventory | Reading `installed_plugins.json` schema as stable | Treat schema as unstable, validate structure before parsing, graceful fallback |
+| MCP server config | Assuming one format for server definitions | Handle both `{ mcpServers: {} }` wrapper and flat format (already done in scanner) |
+| Skill directory location | Only checking `~/.claude/skills/` | Also check `~/.agents/skills/` (already done), watch for future moves |
 
----
+## Performance Traps
+
+Patterns that work at small scale but fail as usage grows.
+
+| Trap | Symptoms | Prevention | When It Breaks |
+|------|----------|------------|----------------|
+| Re-reading settings.json on every GUI interaction | Slight lag when toggling permissions | Cache with file-watcher invalidation, debounce writes | >20 permission rules |
+| Scanning entire ~/.claude/ for health diagnostics | Startup delay | Only scan on first load + manual refresh, cache results | Large plugin caches (>100 plugins) |
+| Parsing all plugin.json files for descriptions | Tools tab takes seconds to load | Cache plugin descriptions in Drift DB, invalidate on mtime change | >50 installed plugins |
+
+## Security Mistakes
+
+Domain-specific security issues for a tool that reads/writes Claude Code config.
+
+| Mistake | Risk | Prevention |
+|---------|------|------------|
+| Committing settings.json contents to Pro Orc's own git history | Exposes user's permission rules, API endpoints, MCP server configs | Never write Claude settings into Pro Orc's data layer; read-only display + direct file writes |
+| Displaying MCP server environment variables in the GUI | Env vars may contain API keys or tokens | Mask env var values by default, show only on explicit click |
+| Including personal paths in error messages/crash reports | Privacy violation when open-sourced | Sanitize all paths in logs: replace `/Users/X/` with `~/` |
+| Storing resolved claude binary path without re-validating | Stale path after Claude Code update (symlink changes) | Re-resolve `which claude` on each app launch, not just first run |
+
+## UX Pitfalls
+
+Common user experience mistakes in this domain.
+
+| Pitfall | User Impact | Better Approach |
+|---------|-------------|-----------------|
+| Settings GUI with too many options exposed | Overwhelming for non-developers (target audience) | Show 4-5 essential settings (model, permissions, MCP servers) with "Erweitert" expandable section |
+| Onboarding that requires Claude Code to proceed | User can't try the dashboard without full setup | Make Claude Code optional — dashboard works for project overview even without it |
+| Claude-Button with no feedback after click | User clicks repeatedly, gets multiple terminals | Show brief "Geoeffnet" state on button for 2-3 seconds |
+| Showing raw JSON paths in error messages | Non-developer target audience doesn't understand `~/.claude/settings.json` | Use friendly labels: "Claude Einstellungen" with "Datei anzeigen" link for advanced users |
+| README in English only | German-speaking target users feel excluded from their own tool | README in English (open source standard) but with German UI screenshots and bilingual section headers |
 
 ## "Looks Done But Isn't" Checklist
 
-- [ ] **Folder import:** Import a folder, then modify a file in it — verify live update works (watcher restart)
-- [ ] **Folder import:** Import a folder that is already under an existing scan dir — verify no duplicate cards
-- [ ] **Folder import:** Import a folder with existing `.planning/` — verify no files overwritten
-- [ ] **Folder import:** Open picker and cancel — verify no crash or error state
-- [ ] **Markdown rendering:** View a MEMORY.md with code blocks, blockquotes, headers — verify all readable on dark background
-- [ ] **Markdown rendering:** View a long description — verify quick actions still accessible (scroll or constrain)
-- [ ] **Memory tab:** Click Settings icon — verify it still opens Settings (not Agents or Memory)
-- [ ] **Memory tab:** Switch to Code tab, modify a file, switch back to Memory — verify no stale state
-- [ ] **Memory tab:** Import a project from `/Volumes/External/...` — verify memory indicator works
-- [ ] **Memory tab:** App has 20+ projects — verify Memory tab does not cause jank on first load
+Things that appear complete but are missing critical pieces.
 
----
+- [ ] **Settings GUI:** Write settings.json, then open a Claude Code session — verify settings were not lost or corrupted
+- [ ] **Settings GUI:** Add a permission rule in Pro Orc, then add a different one via `claude /permissions`, then open Pro Orc again — verify both rules present
+- [ ] **Settings GUI:** Edit settings while Claude Code is actively running — verify no file corruption
+- [ ] **Claude-Button:** Click on a project card when Terminal.app is not running — verify Terminal launches and claude starts
+- [ ] **Claude-Button:** Click when `claude` is not on PATH (renamed binary) — verify helpful error message, not silent failure
+- [ ] **Onboarding:** Delete Drift DB and relaunch — verify onboarding appears. Complete it — verify it never appears again.
+- [ ] **Onboarding:** Click "Ueberspringen" on every step — verify app is fully functional without completing any onboarding step
+- [ ] **Skill Browser:** Update Claude Code to latest version, relaunch Pro Orc — verify tools tab still shows all skills/plugins
+- [ ] **Open Source:** Clone repo on a fresh macOS machine (different username) — verify build succeeds and app launches
+- [ ] **Open Source:** Run `grep -r "Users/rob" pro_orc/lib/` — verify zero results
+- [ ] **Open Source:** Check LICENSE file exists and is valid
+- [ ] **Open Source:** README install instructions work from scratch on a machine with only Flutter and Claude Code installed
 
 ## Recovery Strategies
 
+When pitfalls occur despite prevention, how to recover.
+
 | Pitfall | Recovery Cost | Recovery Steps |
 |---------|---------------|----------------|
-| Watcher not restarted (1) | LOW | Add `ref.invalidate(watcherProvider)` to scan dir save — one line fix |
-| Markdown dark theme (2) | LOW | Create `MarkdownStyleSheet` factory — mechanical, no logic changes |
-| Duplicate projects (3) | MEDIUM | Add path validation logic, update UI to show warning — testable in isolation |
-| Nav index mismatch (4) | LOW-MEDIUM | Refactor to enum — mechanical but touches shell_screen + any direct index references |
-| Sync file reads (5) | LOW | Switch to async `readAsString` — straightforward refactor |
-| Memory path encoding (6) | MEDIUM | Requires testing with diverse paths, may need heuristic tuning |
-| Scaffold overwrites (7) | LOW | Add existence check before file creation — simple guard |
-| Layout break from markdown (8) | LOW | Constrain height or revert to plain text — quick decision |
-| Picker cancel crash (9) | LOW | Add null guard — one line fix |
-| Accent color (10) | LOW | Use existing violet — design decision, not code change |
+| settings.json corruption (1) | MEDIUM | Claude Code keeps no backups. Add a "backup before write" step: copy settings.json to settings.json.bak before every Pro Orc write. Recovery = copy .bak over .json |
+| Claude binary not found (2) | LOW | Add manual path entry in Pro Orc settings. User pastes result of `which claude` from Terminal |
+| Hardcoded paths in source (3) | LOW | Global find-and-replace. No architectural change needed |
+| Schema drift (4) | LOW | Map-based architecture means unknown keys pass through. Only affects GUI display, not data integrity |
+| Directory structure change (5) | MEDIUM | Add diagnostic mode to scanner that logs what it finds vs. expects. Update path constants when new Claude Code version ships |
+| Wrong install detection (6) | LOW | Add "manuell konfigurieren" option in onboarding to bypass auto-detection |
+| Settings precedence confusion (7) | LOW | Add UI labels. No code architecture change |
+| Missing open source files (8) | LOW | Create files from templates. One-time effort |
+| Forced onboarding (9) | LOW | Add skip button. Minimal code change |
+| Duplicate Terminal windows (10) | LOW | Add button cooldown. Cosmetic fix |
 
----
+## Pitfall-to-Phase Mapping
+
+How roadmap phases should address these pitfalls.
+
+| Pitfall | Prevention Phase | Verification |
+|---------|------------------|--------------|
+| settings.json race condition (1) | Settings GUI | Write settings while Claude Code is running — no corruption |
+| Claude binary PATH (2) | Claude-Button | Click button on fresh macOS account — Terminal opens with claude |
+| Hardcoded personal paths (3) | Open Source Polish | `grep -r "Users/rob" pro_orc/lib/` returns zero matches |
+| Schema drift / unknown keys (4) | Settings GUI | Add unknown key to settings.json manually, open Settings GUI, save — key preserved |
+| ~/.claude/ structure changes (5) | Skill/Plugin Browser | Rename a ~/.claude/ subdirectory, verify browser shows diagnostic, not empty state |
+| Install detection false negative (6) | Onboarding | Test on machine with Claude Code installed via non-standard method |
+| Settings precedence confusion (7) | Settings GUI | "Globale Einstellungen" label visible in UI |
+| Missing open source files (8) | Open Source Polish | LICENSE, CONTRIBUTING.md, README.md exist with correct content |
+| No skip in onboarding (9) | Onboarding | Skip all steps — app fully functional |
+| Terminal deduplication (10) | Claude-Button | Visual feedback after click, button briefly disabled |
+| Stale screenshots (11) | Open Source Polish | Screenshots match current UI at release time |
 
 ## Sources
 
-- [flutter_markdown blockquoteDecoration dark theme issue #82020](https://github.com/flutter/flutter/issues/82020)
-- [flutter_markdown font color theme brightness issue #162784](https://github.com/flutter/flutter/issues/162784)
-- [MarkdownStyleSheet API docs](https://pub.dev/documentation/flutter_markdown/latest/flutter_markdown/MarkdownStyleSheet-class.html)
-- [Material 3 Theme for Markdown (Rody Davis gist)](https://gist.github.com/rodydavis/01a87320cf8522241515507e5ee53ac5)
-- [file_picker macOS sandbox-off issue #1845](https://github.com/miguelpruivo/flutter_file_picker/issues/1845)
-- [file_selector package](https://pub.dev/packages/file_selector)
-- [NavigationRail hard destination count issue #104913](https://github.com/flutter/flutter/issues/104913)
-- [watcher package — directory event limitations](https://github.com/dart-lang/watcher/issues/1)
-- Codebase analysis: `shell_screen.dart`, `watcher_provider.dart`, `app_database.dart`, `settings_tab.dart`, `project_detail_panel.dart`, `memory_reader.dart`, `memory_indicator.dart`
+- [Claude Code settings.json corruption — Issue #18998](https://github.com/anthropics/claude-code/issues/18998)
+- [Claude Code .claude.json race condition — Issue #28847](https://github.com/anthropics/claude-code/issues/28847)
+- [Claude Code .claude.json race condition — Issue #28922](https://github.com/anthropics/claude-code/issues/28922)
+- [Claude Code official settings documentation](https://code.claude.com/docs/en/settings)
+- [Apple Race Conditions and Secure File Operations](https://developer.apple.com/library/archive/documentation/Security/Conceptual/SecureCodingGuide/Articles/RaceConditions.html)
+- [Dart:io Process.run PATH issue on macOS — dart-lang/sdk#38364](https://github.com/dart-lang/sdk/issues/38364)
+- [Flutter Process.run crashes built macOS app — flutter#89837](https://github.com/flutter/flutter/issues/89837)
+- [Open Source Project Checklist — afonsopacifer](https://github.com/afonsopacifer/open-source-checklist)
+- [Open Source Project Checklist — libresource](https://github.com/libresource/open-source-checklist)
+- [CFPB Open Source Checklist](https://github.com/cfpb/open-source-project-template/blob/main/opensource-checklist.md)
+- [Flutter secrets management — Medium](https://medium.com/flutter-community/managing-secrets-in-an-open-sourced-flutter-web-app-8c2219ed72b9)
+- [Claude Code Changelog](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md)
+- Codebase analysis: `claude_tools_scanner.dart`, `settings_tab.dart`, `shell_screen.dart`, `~/.claude/settings.json`, `~/.claude/settings.local.json`
 
 ---
-*Pitfalls research for: Pro Orc v1.5 — Folder Import, Detail-Panel, Memory Tab*
-*Researched: 2026-03-05*
+*Pitfalls research for: Pro Orc v2.0 — Claude-Button, Settings GUI, Skill/Plugin Browser, Onboarding, Open Source Polish*
+*Researched: 2026-03-06*
