@@ -1,88 +1,87 @@
 # Requirements: Pro Orc
 
-**Defined:** 2026-03-05
+**Defined:** 2026-03-06
 **Core Value:** Auf einen Blick sehen, wo jedes Projekt steht, was der naechste Schritt ist, und welche Tools zur Verfuegung stehen — ohne Terminal-Hopping oder Notion-Suche.
 
-## v1.5 Requirements
+## v2.0 Requirements
 
-Requirements for milestone v1.5: Import, Detail-Panel & Memory-Tab.
+Requirements for Open Source Public Release. Each maps to roadmap phases.
 
-### Detail-Panel
+### Claude-Button
 
-- [ ] **DPL-01**: User sieht Beschreibungstexte mit erhoehter Zeilenhoehe (1.6+) fuer bessere Lesbarkeit
-- [ ] **DPL-02**: User kann Beschreibungstexte selektieren und kopieren
-- [ ] **DPL-03**: Beschreibungstexte erfuellen WCAG AA Kontrast auf dunklem Glasmorphism-Hintergrund
-- [ ] **DPL-04**: Lange Beschreibungen werden mit "Mehr anzeigen"/"Weniger anzeigen" ein-/ausgeklappt
+- [ ] **CLB-01**: User kann auf jeder Projektkarte einen prominenten Claude-Button klicken der eine Claude Code Session im Terminal im Projektverzeichnis startet
+- [ ] **CLB-02**: Claude-Button ist visuell hervorgehoben (Cyan, groesser) und als primaere Action auf der Karte erkennbar
+- [ ] **CLB-03**: Bisheriger Terminal-Button wird durch Claude-Button ersetzt; Terminal-Zugang bleibt ueber Kontextmenue oder sekundaere Action erreichbar
 
-### Folder Import
+### Skill/Plugin Browser
 
-- [ ] **IMP-01**: User kann ueber den Add+ Button einen existierenden Ordner per macOS Folder Picker auswaehlen
-- [x] **IMP-02**: Projekttyp (Code/Research) wird automatisch via bestehender _inferType()-Logik erkannt
-- [x] **IMP-03**: Fehlende Dateien (GSD skeleton, CLAUDE.md, .gitignore, git init) werden automatisch angelegt
-- [x] **IMP-04**: Ordner ausserhalb bekannter Scan-Verzeichnisse fuehren zur Erweiterung der Scan-Dirs (Parent-Verzeichnis)
-- [x] **IMP-05**: Duplikat-Erkennung: Ordner innerhalb bestehender Scan-Dirs zeigen Warnung statt erneutes Hinzufuegen
-- [ ] **IMP-06**: Import-Vorschau zeigt erkannten Zustand (Typ, vorhandene Dateien, geplante Aktionen) vor Bestaetigung
-- [ ] **IMP-07**: Nach Import erscheint das Projekt sofort im korrekten Tab (Live-Update via Watcher-Neustart)
+- [ ] **SPB-01**: User sieht pro Projekt welche Skills und Plugins aktiv/installiert sind
+- [ ] **SPB-02**: User kann per Quick Action ein Skill/Plugin im Editor oeffnen oder Docs anzeigen
+- [ ] **SPB-03**: Browser zeigt Metadaten (Autor, installiert am, zuletzt aktualisiert) pro Plugin
 
-### Memory Tab
+### Onboarding
 
-- [ ] **MEM-01**: Neuer Memory-Tab in NavigationRail mit eigenem Icon zeigt alle Memory-Files
-- [ ] **MEM-02**: Projektliste mit Memory-Status und Freshness-Indikator (zuletzt konsolidiert)
-- [ ] **MEM-03**: Master-Detail Layout: Projektliste links, MEMORY.md Inhalt rechts als Vorschau
-- [ ] **MEM-04**: Quick Action: rem-sleep im Terminal triggern fuer ausgewaehltes Projekt
-- [ ] **MEM-05**: Quick Action: Memory-File im Editor oeffnen
-- [ ] **MEM-06**: Projekte ohne Memory werden separat aufgelistet mit "rem-sleep starten" Action
-- [ ] **MEM-07**: NavigationRail nutzt Enum-basierte Tab-Selektion statt Integer-Indices
+- [ ] **ONB-01**: Beim ersten Start erkennt Pro Orc ob Claude Code CLI installiert ist und zeigt Setup-Hilfe falls nicht
+- [ ] **ONB-02**: Setup-Wizard fuehrt durch Ersteinrichtung: Claude Code Check, Scan-Verzeichnisse konfigurieren, ersten Projekt-Import
+- [ ] **ONB-03**: Wizard ist ueberspringbar und kann spaeter ueber Settings erneut gestartet werden
+
+### Open Source Polish
+
+- [ ] **OSS-01**: GitHub README mit Feature-Beschreibung, Screenshots, Installationsanleitung (Homebrew + DMG) und Quick-Start Guide
+- [ ] **OSS-02**: LICENSE-Datei (MIT oder Apache 2.0) und CONTRIBUTING.md mit Contribution Guidelines
+- [ ] **OSS-03**: Repo-Audit: hardcoded Pfade entfernen, Secrets in Git-History pruefen, .gitignore aufraeumen
+- [ ] **OSS-04**: GitHub Issue Templates und Release Notes Template
 
 ## Future Requirements
 
-### Deferred
+Deferred to future release. Tracked but not in current roadmap.
 
-- **IMP-F01**: Drag-and-Drop Import von Ordnern ins Dashboard
-- **IMP-F02**: Batch-Import mehrerer Ordner gleichzeitig
-- **MEM-F01**: Suche und Diff in Memory-Files
-- **MEM-F02**: Memory-Editing direkt im Dashboard
+### Settings GUI
+
+- **SET-01**: Grafische Oberflaeche fuer ~/.claude/settings.json (Modell, Tools, Plugins)
+- **SET-02**: MCP Server Konfiguration anzeigen und editieren
+- **SET-03**: Per-Projekt Claude Settings anzeigen
+
+### Advanced Features
+
+- **ADV-01**: Embedded Terminal in Pro Orc (kein separates Terminal.app)
+- **ADV-02**: Claude Code Session Output Streaming in der App
+- **ADV-03**: Skill/Plugin Installation direkt aus dem Browser
 
 ## Out of Scope
 
 | Feature | Reason |
 |---------|--------|
-| Memory-Editing im Dashboard | Read-only by Design — Editing gehoert in den Editor |
-| Rekursives Folder-Scanning beim Import | Ueberkomplex, User soll explizit waehlen |
-| Full Markdown Renderer fuer kurze Beschreibungen | Overkill — leichtgewichtiges TextSpan Parsing reicht |
-| Drag-and-Drop Import | Kann spaeter ohne Architektur-Aenderungen ergaenzt werden |
-| Batch Folder Import | Single-Folder Import reicht fuer MVP |
+| Embedded Terminal / Chat UI | Architektur-Komplexitaet, Terminal bleibt Arbeitsumgebung |
+| Multi-User / Cloud Sync | Single-User Tool, nur localhost |
+| Auto-Update Mechanismus | git pull && flutter build reicht |
+| Light Mode | n3urala1 Theme ist intentional dark-only |
+| App Store Distribution | Sandbox-Anforderungen zu restriktiv |
+| Settings GUI | Instabiles Schema, Race Conditions, geringer Nutzen fuer Zielgruppe |
 
 ## Traceability
 
-Which phases cover which requirements. Updated during roadmap creation.
-
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DPL-01 | Phase 19 | Pending |
-| DPL-02 | Phase 19 | Pending |
-| DPL-03 | Phase 19 | Pending |
-| DPL-04 | Phase 19 | Pending |
-| IMP-01 | Phase 20 | Pending |
-| IMP-02 | Phase 20 | Complete |
-| IMP-03 | Phase 20 | Complete |
-| IMP-04 | Phase 20 | Complete |
-| IMP-05 | Phase 20 | Complete |
-| IMP-06 | Phase 20 | Pending |
-| IMP-07 | Phase 20 | Pending |
-| MEM-01 | Phase 21 | Pending |
-| MEM-02 | Phase 21 | Pending |
-| MEM-03 | Phase 21 | Pending |
-| MEM-04 | Phase 21 | Pending |
-| MEM-05 | Phase 21 | Pending |
-| MEM-06 | Phase 21 | Pending |
-| MEM-07 | Phase 21 | Pending |
+| CLB-01 | Phase 22 | Pending |
+| CLB-02 | Phase 22 | Pending |
+| CLB-03 | Phase 22 | Pending |
+| SPB-01 | Phase 23 | Pending |
+| SPB-02 | Phase 23 | Pending |
+| SPB-03 | Phase 23 | Pending |
+| ONB-01 | Phase 24 | Pending |
+| ONB-02 | Phase 24 | Pending |
+| ONB-03 | Phase 24 | Pending |
+| OSS-01 | Phase 25 | Pending |
+| OSS-02 | Phase 25 | Pending |
+| OSS-03 | Phase 25 | Pending |
+| OSS-04 | Phase 25 | Pending |
 
 **Coverage:**
-- v1.5 requirements: 18 total
-- Mapped to phases: 18
-- Unmapped: 0
+- v2.0 requirements: 13 total
+- Mapped to phases: 13
+- Unmapped: 0 ✓
 
 ---
-*Requirements defined: 2026-03-05*
-*Last updated: 2026-03-05 after roadmap creation*
+*Requirements defined: 2026-03-06*
+*Last updated: 2026-03-06 after initial definition*
