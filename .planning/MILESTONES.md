@@ -85,3 +85,31 @@
 
 ---
 
+
+## v1.5 Import & Detail-Panel (Shipped: 2026-03-05)
+
+**Phases completed:** 2 phases (19-20), 3 plans
+**Timeline:** 2026-03-01 to 2026-03-05
+
+**Key accomplishments:**
+1. Detail-Panel Typography: Zeilenhoehe, Selektierbarkeit, Kontrast und Expand/Collapse fuer Beschreibungstexte
+2. Folder Import: Existierende Ordner per macOS Folder Picker importieren mit Auto-Scaffold und Scan-Dir-Erweiterung
+3. scaffoldProject() extrahiert aus createProject() fuer shared scaffolding
+4. GSD Parser: Description-Fallback CLAUDE.md mit H1-Paragraph und Platzhalter-Filter
+
+Phase 21 (Memory Tab) gestrichen — Obsidian Vault ersetzt die Funktion.
+
+---
+
+
+## v2.0 Open Source Public Release (In Progress)
+
+**Phases planned:** 4 phases (22-25)
+**Requirements:** 13 (CLB: 3, SPB: 3, ONB: 3, OSS: 4)
+**Started:** 2026-03-06
+
+**Target features:**
+1. Claude-Button als primaere Action auf Projektkarten (startet `claude` im Terminal)
+2. Erweiterter Skill/Plugin Browser mit Pro-Projekt-Status und Quick Actions
+3. Onboarding-Flow fuer Erstbenutzer (Claude Code Detection, Setup-Wizard)
+4. Professionelle Open Source Praesenz (README, Screenshots, Contributing Guide, LICENSE)

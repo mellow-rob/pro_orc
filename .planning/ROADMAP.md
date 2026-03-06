@@ -8,6 +8,7 @@
 - ✅ **v1.3 Project Creator** — Phases 14-16 (shipped 2026-02-26)
 - ✅ **v1.4 Projekt-Loeschfunktion** — Phases 17-18 (shipped 2026-03-01)
 - ✅ **v1.5 Import & Detail-Panel** — Phases 19-20 (shipped 2026-03-05)
+- 🚧 **v2.0 Open Source Public Release** — Phases 22-25 (in progress)
 
 ## Phases
 
@@ -69,27 +70,71 @@ See: milestones/v1.4-ROADMAP.md for full details
 
 </details>
 
-### ✅ v1.5 Import & Detail-Panel (SHIPPED 2026-03-05)
+<details>
+<summary>✅ v1.5 Import & Detail-Panel (Phases 19-20) — SHIPPED 2026-03-05</summary>
 
-**Milestone Goal:** Existierende Ordner importieren und Detail-Panel Lesbarkeit verbessern.
-
-- [x] **Phase 19: Detail-Panel Typography** - Beschreibungstexte lesbar machen mit Zeilenhoehe, Selektierbarkeit, Kontrast und Expand/Collapse (completed 2026-03-05)
-- [x] **Phase 20: Folder Import** - Existierende Ordner per macOS Folder Picker importieren mit Auto-Scaffold und Scan-Dir-Erweiterung (completed 2026-03-05)
+- [x] Phase 19: Detail-Panel Typography (1/1 plan) — completed 2026-03-05
+- [x] Phase 20: Folder Import (2/2 plans) — completed 2026-03-05
 
 ~~Phase 21: Memory Tab~~ — gestrichen, Obsidian Vault ersetzt die Funktion.
 
+See: milestones/v1.5-ROADMAP.md for full details
+
+</details>
+
+### v2.0 Open Source Public Release
+
+**Milestone Goal:** Pro Orc als vollwertiges Open Source Produkt veroeffentlichen — mit Claude-Button als primaerer Action, erweitertem Tool-Browser, Onboarding fuer Erstbenutzer und professioneller Dokumentation.
+
+- [ ] **Phase 22: Claude-Button** - Prominenter Claude-Button als primaere Action auf allen Projektkarten
+- [ ] **Phase 23: Skill/Plugin Browser Upgrade** - Pro-Projekt-Status, Quick Actions und Metadaten im Claude Tools Tab
+- [ ] **Phase 24: Onboarding** - First-Run Wizard mit Claude Code Detection und Setup-Hilfe
+- [ ] **Phase 25: Open Source Polish** - README, LICENSE, Contributing Guide, Repo-Audit und Release Templates
+
 ## Phase Details
 
-### Phase 19: Detail-Panel Typography ✅
-**Completed**: 2026-03-05
-**Plans**: 1/1 complete
+### Phase 22: Claude-Button
+**Goal**: User startet Claude Code Sessions direkt von Projektkarten — ein Klick vom Dashboard ins Terminal
+**Depends on**: Nothing (unabhaengig, baut auf bestehende osascript/QuickActions Patterns)
+**Requirements**: CLB-01, CLB-02, CLB-03
+**Success Criteria** (what must be TRUE):
+  1. User klickt den Claude-Button auf einer Projektkarte und eine Terminal-Session oeffnet sich mit `claude` im richtigen Projektverzeichnis
+  2. Der Claude-Button ist visuell als primaere Action erkennbar (Cyan, prominente Position links)
+  3. Terminal-Zugang bleibt ueber Kontextmenue oder sekundaere Action erreichbar — kein Funktionsverlust
+**Plans**: TBD
 
-### Phase 20: Folder Import ✅
-**Completed**: 2026-03-05
-**Plans**: 2/2 complete
+### Phase 23: Skill/Plugin Browser Upgrade
+**Goal**: User sieht auf einen Blick welche Skills und Plugins pro Projekt aktiv sind und kann sie direkt oeffnen
+**Depends on**: Phase 22 (sequenziell, keine harte Abhaengigkeit)
+**Requirements**: SPB-01, SPB-02, SPB-03
+**Success Criteria** (what must be TRUE):
+  1. User sieht im Claude Tools Tab pro Projekt welche Skills und Plugins installiert/aktiv sind
+  2. User kann per Quick Action ein Skill oder Plugin im Editor oeffnen oder dessen Dokumentation anzeigen
+  3. Jedes Plugin zeigt Metadaten: Autor, Installationsdatum, letzte Aktualisierung
+**Plans**: TBD
 
-### ~~Phase 21: Memory Tab~~ — GESTRICHEN
-**Grund**: Obsidian Vault ersetzt die geplante Memory-Tab-Funktion. rem-sleep und Memory-Verwaltung laufen ueber Obsidian.
+### Phase 24: Onboarding
+**Goal**: Erstbenutzer werden beim ersten Start durch Claude Code Detection und Ersteinrichtung gefuehrt
+**Depends on**: Phase 23 (alle Features muessen stehen bevor Onboarding darauf verweisen kann)
+**Requirements**: ONB-01, ONB-02, ONB-03
+**Success Criteria** (what must be TRUE):
+  1. Beim allerersten Start erkennt Pro Orc ob Claude Code CLI installiert ist und zeigt verstaendliche Setup-Hilfe falls nicht
+  2. Der Setup-Wizard fuehrt durch: Claude Code Check, Scan-Verzeichnisse konfigurieren, ersten Projekt-Import
+  3. Jeder Wizard-Schritt ist ueberspringbar und der gesamte Wizard kann spaeter ueber Settings erneut gestartet werden
+  4. Erfahrene User mit existierender ~/.claude/ und konfigurierten Scan-Dirs werden nicht durch den Wizard belaestigt
+**Plans**: TBD
+
+### Phase 25: Open Source Polish
+**Goal**: Pro Orc ist bereit fuer die oeffentliche GitHub-Veroeffentlichung mit professioneller Dokumentation und sauberem Repo
+**Depends on**: Phase 24 (alle Features muessen final sein fuer Screenshots und Dokumentation)
+**Requirements**: OSS-01, OSS-02, OSS-03, OSS-04
+**Success Criteria** (what must be TRUE):
+  1. GitHub README erklaert Features, zeigt Screenshots, enthaelt Installationsanleitung (Homebrew + DMG) und Quick-Start Guide
+  2. LICENSE-Datei und CONTRIBUTING.md mit Build/Test/PR Conventions liegen im Repo-Root
+  3. Keine hardcoded /Users/rob Pfade im Source Code, keine Secrets in der Git-History, .gitignore ist vollstaendig
+  4. GitHub Issue Templates und Release Notes Template sind konfiguriert
+  5. Ein neuer User kann Pro Orc allein anhand der README installieren und starten
+**Plans**: TBD
 
 ## Progress
 
@@ -116,3 +161,7 @@ See: milestones/v1.4-ROADMAP.md for full details
 | 19. Detail-Panel Typography | v1.5 | 1/1 | Complete | 2026-03-05 |
 | 20. Folder Import | v1.5 | 2/2 | Complete | 2026-03-05 |
 | ~~21. Memory Tab~~ | v1.5 | — | Gestrichen | — |
+| 22. Claude-Button | v2.0 | 0/? | Not started | - |
+| 23. Skill/Plugin Browser Upgrade | v2.0 | 0/? | Not started | - |
+| 24. Onboarding | v2.0 | 0/? | Not started | - |
+| 25. Open Source Polish | v2.0 | 0/? | Not started | - |

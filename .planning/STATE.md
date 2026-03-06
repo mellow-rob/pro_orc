@@ -2,12 +2,12 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Open Source Public Release
-status: planning
-stopped_at: Defining requirements
-last_updated: "2026-03-06T08:30:00Z"
-last_activity: 2026-03-06 — Milestone v2.0 started
+status: ready_to_plan
+stopped_at: Roadmap created, ready to plan Phase 22
+last_updated: "2026-03-06T09:00:00Z"
+last_activity: 2026-03-06 — Roadmap v2.0 created (4 phases, 13 requirements)
 progress:
-  total_phases: 5
+  total_phases: 4
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -21,17 +21,17 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-06)
 
 **Core value:** Auf einen Blick sehen, wo jedes Projekt steht, was der naechste Schritt ist, und welche Tools zur Verfuegung stehen — ohne Terminal-Hopping oder Notion-Suche.
-**Current focus:** v2.0 Open Source Public Release
+**Current focus:** Phase 22 — Claude-Button
 
 ## Current Position
 
 Milestone: v2.0 Open Source Public Release
-Phase: Not started (defining requirements)
+Phase: 22 of 25 (Claude-Button) — first of 4 v2.0 phases
 Plan: —
-Status: Defining requirements
-Last activity: 2026-03-06 — Milestone v2.0 started
+Status: Ready to plan
+Last activity: 2026-03-06 — Roadmap v2.0 created
 
-Progress: ░░░░░░░░░░░░░░░░░░░░ 0% (0/5 phases)
+Progress: ░░░░░░░░░░░░░░░░░░░░ 0% (0/4 phases)
 
 ## Performance Metrics
 
@@ -56,33 +56,21 @@ Progress: ░░░░░░░░░░░░░░░░░░░░ 0% (0/5 p
 ### Decisions
 
 Full decision log in PROJECT.md Key Decisions table.
-v1.0 decisions archived to milestones/v1.0-ROADMAP.md.
-v1.1 decisions archived to milestones/v1.1-ROADMAP.md.
-v1.2 decisions archived to milestones/v1.2-ROADMAP.md.
-v1.3 decisions archived to milestones/v1.3-ROADMAP.md.
-v1.4 decisions archived to milestones/v1.4-ROADMAP.md.
+v1.0-v1.4 decisions archived to respective milestones/ files.
 
-**v1.5 Phase 19:**
-- LayoutBuilder statt hardcoded 624px fuer TextPainter-Breite
-- Beschreibungslimit von 200 auf 500 Zeichen (200 reichte nie fuer 5 Zeilen)
-
-**v1.5 Phase 20:**
-- Templates als public top-level functions in importer service
-- scaffoldProject auto-committed nur wenn .git existiert UND Dateien erstellt
-- p.isWithin() fuer scan-dir containment mit trailing slash normalization
-
-**v1.5 Phase 21:**
-- Gestrichen — Obsidian Vault ersetzt Memory-Tab-Funktion
+**v1.5:**
+- Phase 21 gestrichen — Obsidian Vault ersetzt Memory-Tab-Funktion
 
 **v2.0:**
 - Produktvision: Dashboard + Launcher, kein Terminal-Ersatz
 - Zielgruppe: Technisch versierte Nicht-Entwickler
-- Personas: Lisa (Gruenderin), Markus (Berater), Tom (Designer)
+- Settings GUI (SET-01..03) auf Future deferred — instabiles Schema, Race Conditions
+- Claude-Button via osascript + Terminal.app (nicht direct Process.run — PATH-Problem)
 
 ### Pending Todos
 
-- Update ~/.zshrc to add `/opt/homebrew/share/flutter/bin` to PATH (or symlink to expected `/Users/rob/code/flutter`)
-- Fix pre-existing withOpacity() in launch_dialog.dart:12 (deferred from 09-01)
+- Update ~/.zshrc to add `/opt/homebrew/share/flutter/bin` to PATH
+- Fix pre-existing withOpacity() in launch_dialog.dart:12
 
 ### Blockers/Concerns
 
@@ -90,6 +78,6 @@ None
 
 ## Session Continuity
 
-Last session: 2026-03-06T08:30:00Z
-Stopped at: Defining requirements for v2.0
-Resume with: Continue requirements definition and roadmap creation
+Last session: 2026-03-06
+Stopped at: Roadmap v2.0 created with 4 phases (22-25)
+Resume with: `/gsd:plan-phase 22` to plan Claude-Button
