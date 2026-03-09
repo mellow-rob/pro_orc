@@ -9,6 +9,16 @@ import 'package:pro_orc/features/shell/glass_card.dart';
 import 'package:pro_orc/theme/n3_colors.dart';
 
 // ---------------------------------------------------------------------------
+// Date formatting helper (manual, no intl dependency)
+// ---------------------------------------------------------------------------
+
+String _formatDate(DateTime dt) {
+  final d = dt.day.toString().padLeft(2, '0');
+  final m = dt.month.toString().padLeft(2, '0');
+  return '$d.$m.${dt.year}';
+}
+
+// ---------------------------------------------------------------------------
 // Public show functions
 // ---------------------------------------------------------------------------
 
@@ -135,6 +145,14 @@ class _SkillDetailContent extends StatelessWidget {
               colors: colors,
               onTap: () => Process.run('open', [skill.path], runInShell: true),
             ),
+            const SizedBox(width: 8),
+            _ActionChip(
+              icon: Icons.edit_note,
+              label: 'Im Editor öffnen',
+              accent: accent,
+              colors: colors,
+              onTap: () => Process.run('open', ['${skill.path}/SKILL.md'], runInShell: true),
+            ),
             if (skill.homepage != null) ...[
               const SizedBox(width: 8),
               _ActionChip(
@@ -186,6 +204,12 @@ class _PluginDetailContent extends StatelessWidget {
               if (plugin.version != null)
                 _InfoRow(label: 'Version', value: plugin.version!, colors: colors),
               _InfoRow(label: 'Marketplace', value: plugin.marketplace, colors: colors),
+              if (plugin.author != null)
+                _InfoRow(label: 'Autor', value: plugin.author!, colors: colors),
+              if (plugin.installedAt != null)
+                _InfoRow(label: 'Installiert', value: _formatDate(plugin.installedAt!), colors: colors),
+              if (plugin.lastUpdated != null)
+                _InfoRow(label: 'Aktualisiert', value: _formatDate(plugin.lastUpdated!), colors: colors),
             ],
           ),
         ),
@@ -317,6 +341,18 @@ class _McpServerDetailContent extends StatelessWidget {
             _ActionChip(
               icon: Icons.settings,
               label: 'settings.json öffnen',
+              accent: accent,
+              colors: colors,
+              onTap: () {
+                final home = Platform.environment['HOME']!;
+                Process.run('open', ['$home/.claude/settings.json'],
+                    runInShell: true);
+              },
+            ),
+            const SizedBox(width: 8),
+            _ActionChip(
+              icon: Icons.edit_note,
+              label: 'Im Editor öffnen',
               accent: accent,
               colors: colors,
               onTap: () {

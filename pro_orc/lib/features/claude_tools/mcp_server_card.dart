@@ -145,6 +145,19 @@ class McpServerCard extends StatelessWidget {
                         );
                       },
                     ),
+                    _McpActionButton(
+                      icon: LucideIcons.filePenLine100,
+                      tooltip: 'Im Editor öffnen',
+                      color: colors.violetLo,
+                      onPressed: () {
+                        final home = Platform.environment['HOME']!;
+                        Process.run(
+                          'open',
+                          ['$home/.claude/settings.json'],
+                          runInShell: true,
+                        );
+                      },
+                    ),
                   ],
                 ),
               ],

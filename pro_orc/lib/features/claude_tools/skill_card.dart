@@ -81,6 +81,17 @@ class SkillCard extends StatelessWidget {
                     ),
                   ),
 
+                  // Im Editor oeffnen
+                  _ActionButton(
+                    icon: LucideIcons.filePenLine100,
+                    tooltip: 'Im Editor öffnen',
+                    color: colors.amberLo,
+                    onPressed: () {
+                      final skillMdPath = '${skill.path}/SKILL.md';
+                      Process.run('open', [skillMdPath], runInShell: true);
+                    },
+                  ),
+
                   // Homepage (only if available)
                   if (skill.homepage != null)
                     _ActionButton(

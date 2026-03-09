@@ -7,6 +7,12 @@ import 'package:pro_orc/features/shared/claude_tool_detail_panel.dart';
 import 'package:pro_orc/features/shell/glass_card.dart';
 import 'package:pro_orc/theme/n3_colors.dart';
 
+String _formatDate(DateTime dt) {
+  final d = dt.day.toString().padLeft(2, '0');
+  final m = dt.month.toString().padLeft(2, '0');
+  return '$d.$m.${dt.year}';
+}
+
 /// Mini GlassCard for a single Claude plugin.
 ///
 /// Accent color: emerald. Shows name, version, enabled status,
@@ -77,6 +83,19 @@ class PluginCard extends StatelessWidget {
                 ],
               ),
 
+              // Author (if available)
+              if (plugin.author != null) ...[
+                const SizedBox(height: 4),
+                Text(
+                  'von ${plugin.author}',
+                  style: TextStyle(
+                    color: colors.textDim,
+                    fontSize: 11,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              ],
+
               // Description (if available)
               if (plugin.description != null) ...[
                 const SizedBox(height: 4),
@@ -85,6 +104,17 @@ class PluginCard extends StatelessWidget {
                   style: TextStyle(color: colors.textSec, fontSize: 12),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
+                ),
+              ],
+
+              // Date (most recent of lastUpdated/installedAt)
+              if (plugin.lastUpdated != null || plugin.installedAt != null) ...[
+                const SizedBox(height: 4),
+                Text(
+                  plugin.lastUpdated != null
+                      ? 'Aktualisiert: ${_formatDate(plugin.lastUpdated!)}'
+                      : 'Installiert: ${_formatDate(plugin.installedAt!)}',
+                  style: TextStyle(color: colors.textDim, fontSize: 10),
                 ),
               ],
 
