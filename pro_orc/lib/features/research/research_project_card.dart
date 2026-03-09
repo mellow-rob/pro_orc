@@ -118,12 +118,39 @@ class _ResearchProjectCardState extends ConsumerState<ResearchProjectCard> {
 
         const Spacer(),
 
-        // --- Quick action buttons ---
+        // --- Claude button (primary action) ---
+        _buildClaudeButton(colors),
+        const SizedBox(height: 8),
+
+        // --- Quick action buttons (secondary) ---
         buildQuickActionRow(
           buildProjectQuickActions(widget.project, ref.read(quickActionsProvider)),
           colors,
         ),
       ],
+    );
+  }
+
+  Widget _buildClaudeButton(AppColors colors) {
+    return SizedBox(
+      height: 32,
+      child: TextButton.icon(
+        onPressed: () => ref.read(quickActionsProvider).openClaude(widget.project.path),
+        icon: Icon(LucideIcons.sparkles100, size: 16, color: colors.cyan),
+        label: Text(
+          'Claude',
+          style: TextStyle(
+            color: colors.cyan,
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        style: TextButton.styleFrom(
+          backgroundColor: colors.cyan.withValues(alpha: 0.1),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+        ),
+      ),
     );
   }
 
