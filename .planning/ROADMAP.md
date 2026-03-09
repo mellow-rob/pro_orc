@@ -102,8 +102,8 @@ Wave 3B (2-3h):  Phase 25 README + Screenshots (interaktiv)
 ```
 
 - [ ] **Wave 0: Foundation Cleanup** - Fix failing tests, analyzer warnings, hardcoded /Users/rob paths
-- [ ] **Phase 22: Claude-Button** - Prominenter Claude-Button als primaere Action auf allen Projektkarten
-- [ ] **Phase 23: Skill/Plugin Browser Upgrade** - Read-only Pro-Projekt-Status, Quick Actions und Metadaten im Claude Tools Tab
+- [x] **Phase 22: Claude-Button** - Prominenter Claude-Button als primaere Action auf allen Projektkarten (completed 2026-03-09)
+- [x] **Phase 23: Skill/Plugin Browser Upgrade** - Read-only Pro-Projekt-Status, Quick Actions und Metadaten im Claude Tools Tab (completed 2026-03-09)
 - [ ] **Phase 24: Onboarding** - First-Run Wizard mit Claude Code Detection und Setup-Hilfe
 - [ ] **Phase 25: Open Source Polish** - README, LICENSE, Contributing Guide, Repo-Audit und Release Templates
 
@@ -127,7 +127,7 @@ Wave 3B (2-3h):  Phase 25 README + Screenshots (interaktiv)
   1. User klickt den Claude-Button auf einer Projektkarte und eine Terminal-Session oeffnet sich mit `claude` im richtigen Projektverzeichnis
   2. Der Claude-Button ist visuell als primaere Action erkennbar (Cyan, prominente Position links)
   3. Terminal-Zugang bleibt ueber Kontextmenue oder sekundaere Action erreichbar — kein Funktionsverlust
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 
 Plans:
 - [x] 22-01-PLAN.md — Claude-Button auf Projektkarten + Terminal ins Kontextmenue
@@ -142,7 +142,7 @@ Plans:
   1. User sieht im Claude Tools Tab pro Projekt welche Skills und Plugins installiert/aktiv sind
   2. User kann per Quick Action ein Skill oder Plugin im Editor oeffnen oder dessen Dokumentation anzeigen
   3. Jedes Plugin zeigt Metadaten: Autor, Installationsdatum, letzte Aktualisierung
-**Plans:** 2 plans
+**Plans:** 2/2 plans complete
 
 Plans:
 - [x] 23-01-PLAN.md — Data layer: Plugin-Metadaten + Per-Project Scanner
@@ -199,7 +199,7 @@ Plans:
 | 19. Detail-Panel Typography | v1.5 | 1/1 | Complete | 2026-03-05 |
 | 20. Folder Import | v1.5 | 2/2 | Complete | 2026-03-05 |
 | ~~21. Memory Tab~~ | v1.5 | — | Gestrichen | — |
-| 22. Claude-Button | v2.0 | 1/1 | Complete | 2026-03-09 |
-| 23. Skill/Plugin Browser Upgrade | v2.0 | 2/2 | Complete (pending verify) | 2026-03-09 |
+| 22. Claude-Button | v2.0 | Complete    | 2026-03-09 | 2026-03-09 |
+| 23. Skill/Plugin Browser Upgrade | v2.0 | Complete    | 2026-03-09 | 2026-03-09 |
 | 24. Onboarding | v2.0 | 0/? | Not started | - |
 | 25. Open Source Polish | v2.0 | 0/? | Not started | - |
