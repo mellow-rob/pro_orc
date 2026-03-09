@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Open Source Public Release
 status: ready_to_plan
-stopped_at: Roadmap created, ready to plan Phase 22
-last_updated: "2026-03-06T09:00:00Z"
-last_activity: 2026-03-06 — Roadmap v2.0 created (4 phases, 13 requirements)
+stopped_at: Roadmap optimiert (Wave-basiert, parallelisiert), ready for Wave 0
+last_updated: "2026-03-09T13:00:00Z"
+last_activity: 2026-03-09 — Roadmap v2.0 optimiert (Wave-basiert, Settings GUI gestrichen, Phase 23 read-only)
 progress:
   total_phases: 4
   completed_phases: 0
@@ -21,15 +21,15 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-06)
 
 **Core value:** Auf einen Blick sehen, wo jedes Projekt steht, was der naechste Schritt ist, und welche Tools zur Verfuegung stehen — ohne Terminal-Hopping oder Notion-Suche.
-**Current focus:** Phase 22 — Claude-Button
+**Current focus:** Wave 0 — Foundation Cleanup (Tests, Analyzer, Hardcoded Paths)
 
 ## Current Position
 
 Milestone: v2.0 Open Source Public Release
-Phase: 22 of 25 (Claude-Button) — first of 4 v2.0 phases
+Phase: Wave 0 (Foundation Cleanup) — prerequisite for Phases 22-25
 Plan: —
-Status: Ready to plan
-Last activity: 2026-03-06 — Roadmap v2.0 created
+Status: Ready to execute
+Last activity: 2026-03-09 — Roadmap optimiert mit Wave-basierter Parallelisierung
 
 Progress: ░░░░░░░░░░░░░░░░░░░░ 0% (0/4 phases)
 
@@ -65,7 +65,9 @@ v1.0-v1.4 decisions archived to respective milestones/ files.
 - Produktvision: Dashboard + Launcher, kein Terminal-Ersatz
 - Zielgruppe: Technisch versierte Nicht-Entwickler
 - Settings GUI (SET-01..03) auf Future deferred — instabiles Schema, Race Conditions
+- Phase 23 read-only — keine settings.json Writes, Toggle-Writes deferred auf v2.1
 - Claude-Button via osascript + Terminal.app (nicht direct Process.run — PATH-Problem)
+- Wave-basierte Ausfuehrung: Phase 22 + 23 parallel (zero file overlap), Phase 25A parallel mit Wave 1
 
 ### Pending Todos
 
@@ -78,6 +80,6 @@ None
 
 ## Session Continuity
 
-Last session: 2026-03-06
-Stopped at: Roadmap v2.0 created with 4 phases (22-25)
-Resume with: `/gsd:plan-phase 22` to plan Claude-Button
+Last session: 2026-03-09
+Stopped at: Roadmap v2.0 optimiert — Wave-basiert, Settings GUI gestrichen, Phase 23 read-only
+Resume with: Wave 0 ausfuehren (fix tests + analyzer + hardcoded paths), dann `/gsd:plan-phase 22` parallel mit `/gsd:plan-phase 23`

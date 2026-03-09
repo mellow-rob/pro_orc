@@ -38,7 +38,7 @@ class AppDatabase extends _$AppDatabase {
 
   /// Default scan directory: ~/project_orchestration
   static String get _defaultScanDir {
-    final home = Platform.environment['HOME'] ?? '/Users/rob';
+    final home = Platform.environment['HOME']!;
     return '$home/project_orchestration';
   }
 

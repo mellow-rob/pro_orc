@@ -123,6 +123,11 @@ The parser (`gsd_parser.dart`) extracts data from `.planning/` with multi-level 
 - **Status normalization** (`_deriveStatus`): maps keywords to research|planning|building|paused|done|archived. Recognizes: shipped, complete, finish, done, build, progress, etc.
 - **Phase info**: `### Phase N: Name` headings from ROADMAP, or `N of N` pattern from currentPhase string
 
-## Current State (v1.1 Rewrite)
+## Current State (v2.0 Open Source Public Release)
 
-Phase 10 of 11 in progress. Phases 6-10 delivered: native macOS foundation, data layer with TDD, reactive state with file watching, theme + UI shell, card widgets + quick actions. Phase 11 (Claude Tools tab) remaining.
+v1.0-v1.5 shipped. Currently at v2.0 milestone (Phases 22-25): Claude-Button, Skill/Plugin Browser Upgrade, Onboarding, Open Source Polish. 104 tests, ~12,400 LOC Dart.
+
+### Build Baseline
+- `flutter test`: 104 tests (2 known failures — space encoding + truncation limit)
+- `flutter analyze`: 10 info-level warnings (not errors)
+- Distribution: `scripts/build-dmg.sh` builds DMG installer

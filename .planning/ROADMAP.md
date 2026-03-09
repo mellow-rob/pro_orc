@@ -84,18 +84,44 @@ See: milestones/v1.5-ROADMAP.md for full details
 
 ### v2.0 Open Source Public Release
 
-**Milestone Goal:** Pro Orc als vollwertiges Open Source Produkt veroeffentlichen — mit Claude-Button als primaerer Action, erweitertem Tool-Browser, Onboarding fuer Erstbenutzer und professioneller Dokumentation.
+**Milestone Goal:** Pro Orc als vollwertiges Open Source Produkt veroeffentlichen — mit Claude-Button als primaerer Action, erweitertem Tool-Browser (read-only), Onboarding fuer Erstbenutzer und professioneller Dokumentation.
 
+**Execution Strategy:** Wave-basiert mit Parallelisierung (~60% parallel statt 100% sequentiell)
+
+```
+Wave 0 (30min):  Fix Tests + Analyzer + Hardcoded Paths
+                  |
+       ┌──────────┴──────────┐
+Wave 1a: Phase 22 (1-2h)     | Wave 1b: Phase 23 (3-4h)
+       (parallel, worktree)   | (parallel, worktree)
+       └──────────┬──────────┘
+                  |              Wave 3A: Phase 25 Legal (parallel mit Wave 1)
+Wave 2 (3-4h):   Phase 24
+                  |
+Wave 3B (2-3h):  Phase 25 README + Screenshots (interaktiv)
+```
+
+- [ ] **Wave 0: Foundation Cleanup** - Fix failing tests, analyzer warnings, hardcoded /Users/rob paths
 - [ ] **Phase 22: Claude-Button** - Prominenter Claude-Button als primaere Action auf allen Projektkarten
-- [ ] **Phase 23: Skill/Plugin Browser Upgrade** - Pro-Projekt-Status, Quick Actions und Metadaten im Claude Tools Tab
+- [ ] **Phase 23: Skill/Plugin Browser Upgrade** - Read-only Pro-Projekt-Status, Quick Actions und Metadaten im Claude Tools Tab
 - [ ] **Phase 24: Onboarding** - First-Run Wizard mit Claude Code Detection und Setup-Hilfe
 - [ ] **Phase 25: Open Source Polish** - README, LICENSE, Contributing Guide, Repo-Audit und Release Templates
 
 ## Phase Details
 
+### Wave 0: Foundation Cleanup (Prerequisite)
+**Goal**: Sauberer Feedback-Loop fuer alle nachfolgenden Phasen
+**Depends on**: Nothing
+**Tasks**:
+  1. Fix 2 failing tests (space encoding + truncation limit)
+  2. Fix analyzer warnings (use_build_context_synchronously etc.)
+  3. Replace hardcoded `/Users/rob` fallbacks with `Platform.environment['HOME']!`
+**Done when**: `flutter test` = 0 failures, `flutter analyze` = 0 issues, kein `/Users/rob` in lib/
+
 ### Phase 22: Claude-Button
 **Goal**: User startet Claude Code Sessions direkt von Projektkarten — ein Klick vom Dashboard ins Terminal
-**Depends on**: Nothing (unabhaengig, baut auf bestehende osascript/QuickActions Patterns)
+**Depends on**: Wave 0
+**Parallel with**: Phase 23 (zero file overlap — Phase 22 touches project cards, Phase 23 touches Claude Tools tab)
 **Requirements**: CLB-01, CLB-02, CLB-03
 **Success Criteria** (what must be TRUE):
   1. User klickt den Claude-Button auf einer Projektkarte und eine Terminal-Session oeffnet sich mit `claude` im richtigen Projektverzeichnis
@@ -105,7 +131,9 @@ See: milestones/v1.5-ROADMAP.md for full details
 
 ### Phase 23: Skill/Plugin Browser Upgrade
 **Goal**: User sieht auf einen Blick welche Skills und Plugins pro Projekt aktiv sind und kann sie direkt oeffnen
-**Depends on**: Phase 22 (sequenziell, keine harte Abhaengigkeit)
+**Depends on**: Wave 0
+**Parallel with**: Phase 22 (zero file overlap)
+**Scope**: Read-only — keine settings.json Writes. Toggle-Writes deferred auf v2.1 (Race Condition Risiko mit laufenden Claude Sessions)
 **Requirements**: SPB-01, SPB-02, SPB-03
 **Success Criteria** (what must be TRUE):
   1. User sieht im Claude Tools Tab pro Projekt welche Skills und Plugins installiert/aktiv sind
@@ -115,7 +143,7 @@ See: milestones/v1.5-ROADMAP.md for full details
 
 ### Phase 24: Onboarding
 **Goal**: Erstbenutzer werden beim ersten Start durch Claude Code Detection und Ersteinrichtung gefuehrt
-**Depends on**: Phase 23 (alle Features muessen stehen bevor Onboarding darauf verweisen kann)
+**Depends on**: Phase 22 + 23 (Onboarding referenziert Claude-Button und Browser Features)
 **Requirements**: ONB-01, ONB-02, ONB-03
 **Success Criteria** (what must be TRUE):
   1. Beim allerersten Start erkennt Pro Orc ob Claude Code CLI installiert ist und zeigt verstaendliche Setup-Hilfe falls nicht
@@ -126,8 +154,11 @@ See: milestones/v1.5-ROADMAP.md for full details
 
 ### Phase 25: Open Source Polish
 **Goal**: Pro Orc ist bereit fuer die oeffentliche GitHub-Veroeffentlichung mit professioneller Dokumentation und sauberem Repo
-**Depends on**: Phase 24 (alle Features muessen final sein fuer Screenshots und Dokumentation)
+**Depends on**: Splitbar — Legal/Repo-Audit (25A) parallel mit Wave 1, README+Screenshots (25B) nach Phase 24
 **Requirements**: OSS-01, OSS-02, OSS-03, OSS-04
+**Sub-tasks**:
+  - **25A (parallel mit Wave 1)**: LICENSE, CONTRIBUTING.md, Issue Templates, PR Template, .gitignore Audit, Secrets-Scan
+  - **25B (nach Phase 24)**: README mit Screenshots, Feature-Beschreibung, Installationsanleitung, Quick-Start Guide
 **Success Criteria** (what must be TRUE):
   1. GitHub README erklaert Features, zeigt Screenshots, enthaelt Installationsanleitung (Homebrew + DMG) und Quick-Start Guide
   2. LICENSE-Datei und CONTRIBUTING.md mit Build/Test/PR Conventions liegen im Repo-Root

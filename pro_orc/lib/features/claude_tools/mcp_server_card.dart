@@ -137,7 +137,7 @@ class McpServerCard extends StatelessWidget {
                       color: colors.violetLo,
                       onPressed: () {
                         final home =
-                            Platform.environment['HOME'] ?? '/Users/rob';
+                            Platform.environment['HOME']!;
                         Process.run(
                           'open',
                           ['$home/.claude/settings.json'],

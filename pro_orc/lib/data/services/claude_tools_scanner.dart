@@ -19,7 +19,7 @@ class ClaudeToolsScanner {
   /// defaults to `$HOME/.claude`.
   ClaudeToolsScanner({String? claudeDirOverride})
       : claudeDir = claudeDirOverride ??
-            '${Platform.environment['HOME'] ?? '/Users/rob'}/.claude';
+            '${Platform.environment['HOME']!}/.claude';
 
   // ---------------------------------------------------------------------------
   // Public API

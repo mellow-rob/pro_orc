@@ -320,7 +320,7 @@ class _McpServerDetailContent extends StatelessWidget {
               accent: accent,
               colors: colors,
               onTap: () {
-                final home = Platform.environment['HOME'] ?? '/Users/rob';
+                final home = Platform.environment['HOME']!;
                 Process.run('open', ['$home/.claude/settings.json'],
                     runInShell: true);
               },

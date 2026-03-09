@@ -209,12 +209,13 @@ class _ResearchTabState extends ConsumerState<ResearchTab> {
   }
 
   Future<void> _showAddMenu(
-      BuildContext context, Offset position, String tabType) async {
-    final colors = Theme.of(context).extension<AppColors>()!;
+      BuildContext _, Offset position, String tabType) async {
+    final ctx = context;
+    final colors = Theme.of(ctx).extension<AppColors>()!;
     final overlay =
-        Overlay.of(context).context.findRenderObject() as RenderBox;
+        Overlay.of(ctx).context.findRenderObject() as RenderBox;
     final result = await showMenu<String>(
-      context: context,
+      context: ctx,
       color: colors.bgElev,
       position: RelativeRect.fromRect(
         Rect.fromLTWH(position.dx, position.dy, 0, 0),
@@ -249,13 +250,13 @@ class _ResearchTabState extends ConsumerState<ResearchTab> {
     if (!mounted || result == null) return;
 
     if (result == 'create') {
-      await _openCreateDialog(context, tabType);
+      await _openCreateDialog(tabType);
     } else if (result == 'import') {
-      await _openImportFlow(context);
+      await _openImportFlow();
     }
   }
 
-  Future<void> _openImportFlow(BuildContext context) async {
+  Future<void> _openImportFlow() async {
     final dir = await getDirectoryPath();
     if (dir == null || !mounted) return;
 
@@ -283,7 +284,7 @@ class _ResearchTabState extends ConsumerState<ResearchTab> {
       context: context,
       barrierDismissible: false,
       barrierColor: Colors.black54,
-      builder: (context) => ImportProjectDialog(
+      builder: (ctx) => ImportProjectDialog(
         analysis: analysis,
         scanDirs: scanDirs,
       ),
@@ -299,7 +300,7 @@ class _ResearchTabState extends ConsumerState<ResearchTab> {
     }
   }
 
-  Future<void> _openCreateDialog(BuildContext context, String initialTab) async {
+  Future<void> _openCreateDialog(String initialTab) async {
     final result = await showDialog<Map<String, dynamic>>(
       context: context,
       barrierDismissible: false,

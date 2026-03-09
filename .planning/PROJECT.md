@@ -46,14 +46,13 @@ Auf einen Blick sehen, wo jedes Projekt steht, was der naechste Schritt ist, und
 ### Active
 
 - Prominenter Claude-Button statt Terminal-Button auf Projektkarten — v2.0
-- Settings GUI fuer ~/.claude/settings.json (Tools, MCP Server, Modell) — v2.0
-- Skill/Plugin Browser Upgrade mit Pro-Projekt-Status und Quick Actions — v2.0
+- Skill/Plugin Browser Upgrade (read-only) mit Pro-Projekt-Status und Metadaten — v2.0
 - Onboarding & First Run mit Claude Code Detection und Setup-Wizard — v2.0
 - Open Source Polish (README, Screenshots, Contributing Guide, LICENSE) — v2.0
 
 ## Current Milestone: v2.0 Open Source Public Release
 
-**Goal:** Pro Orc als vollwertiges Open Source Produkt veroeffentlichen — mit Claude-Button, Settings GUI, erweitertem Tool-Browser, Onboarding und professioneller Dokumentation.
+**Goal:** Pro Orc als vollwertiges Open Source Produkt veroeffentlichen — mit Claude-Button, erweitertem Tool-Browser, Onboarding und professioneller Dokumentation.
 
 **Vision:** Der visuelle Einstieg in Claude Code — Projekte verwalten, Sessions starten, Tools ueberblicken. Das Terminal bleibt die Arbeitsumgebung, Pro Orc macht den Weg dorthin einfacher.
 
@@ -61,8 +60,7 @@ Auf einen Blick sehen, wo jedes Projekt steht, was der naechste Schritt ist, und
 
 **Target features:**
 - Claude-Button als primaere Action auf Projektkarten (startet `claude` im Terminal)
-- Grafische Oberflaeche fuer Claude Code Settings (erlaubte Tools, MCP Server, Modell)
-- Erweiterter Skill/Plugin Browser mit Pro-Projekt-Status und Quick Actions
+- Erweiterter Skill/Plugin Browser (read-only) mit Pro-Projekt-Status und Metadaten
 - Onboarding-Flow fuer Erstbenutzer (Claude Code Detection, Setup-Wizard, guided Import)
 - Professionelle Open Source Praesenz (README, Screenshots, Contributing Guide, LICENSE, Homebrew)
 

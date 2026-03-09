@@ -37,10 +37,11 @@ Produktdesigner, 28. Baut nebenbei 3 Side-Projects mit Claude Code. Vergisst sta
 | Phase | Feature | Beschreibung |
 |-------|---------|-------------|
 | 22 | Claude-Button | Terminal-Button wird prominenter Claude-Button (Cyan, groesser). Startet `claude` im Terminal im Projektverzeichnis. |
-| 23 | Settings GUI | Grafische Oberflaeche fuer `~/.claude/settings.json` — erlaubte Tools, MCP Server, Modell-Auswahl. |
-| 24 | Skill/Plugin Browser Upgrade | Pro Projekt zeigen welche Skills/Plugins aktiv sind, Status, Quick Actions (Editor, Docs). |
-| 25 | Onboarding & First Run | Claude Code Installation erkennen, Setup-Wizard, erster Projekt-Import guided. |
-| 26 | Open Source Polish | README, Screenshots, Contributing Guide, LICENSE, GitHub Repo aufraeumen, Homebrew Cask aktualisieren. |
+| 23 | Skill/Plugin Browser Upgrade | Read-only: Pro Projekt zeigen welche Skills/Plugins aktiv sind, Metadaten, Quick Actions (Editor, Docs). |
+| 24 | Onboarding & First Run | Claude Code Installation erkennen, Setup-Wizard, erster Projekt-Import guided. |
+| 25 | Open Source Polish | README, Screenshots, Contributing Guide, LICENSE, GitHub Repo aufraeumen, Homebrew Cask aktualisieren. |
+
+> **Scope-Aenderung**: Settings GUI (urspruenglich Phase 23) auf Future deferred — instabiles settings.json Schema, Race Conditions mit laufenden Claude Sessions, geringer Nutzen fuer Zielgruppe. Skill/Plugin Browser bleibt read-only in v2.0.
 
 ### Explizit nicht in v2.0
 - Embedded Terminal / Chat UI
@@ -51,18 +52,19 @@ Produktdesigner, 28. Baut nebenbei 3 Side-Projects mit Claude Code. Vergisst sta
 ## Architektur-Impact
 
 Keine fundamentalen Aenderungen an der 3-Layer-Architektur noetig. Neue Features sind additive Erweiterungen:
-- **Phase 22**: Aenderung an Quick Actions (osascript Command aendern)
-- **Phase 23**: Neuer Service `settings_reader.dart` + neue Settings-UI-Sektion
-- **Phase 24**: Erweiterung des bestehenden Claude Tools Tab
-- **Phase 25**: Neues Onboarding-Widget + Claude Code Detection Service
-- **Phase 26**: Keine Code-Aenderungen, nur Docs + Distribution
+- **Phase 22**: Aenderung an Quick Actions (osascript Command aendern) — project cards, quick_actions_service
+- **Phase 23**: Erweiterung des bestehenden Claude Tools Tab (read-only Metadaten) — claude_tools_tab, claude_tools_scanner
+- **Phase 24**: Neues Onboarding-Widget + Claude Code Detection Service — shell_screen, neue Dateien
+- **Phase 25**: Keine Code-Aenderungen, nur Docs + Distribution + Repo-Cleanup
+
+**Parallelisierung**: Phase 22 und 23 haben null File-Overlap und koennen parallel via Worktrees ausgefuehrt werden.
 
 ## Milestone-Definition
 
 **Name**: v2.0 — Open Source Public Release
-**Phasen**: 22-26
+**Phasen**: 22-25 (urspruenglich 22-26, Settings GUI gestrichen)
 **Abhaengigkeit**: v1.5 (abgeschlossen)
-**Ziel**: Pro Orc als vollwertiges Open Source Produkt veroeffentlichen mit Claude-Button, Settings GUI, erweitertem Tool-Browser, Onboarding und professioneller Dokumentation.
+**Ziel**: Pro Orc als vollwertiges Open Source Produkt veroeffentlichen mit Claude-Button, erweitertem Tool-Browser (read-only), Onboarding und professioneller Dokumentation.
 
 ---
 *Erstellt: 2026-03-06 | Status: Approved*

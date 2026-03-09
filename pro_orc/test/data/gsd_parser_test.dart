@@ -305,8 +305,8 @@ Das Wichtigste auf einen Blick.
     // ------------------------------------------------------------------ //
     // PROJECT.md — description truncated to 200 chars
     // ------------------------------------------------------------------ //
-    test('truncates description to 200 characters', () async {
-      final longText = 'A' * 300;
+    test('truncates description to 500 characters', () async {
+      final longText = 'A' * 600;
       final tmp = await createTempProject({
         '.planning/PROJECT.md': '''
 # Project
@@ -320,7 +320,7 @@ $longText
 
       final result = await parseGsdData(tmp.path);
 
-      expect(result.description!.length, equals(200));
+      expect(result.description!.length, equals(500));
     });
 
     // ------------------------------------------------------------------ //

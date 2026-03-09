@@ -19,10 +19,10 @@ void main() {
         expect(encodeProjectPath('/'), equals('-'));
       });
 
-      test('preserves spaces, only replaces slashes', () {
+      test('replaces spaces with dashes (matching Claude behavior)', () {
         expect(
           encodeProjectPath('/Users/rob/code/my project'),
-          equals('-Users-rob-code-my project'),
+          equals('-Users-rob-code-my-project'),
         );
       });
     });
