@@ -4,9 +4,14 @@ import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:launch_at_startup/launch_at_startup.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+import 'package:pro_orc/features/onboarding/onboarding_wizard.dart';
 import 'package:pro_orc/features/shell/glass_card.dart';
 import 'package:pro_orc/providers/database_provider.dart';
 import 'package:pro_orc/providers/projects_provider.dart';
+import 'package:pro_orc/providers/watcher_provider.dart';
 import 'package:pro_orc/theme/n3_colors.dart';
 
 /// Full-page settings tab — manages scan directories, ignore patterns,
@@ -139,6 +144,26 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
     } catch (_) {
       // May fail in debug mode
     }
+  }
+
+  // --- Setup Wizard ---
+
+  Future<void> _restartWizard() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('onboarding_completed');
+    if (!mounted) return;
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => OnboardingWizard(
+        onComplete: () {
+          ref.invalidate(watcherProvider);
+          ref.invalidate(projectsProvider);
+          _loadSettings(); // Refresh settings tab state
+        },
+      ),
+    );
+    await prefs.setBool('onboarding_completed', true);
   }
 
   // --- UI Helpers ---
@@ -337,6 +362,24 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
                   activeTrackColor: colors.cyan,
                 ),
               ],
+            ),
+          ),
+
+          const SizedBox(height: 20),
+
+          // --- Setup Wizard ---
+          _buildSection(
+            colors: colors,
+            icon: LucideIcons.wand,
+            title: 'Setup',
+            subtitle: 'Ersteinrichtungs-Wizard erneut durchlaufen',
+            child: TextButton.icon(
+              onPressed: _restartWizard,
+              icon: Icon(LucideIcons.refreshCw, size: 16, color: colors.cyan),
+              label: Text(
+                'Setup-Wizard erneut starten',
+                style: TextStyle(color: colors.textSec, fontSize: 13),
+              ),
             ),
           ),
         ],

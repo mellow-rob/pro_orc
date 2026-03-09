@@ -1,13 +1,17 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:launch_at_startup/launch_at_startup.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tray_manager/tray_manager.dart';
 import 'package:window_manager/window_manager.dart';
 
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import 'package:pro_orc/features/onboarding/onboarding_wizard.dart';
+import 'package:pro_orc/providers/database_provider.dart';
 import 'package:pro_orc/providers/projects_provider.dart';
+import 'package:pro_orc/providers/watcher_provider.dart';
 import 'package:pro_orc/theme/n3_colors.dart';
 import 'package:pro_orc/tray/tray_service.dart';
 import 'package:pro_orc/window/window_geometry_service.dart';
@@ -17,7 +21,6 @@ import 'package:pro_orc/features/code/code_tab.dart';
 import 'package:pro_orc/features/research/research_tab.dart';
 import 'package:pro_orc/features/settings/settings_tab.dart';
 import 'package:pro_orc/features/shell/glow_border_shell.dart';
-import 'package:pro_orc/features/shell/launch_dialog.dart';
 import 'package:pro_orc/features/shell/orb_background.dart';
 
 class ShellScreen extends ConsumerStatefulWidget {
@@ -41,28 +44,45 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
     _trayService.init();
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      await _checkFirstLaunch();
+      await Future.delayed(const Duration(milliseconds: 500));
+      if (!mounted) return;
+      await _checkOnboarding();
     });
   }
 
-  Future<void> _checkFirstLaunch() async {
+  /// Shows the onboarding wizard on first launch when scan dirs are
+  /// still at the default value. Skips automatically for users who
+  /// already configured custom scan directories or completed the wizard.
+  Future<void> _checkOnboarding() async {
+    final db = ref.read(appDatabaseProvider);
+    final scanDirs = await db.getScanDirs();
+
+    // Smart skip: if user has custom scan dirs, they don't need the wizard
+    final home = Platform.environment['HOME']!;
+    final isDefault = scanDirs.length == 1 &&
+        scanDirs.first == '$home/project_orchestration';
+
     final prefs = await SharedPreferences.getInstance();
-    final asked = prefs.getBool('launch_at_login_asked') ?? false;
-    if (!asked && mounted) {
-      await Future.delayed(const Duration(milliseconds: 500));
-      if (!mounted) return;
-      final enable = await showLaunchAtLoginDialog(context);
-      try {
-        if (enable) {
-          await launchAtStartup.enable();
-        } else {
-          await launchAtStartup.disable();
-        }
-      } catch (_) {
-        // launch_at_startup plugin may fail in debug mode
-      }
-      await prefs.setBool('launch_at_login_asked', true);
-    }
+    final wizardCompleted = prefs.getBool('onboarding_completed') ?? false;
+    // Backwards compat: also check old key from launch_dialog.dart
+    final oldDialogAsked = prefs.getBool('launch_at_login_asked') ?? false;
+
+    if (wizardCompleted || oldDialogAsked || !isDefault) return;
+    if (!mounted) return;
+
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => OnboardingWizard(
+        onComplete: () {
+          ref.invalidate(watcherProvider);
+          ref.invalidate(projectsProvider);
+        },
+      ),
+    );
+
+    await prefs.setBool('onboarding_completed', true);
+    await prefs.setBool('launch_at_login_asked', true);
   }
 
   @override

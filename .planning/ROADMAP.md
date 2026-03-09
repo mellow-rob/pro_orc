@@ -104,8 +104,8 @@ Wave 3B (2-3h):  Phase 25 README + Screenshots (interaktiv)
 - [ ] **Wave 0: Foundation Cleanup** - Fix failing tests, analyzer warnings, hardcoded /Users/rob paths
 - [x] **Phase 22: Claude-Button** - Prominenter Claude-Button als primaere Action auf allen Projektkarten (completed 2026-03-09)
 - [x] **Phase 23: Skill/Plugin Browser Upgrade** - Read-only Pro-Projekt-Status, Quick Actions und Metadaten im Claude Tools Tab (completed 2026-03-09)
-- [ ] **Phase 24: Onboarding** - First-Run Wizard mit Claude Code Detection und Setup-Hilfe
-- [ ] **Phase 25: Open Source Polish** - README, LICENSE, Contributing Guide, Repo-Audit und Release Templates
+- [x] **Phase 24: Onboarding** - First-Run Wizard mit Claude Code Detection und Setup-Hilfe (completed 2026-03-09)
+- [x] **Phase 25: Open Source Polish** - README, LICENSE, Contributing Guide, Repo-Audit und Release Templates (completed 2026-03-09)
 
 ## Phase Details
 
@@ -157,7 +157,10 @@ Plans:
   2. Der Setup-Wizard fuehrt durch: Claude Code Check, Scan-Verzeichnisse konfigurieren, ersten Projekt-Import
   3. Jeder Wizard-Schritt ist ueberspringbar und der gesamte Wizard kann spaeter ueber Settings erneut gestartet werden
   4. Erfahrene User mit existierender ~/.claude/ und konfigurierten Scan-Dirs werden nicht durch den Wizard belaestigt
-**Plans**: TBD
+**Plans**: 1/1 plans complete
+
+Plans:
+- [x] 24-01-PLAN.md — Setup-Wizard mit Claude Detection, Scan-Dir-Konfiguration, Projekt-Vorschau
 
 ### Phase 25: Open Source Polish
 **Goal**: Pro Orc ist bereit fuer die oeffentliche GitHub-Veroeffentlichung mit professioneller Dokumentation und sauberem Repo
@@ -172,7 +175,10 @@ Plans:
   3. Keine hardcoded /Users/rob Pfade im Source Code, keine Secrets in der Git-History, .gitignore ist vollstaendig
   4. GitHub Issue Templates und Release Notes Template sind konfiguriert
   5. Ein neuer User kann Pro Orc allein anhand der README installieren und starten
-**Plans**: TBD
+**Plans**: 1/1 plans complete
+
+Plans:
+- [x] 25-01-PLAN.md — LICENSE, CONTRIBUTING, GitHub Templates, README Update, Repo Audit
 
 ## Progress
 
@@ -201,5 +207,5 @@ Plans:
 | ~~21. Memory Tab~~ | v1.5 | — | Gestrichen | — |
 | 22. Claude-Button | v2.0 | Complete    | 2026-03-09 | 2026-03-09 |
 | 23. Skill/Plugin Browser Upgrade | v2.0 | Complete    | 2026-03-09 | 2026-03-09 |
-| 24. Onboarding | v2.0 | 0/? | Not started | - |
-| 25. Open Source Polish | v2.0 | 0/? | Not started | - |
+| 24. Onboarding | v2.0 | 1/1 | Complete | 2026-03-09 |
+| 25. Open Source Polish | v2.0 | 1/1 | Complete | 2026-03-09 |

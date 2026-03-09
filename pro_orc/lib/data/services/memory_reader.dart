@@ -7,7 +7,7 @@ import 'package:pro_orc/data/models/memory_data.dart';
 /// Encodes an absolute project path to Claude's dash-separated format.
 ///
 /// Replaces every `/` and `_` with `-` (matching Claude's actual behavior).
-/// Example: `/Users/rob/code/my_app` becomes `-Users-rob-code-my-app`.
+/// Example: `~/code/my_app` (expanded to `/home/user/code/my_app`) becomes `-home-user-code-my-app`.
 String encodeProjectPath(String projectPath) {
   return projectPath.replaceAll('/', '-').replaceAll('_', '-').replaceAll(' ', '-');
 }
@@ -32,7 +32,7 @@ MemoryData? _checkMemoryAt(String projectDir) {
 /// Reads Claude rem-sleep memory consolidation status for a project.
 ///
 /// Claude creates project directories with inconsistent naming:
-/// - Sometimes `/Users/rob/code/my_app` → `-Users-rob-code-my-app`
+/// - Sometimes `$HOME/code/my_app` → `-home-user-code-my-app`
 /// - Sometimes with suffixes like `-gsd`
 /// - Sometimes from parent directories (shorter prefix)
 ///

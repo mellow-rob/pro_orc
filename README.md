@@ -9,7 +9,10 @@ Native macOS menubar app that auto-discovers your projects, displays GSD plannin
 - **Git integration** — last commit, branch, dirty state, GitHub links
 - **Claude Tools inventory** — discovers installed Skills, Plugins, and MCP servers from `~/.claude/`
 - **Memory indicator** — shows Claude rem-sleep memory consolidation status per project (brain+zzz icon), click to trigger rem-sleep
-- **Quick actions** — open in Terminal, Finder, GitHub; right-click context menus
+- **Claude-Button** — start Claude Code sessions directly from project cards
+- **Onboarding wizard** — first-run setup with Claude Code detection and directory configuration
+- **Skill/Plugin browser** — view per-project skills, plugins, and MCP servers with metadata
+- **Quick actions** — Claude-Button, open in Terminal, Finder, GitHub; right-click context menus
 - **Menubar-only** — lives in the macOS menubar, no Dock icon
 - **Reactive** — file watcher auto-refreshes when projects change on disk
 - **Private projects** — hide projects from the main view, toggle visibility
@@ -41,8 +44,8 @@ flutter build macos --release
 ## Getting Started
 
 1. Launch Pro Orc — a menubar icon appears
-2. Open **Settings** (gear icon in the navigation rail)
-3. Add your project directories (e.g. `~/code`, `~/research`)
+2. On first launch, a setup wizard guides you through Claude Code detection and directory configuration
+3. Or open **Settings** manually (gear icon in the navigation rail) to add project directories
 4. Projects appear automatically in the **Code** and **Research** tabs
 5. Browse installed Claude tools in the **Claude Tools** tab
 
@@ -93,4 +96,4 @@ This project uses the GSD (Get Shit Done) framework for structured planning and 
 
 ## License
 
-Private project — not licensed for distribution.
+[MIT](LICENSE)
