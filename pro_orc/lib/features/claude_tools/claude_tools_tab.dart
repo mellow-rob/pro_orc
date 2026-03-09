@@ -7,11 +7,13 @@ import 'package:pro_orc/features/claude_tools/plugin_card.dart';
 import 'package:pro_orc/features/claude_tools/skill_card.dart';
 import 'package:pro_orc/features/shell/glass_card.dart';
 import 'package:pro_orc/providers/claude_tools_provider.dart';
+import 'package:pro_orc/providers/projects_provider.dart';
 import 'package:pro_orc/theme/n3_colors.dart';
 
-/// Full Claude Tools tab with search, three sections, mini cards, and live updates.
+/// Full Claude Tools tab with search, project filter, three sections, mini cards,
+/// and live updates.
 ///
-/// Sections: Skills (amber) → Plugins (emerald) → MCP-Server (violet).
+/// Sections: Skills (amber) -> Plugins (emerald) -> MCP-Server (violet).
 /// All three sections always visible, even when filtered to zero items.
 /// File watcher on ~/.claude/ triggers automatic re-scan via claudeToolsProvider.
 class ClaudeToolsTab extends ConsumerStatefulWidget {
@@ -112,7 +114,7 @@ class _ClaudeToolsTabState extends ConsumerState<ClaudeToolsTab> {
                   colors,
                   icon: Icons.dns,
                   label: 'MCP-Server',
-                  detail: 'Eintrag in ~/.claude/settings.json → mcpServers',
+                  detail: 'Eintrag in ~/.claude/settings.json -> mcpServers',
                 ),
               ],
             ),
@@ -158,28 +160,37 @@ class _ClaudeToolsTabState extends ConsumerState<ClaudeToolsTab> {
   }
 
   // ---------------------------------------------------------------------------
-  // Content (search field + three sections)
+  // Content (search field + project selector + three sections)
   // ---------------------------------------------------------------------------
 
   Widget _buildContent(
     BuildContext context,
     AppColors colors,
-    ClaudeToolsData data,
+    ClaudeToolsData globalData,
   ) {
+    final selectedPath = ref.watch(selectedProjectPathProvider);
+    final projectToolsAsync = ref.watch(projectToolsProvider);
+
+    // Merge global + project tools when a project is selected
+    final mergedSkills = _mergeSkills(globalData.skills, projectToolsAsync);
+    final mergedMcp = _mergeMcpServers(globalData.mcpServers, projectToolsAsync);
+    // Plugins are always global
+    final allPlugins = globalData.plugins;
+
     // Apply search filter
     final filteredSkills = _searchQuery.isEmpty
-        ? data.skills
-        : data.skills
+        ? mergedSkills
+        : mergedSkills
             .where((s) => s.name.toLowerCase().contains(_searchQuery))
             .toList();
     final filteredPlugins = _searchQuery.isEmpty
-        ? data.plugins
-        : data.plugins
+        ? allPlugins
+        : allPlugins
             .where((p) => p.name.toLowerCase().contains(_searchQuery))
             .toList();
     final filteredMcp = _searchQuery.isEmpty
-        ? data.mcpServers
-        : data.mcpServers
+        ? mergedMcp
+        : mergedMcp
             .where((m) => m.name.toLowerCase().contains(_searchQuery))
             .toList();
 
@@ -190,6 +201,10 @@ class _ClaudeToolsTabState extends ConsumerState<ClaudeToolsTab> {
         children: [
           // Search field
           _buildSearchField(colors),
+          const SizedBox(height: 12),
+
+          // Project selector dropdown
+          _buildProjectSelector(colors, selectedPath),
           const SizedBox(height: 24),
 
           // Skills section
@@ -200,7 +215,14 @@ class _ClaudeToolsTabState extends ConsumerState<ClaudeToolsTab> {
             label: 'Skills',
             count: filteredSkills.length,
             emptyText: 'Keine Skills installiert',
-            cards: filteredSkills.map((s) => SkillCard(skill: s)).toList(),
+            cards: filteredSkills
+                .map((s) => _wrapWithScopeBadge(
+                      colors,
+                      SkillCard(skill: s),
+                      s.scope,
+                      selectedPath != null,
+                    ))
+                .toList(),
           ),
           const SizedBox(height: 32),
 
@@ -224,10 +246,133 @@ class _ClaudeToolsTabState extends ConsumerState<ClaudeToolsTab> {
             label: 'MCP-Server',
             count: filteredMcp.length,
             emptyText: 'Keine MCP-Server konfiguriert',
-            cards: filteredMcp.map((m) => McpServerCard(server: m)).toList(),
+            cards: filteredMcp
+                .map((m) => _wrapWithScopeBadge(
+                      colors,
+                      McpServerCard(server: m),
+                      m.scope,
+                      selectedPath != null,
+                    ))
+                .toList(),
           ),
         ],
       ),
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Merge helpers
+  // ---------------------------------------------------------------------------
+
+  List<SkillData> _mergeSkills(
+    List<SkillData> global,
+    AsyncValue<ClaudeToolsData?> projectAsync,
+  ) {
+    final projectData = projectAsync.value;
+    if (projectData == null) return global;
+    return [...global, ...projectData.skills];
+  }
+
+  List<McpServerData> _mergeMcpServers(
+    List<McpServerData> global,
+    AsyncValue<ClaudeToolsData?> projectAsync,
+  ) {
+    final projectData = projectAsync.value;
+    if (projectData == null) return global;
+    return [...global, ...projectData.mcpServers];
+  }
+
+  // ---------------------------------------------------------------------------
+  // Scope badge wrapper
+  // ---------------------------------------------------------------------------
+
+  /// Wraps a card with a scope badge when a project is selected.
+  Widget _wrapWithScopeBadge(
+    AppColors colors,
+    Widget card,
+    String scope,
+    bool showBadge,
+  ) {
+    if (!showBadge) return card;
+
+    return Stack(
+      children: [
+        card,
+        Positioned(
+          top: 8,
+          right: 8,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            decoration: BoxDecoration(
+              color: scope == 'project'
+                  ? colors.cyanLo.withValues(alpha: 0.15)
+                  : colors.textDim.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Text(
+              scope == 'project' ? 'Projekt' : 'Global',
+              style: TextStyle(
+                color: scope == 'project' ? colors.cyanLo : colors.textDim,
+                fontSize: 10,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Project selector dropdown
+  // ---------------------------------------------------------------------------
+
+  Widget _buildProjectSelector(AppColors colors, String? selectedPath) {
+    final projectsAsync = ref.watch(projectsProvider);
+
+    return projectsAsync.when(
+      loading: () => const SizedBox.shrink(),
+      error: (_, _) => const SizedBox.shrink(),
+      data: (projects) {
+        if (projects.isEmpty) return const SizedBox.shrink();
+
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          decoration: BoxDecoration(
+            color: colors.bgElev,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<String?>(
+              value: selectedPath,
+              isExpanded: true,
+              dropdownColor: colors.bgElev,
+              icon: Icon(Icons.unfold_more, color: colors.textSec, size: 18),
+              style: TextStyle(color: colors.textPri, fontSize: 13),
+              items: [
+                DropdownMenuItem<String?>(
+                  value: null,
+                  child: Text(
+                    'Alle Tools (Global)',
+                    style: TextStyle(color: colors.textPri, fontSize: 13),
+                  ),
+                ),
+                ...projects.map((p) => DropdownMenuItem<String?>(
+                      value: p.path,
+                      child: Text(
+                        p.displayName,
+                        style: TextStyle(color: colors.textPri, fontSize: 13),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    )),
+              ],
+              onChanged: (value) {
+                ref.read(selectedProjectPathProvider.notifier).select(value);
+              },
+            ),
+          ),
+        );
+      },
     );
   }
 
