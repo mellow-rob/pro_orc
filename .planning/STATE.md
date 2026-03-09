@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Open Source Public Release
-status: ready_to_plan
-stopped_at: Roadmap optimiert (Wave-basiert, parallelisiert), ready for Wave 0
-last_updated: "2026-03-09T13:00:00Z"
-last_activity: 2026-03-09 — Roadmap v2.0 optimiert (Wave-basiert, Settings GUI gestrichen, Phase 23 read-only)
+status: executing
+stopped_at: Completed 23-01-PLAN.md
+last_updated: "2026-03-09T13:27:00Z"
+last_activity: 2026-03-09 — Phase 23 Plan 01 complete (data layer enrichment + per-project scanning)
 progress:
   total_phases: 4
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
+  total_plans: 7
+  completed_plans: 1
+  percent: 14
 ---
 
 # Project State
@@ -26,12 +26,12 @@ See: .planning/PROJECT.md (updated 2026-03-06)
 ## Current Position
 
 Milestone: v2.0 Open Source Public Release
-Phase: Wave 0 (Foundation Cleanup) — prerequisite for Phases 22-25
-Plan: —
-Status: Ready to execute
-Last activity: 2026-03-09 — Roadmap optimiert mit Wave-basierter Parallelisierung
+Phase: 23 — Skill/Plugin Browser Upgrade
+Plan: 23-01 complete, 23-02 next
+Status: Executing
+Last activity: 2026-03-09 — Phase 23 Plan 01 complete (data layer enrichment)
 
-Progress: ░░░░░░░░░░░░░░░░░░░░ 0% (0/4 phases)
+Progress: ##░░░░░░░░░░░░░░░░░░ 14% (1/7 plans)
 
 ## Performance Metrics
 
@@ -68,6 +68,9 @@ v1.0-v1.4 decisions archived to respective milestones/ files.
 - Phase 23 read-only — keine settings.json Writes, Toggle-Writes deferred auf v2.1
 - Claude-Button via osascript + Terminal.app (nicht direct Process.run — PATH-Problem)
 - Wave-basierte Ausfuehrung: Phase 22 + 23 parallel (zero file overlap), Phase 25A parallel mit Wave 1
+- Scope as string field ('global'/'project') not enum — simpler, extensible
+- Per-project MCP source labeled 'Projekt' (German UI language)
+- PluginData metadata fields all nullable — backward compatible
 
 ### Pending Todos
 
@@ -81,5 +84,5 @@ None
 ## Session Continuity
 
 Last session: 2026-03-09
-Stopped at: Roadmap v2.0 optimiert — Wave-basiert, Settings GUI gestrichen, Phase 23 read-only
-Resume with: Wave 0 ausfuehren (fix tests + analyzer + hardcoded paths), dann `/gsd:plan-phase 22` parallel mit `/gsd:plan-phase 23`
+Stopped at: Completed 23-01-PLAN.md
+Resume with: Execute 23-02-PLAN.md (UI upgrade for Claude Tools tab)
