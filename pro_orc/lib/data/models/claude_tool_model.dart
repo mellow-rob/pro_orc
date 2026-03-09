@@ -31,12 +31,16 @@ class SkillData {
   /// Absolute path to the skill directory.
   final String path;
 
+  /// Scope: `'global'` for `~/.claude/skills/`, `'project'` for per-project.
+  final String scope;
+
   const SkillData({
     required this.id,
     required this.name,
     this.description,
     this.homepage,
     required this.path,
+    this.scope = 'global',
   });
 }
 
@@ -67,6 +71,15 @@ class PluginData {
   /// Optional GitHub URL derived from `known_marketplaces.json` → `source.repo`.
   final String? marketplaceUrl;
 
+  /// Plugin author name from `plugin.json` `author.name` field.
+  final String? author;
+
+  /// Timestamp when the plugin was first installed.
+  final DateTime? installedAt;
+
+  /// Timestamp when the plugin was last updated.
+  final DateTime? lastUpdated;
+
   const PluginData({
     required this.key,
     required this.name,
@@ -75,6 +88,9 @@ class PluginData {
     required this.enabled,
     this.description,
     this.marketplaceUrl,
+    this.author,
+    this.installedAt,
+    this.lastUpdated,
   });
 }
 
@@ -103,6 +119,9 @@ class McpServerData {
   /// Separate args list for display (stdio only).
   final List<String>? args;
 
+  /// Scope: `'global'` for `~/.claude/settings.json`, `'project'` for per-project.
+  final String scope;
+
   const McpServerData({
     required this.name,
     required this.command,
@@ -110,6 +129,7 @@ class McpServerData {
     this.source,
     this.enabled = true,
     this.args,
+    this.scope = 'global',
   });
 }
 
