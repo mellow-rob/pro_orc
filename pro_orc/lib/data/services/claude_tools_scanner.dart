@@ -49,6 +49,23 @@ class ClaudeToolsScanner {
     }
   }
 
+  /// Scans per-project Claude tools at [projectPath].
+  /// Returns skills from `<project>/.claude/skills/` and MCP servers from
+  /// `<project>/.mcp.json`. Plugins are always global -- returned as empty list.
+  Future<ClaudeToolsData> scanProjectTools(String projectPath) async {
+    try {
+      final skills = await _scanProjectSkills(projectPath);
+      final mcpServers = await _scanProjectMcpServers(projectPath);
+      return ClaudeToolsData(
+        skills: skills,
+        plugins: const [],
+        mcpServers: mcpServers,
+      );
+    } catch (_) {
+      return ClaudeToolsData.empty;
+    }
+  }
+
   // ---------------------------------------------------------------------------
   // Skills
   // ---------------------------------------------------------------------------
@@ -325,6 +342,87 @@ class ClaudeToolsScanner {
       enabled: enabled,
       args: argsList,
     );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Per-project Skills
+  // ---------------------------------------------------------------------------
+
+  Future<List<SkillData>> _scanProjectSkills(String projectPath) async {
+    final skillsDir = Directory('$projectPath/.claude/skills');
+    if (!await skillsDir.exists()) return [];
+
+    final result = <SkillData>[];
+
+    await for (final entity in skillsDir.list(
+      recursive: false,
+      followLinks: true,
+    )) {
+      if (entity is! Directory) continue;
+
+      final id = entity.path.split('/').last;
+      if (id.startsWith('.')) continue;
+
+      final skillData = await _readSkillDir(entity.path, id);
+      result.add(SkillData(
+        id: skillData.id,
+        name: skillData.name,
+        description: skillData.description,
+        homepage: skillData.homepage,
+        path: skillData.path,
+        scope: 'project',
+      ));
+    }
+
+    result.sort((a, b) => a.name.compareTo(b.name));
+    return result;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Per-project MCP Servers
+  // ---------------------------------------------------------------------------
+
+  Future<List<McpServerData>> _scanProjectMcpServers(
+      String projectPath) async {
+    final mcpFile = File('$projectPath/.mcp.json');
+    if (!await mcpFile.exists()) return [];
+
+    try {
+      final raw = await mcpFile.readAsString();
+      final mcpJson = jsonDecode(raw) as Map<String, dynamic>;
+
+      final Map<String, dynamic> servers;
+      if (mcpJson.containsKey('mcpServers')) {
+        servers = (mcpJson['mcpServers'] as Map<String, dynamic>?) ?? {};
+      } else {
+        servers = mcpJson;
+      }
+
+      final result = <McpServerData>[];
+      for (final entry in servers.entries) {
+        final config = entry.value;
+        if (config is! Map<String, dynamic>) continue;
+        final server = _parseMcpEntry(
+          entry.key,
+          config,
+          source: 'Projekt',
+        );
+        result.add(McpServerData(
+          name: server.name,
+          command: server.command,
+          type: server.type,
+          source: server.source,
+          enabled: server.enabled,
+          args: server.args,
+          scope: 'project',
+        ));
+      }
+
+      result.sort((a, b) => a.name.compareTo(b.name));
+      return result;
+    } catch (_) {
+      return [];
+    }
   }
 
   // ---------------------------------------------------------------------------

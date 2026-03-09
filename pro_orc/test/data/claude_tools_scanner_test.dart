@@ -235,4 +235,136 @@ void main() {
       }
     });
   });
+
+  group('Per-project scanning', () {
+    late String claudeDir;
+    late String projectDir;
+
+    setUp(() async {
+      // Create a minimal claude dir for the scanner
+      final tempClaudeDir =
+          await Directory.systemTemp.createTemp('claude_proj_test_');
+      claudeDir = tempClaudeDir.path;
+      await File('$claudeDir/settings.json')
+          .writeAsString(jsonEncode({}));
+
+      // Create a temp project directory
+      final tempProjectDir =
+          await Directory.systemTemp.createTemp('project_test_');
+      projectDir = tempProjectDir.path;
+    });
+
+    tearDown(() async {
+      await Directory(claudeDir).delete(recursive: true);
+      await Directory(projectDir).delete(recursive: true);
+    });
+
+    test('scanProjectTools returns skills from project .claude/skills/',
+        () async {
+      // Create project skill
+      final skillDir = Directory('$projectDir/.claude/skills/my-skill');
+      await skillDir.create(recursive: true);
+      await File('${skillDir.path}/SKILL.md').writeAsString('''---
+name: My Project Skill
+description: A project-level skill
+---
+# My Project Skill
+''');
+
+      final scanner = ClaudeToolsScanner(claudeDirOverride: claudeDir);
+      final result = await scanner.scanProjectTools(projectDir);
+
+      expect(result.skills, hasLength(1));
+      expect(result.skills.first.name, 'My Project Skill');
+      expect(result.skills.first.scope, 'project');
+      expect(result.plugins, isEmpty);
+    });
+
+    test('scanProjectTools returns MCP servers from project .mcp.json',
+        () async {
+      // Create project .mcp.json
+      final mcpJson = {
+        'mcpServers': {
+          'project-server': {
+            'command': 'npx',
+            'args': ['-y', 'project-mcp-server'],
+          },
+        },
+      };
+      await File('$projectDir/.mcp.json')
+          .writeAsString(jsonEncode(mcpJson));
+
+      final scanner = ClaudeToolsScanner(claudeDirOverride: claudeDir);
+      final result = await scanner.scanProjectTools(projectDir);
+
+      expect(result.mcpServers, hasLength(1));
+      expect(result.mcpServers.first.name, 'project-server');
+      expect(result.mcpServers.first.scope, 'project');
+      expect(result.mcpServers.first.source, 'Projekt');
+      expect(result.skills, isEmpty);
+    });
+
+    test('scanProjectTools returns empty lists when no project config exists',
+        () async {
+      final scanner = ClaudeToolsScanner(claudeDirOverride: claudeDir);
+      final result = await scanner.scanProjectTools(projectDir);
+
+      expect(result.skills, isEmpty);
+      expect(result.plugins, isEmpty);
+      expect(result.mcpServers, isEmpty);
+    });
+
+    test('scanProjectTools handles missing .mcp.json gracefully', () async {
+      // Create only a skill, no .mcp.json
+      final skillDir = Directory('$projectDir/.claude/skills/only-skill');
+      await skillDir.create(recursive: true);
+      await File('${skillDir.path}/SKILL.md').writeAsString('''---
+name: Only Skill
+---
+''');
+
+      final scanner = ClaudeToolsScanner(claudeDirOverride: claudeDir);
+      final result = await scanner.scanProjectTools(projectDir);
+
+      expect(result.skills, hasLength(1));
+      expect(result.mcpServers, isEmpty);
+    });
+
+    test(
+        'Duplicate skills (same id in global and project) are kept separate with different scope',
+        () async {
+      // Create global skill
+      final globalSkillDir = Directory('$claudeDir/skills/shared-skill');
+      await globalSkillDir.create(recursive: true);
+      await File('${globalSkillDir.path}/SKILL.md').writeAsString('''---
+name: Shared Skill
+description: Global version
+---
+''');
+
+      // Create project skill with same id
+      final projectSkillDir =
+          Directory('$projectDir/.claude/skills/shared-skill');
+      await projectSkillDir.create(recursive: true);
+      await File('${projectSkillDir.path}/SKILL.md').writeAsString('''---
+name: Shared Skill
+description: Project version
+---
+''');
+
+      final scanner = ClaudeToolsScanner(claudeDirOverride: claudeDir);
+      final globalResult = await scanner.scanAll();
+      final projectResult = await scanner.scanProjectTools(projectDir);
+
+      final globalSkill =
+          globalResult.skills.where((s) => s.id == 'shared-skill').first;
+      final projectSkill =
+          projectResult.skills.where((s) => s.id == 'shared-skill').first;
+
+      expect(globalSkill.scope, 'global');
+      expect(projectSkill.scope, 'project');
+      expect(globalSkill.description, 'Global version');
+      expect(projectSkill.description, 'Project version');
+    });
+  });
 }
