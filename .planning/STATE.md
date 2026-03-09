@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Open Source Public Release
-status: ready_to_plan
-stopped_at: Roadmap optimiert (Wave-basiert, parallelisiert), ready for Wave 0
-last_updated: "2026-03-09T13:00:00Z"
-last_activity: 2026-03-09 — Roadmap v2.0 optimiert (Wave-basiert, Settings GUI gestrichen, Phase 23 read-only)
+status: building
+stopped_at: Phase 22 Plan 01 complete — Claude-Button auf Projektkarten
+last_updated: "2026-03-09T13:28:00Z"
+last_activity: 2026-03-09 — Phase 22-01 Claude-Button implemented (2 tasks, 106 tests, 0 warnings)
 progress:
   total_phases: 4
-  completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
+  completed_phases: 1
+  total_plans: 1
+  completed_plans: 1
+  percent: 25
 ---
 
 # Project State
@@ -21,17 +21,17 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-06)
 
 **Core value:** Auf einen Blick sehen, wo jedes Projekt steht, was der naechste Schritt ist, und welche Tools zur Verfuegung stehen — ohne Terminal-Hopping oder Notion-Suche.
-**Current focus:** Wave 0 — Foundation Cleanup (Tests, Analyzer, Hardcoded Paths)
+**Current focus:** Phase 22 complete, Phase 23 in progress (parallel worktree)
 
 ## Current Position
 
 Milestone: v2.0 Open Source Public Release
-Phase: Wave 0 (Foundation Cleanup) — prerequisite for Phases 22-25
-Plan: —
-Status: Ready to execute
-Last activity: 2026-03-09 — Roadmap optimiert mit Wave-basierter Parallelisierung
+Phase: 22-claude-button (complete)
+Plan: 22-01 (complete)
+Status: Building
+Last activity: 2026-03-09 — Phase 22-01 Claude-Button implemented
 
-Progress: ░░░░░░░░░░░░░░░░░░░░ 0% (0/4 phases)
+Progress: █████░░░░░░░░░░░░░░░ 25% (1/4 phases)
 
 ## Performance Metrics
 
@@ -51,6 +51,10 @@ Progress: ░░░░░░░░░░░░░░░░░░░░ 0% (0/4 p
 - Total plans completed: 4
 - Average duration: ~1.5 min/plan
 
+**v2.0 Velocity:**
+- Total plans completed: 1
+- Phase 22-01: ~5 min (2 tasks, 7 files, 2 tests added)
+
 ## Accumulated Context
 
 ### Decisions
@@ -68,6 +72,8 @@ v1.0-v1.4 decisions archived to respective milestones/ files.
 - Phase 23 read-only — keine settings.json Writes, Toggle-Writes deferred auf v2.1
 - Claude-Button via osascript + Terminal.app (nicht direct Process.run — PATH-Problem)
 - Wave-basierte Ausfuehrung: Phase 22 + 23 parallel (zero file overlap), Phase 25A parallel mit Wave 1
+- Claude-Button: buildClaudeScript() public fuer Testbarkeit, _terminalScript bleibt privat
+- Claude-Button immer Cyan — auch auf Research-Cards (CLB-02 locked)
 
 ### Pending Todos
 
@@ -81,5 +87,5 @@ None
 ## Session Continuity
 
 Last session: 2026-03-09
-Stopped at: Roadmap v2.0 optimiert — Wave-basiert, Settings GUI gestrichen, Phase 23 read-only
-Resume with: Wave 0 ausfuehren (fix tests + analyzer + hardcoded paths), dann `/gsd:plan-phase 22` parallel mit `/gsd:plan-phase 23`
+Stopped at: Completed 22-01-PLAN.md — Claude-Button auf Projektkarten
+Resume with: Phase 23 parallel (worktree), dann Phase 24 Onboarding

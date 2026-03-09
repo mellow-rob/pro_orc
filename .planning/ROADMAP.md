@@ -130,7 +130,7 @@ Wave 3B (2-3h):  Phase 25 README + Screenshots (interaktiv)
 **Plans:** 1 plan
 
 Plans:
-- [ ] 22-01-PLAN.md — Claude-Button auf Projektkarten + Terminal ins Kontextmenue
+- [x] 22-01-PLAN.md — Claude-Button auf Projektkarten + Terminal ins Kontextmenue
 
 ### Phase 23: Skill/Plugin Browser Upgrade
 **Goal**: User sieht auf einen Blick welche Skills und Plugins pro Projekt aktiv sind und kann sie direkt oeffnen
@@ -199,7 +199,7 @@ Plans:
 | 19. Detail-Panel Typography | v1.5 | 1/1 | Complete | 2026-03-05 |
 | 20. Folder Import | v1.5 | 2/2 | Complete | 2026-03-05 |
 | ~~21. Memory Tab~~ | v1.5 | — | Gestrichen | — |
-| 22. Claude-Button | v2.0 | 0/1 | Not started | - |
+| 22. Claude-Button | v2.0 | 1/1 | Complete | 2026-03-09 |
 | 23. Skill/Plugin Browser Upgrade | v2.0 | 0/2 | Not started | - |
 | 24. Onboarding | v2.0 | 0/? | Not started | - |
 | 25. Open Source Polish | v2.0 | 0/? | Not started | - |

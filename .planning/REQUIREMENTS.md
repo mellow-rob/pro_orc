@@ -9,9 +9,9 @@ Requirements for Open Source Public Release. Each maps to roadmap phases.
 
 ### Claude-Button
 
-- [ ] **CLB-01**: User kann auf jeder Projektkarte einen prominenten Claude-Button klicken der eine Claude Code Session im Terminal im Projektverzeichnis startet
-- [ ] **CLB-02**: Claude-Button ist visuell hervorgehoben (Cyan, groesser) und als primaere Action auf der Karte erkennbar
-- [ ] **CLB-03**: Bisheriger Terminal-Button wird durch Claude-Button ersetzt; Terminal-Zugang bleibt ueber Kontextmenue oder sekundaere Action erreichbar
+- [x] **CLB-01**: User kann auf jeder Projektkarte einen prominenten Claude-Button klicken der eine Claude Code Session im Terminal im Projektverzeichnis startet
+- [x] **CLB-02**: Claude-Button ist visuell hervorgehoben (Cyan, groesser) und als primaere Action auf der Karte erkennbar
+- [x] **CLB-03**: Bisheriger Terminal-Button wird durch Claude-Button ersetzt; Terminal-Zugang bleibt ueber Kontextmenue oder sekundaere Action erreichbar
 
 ### Skill/Plugin Browser
 
@@ -63,9 +63,9 @@ Deferred to future release. Tracked but not in current roadmap.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CLB-01 | Phase 22 | Pending |
-| CLB-02 | Phase 22 | Pending |
-| CLB-03 | Phase 22 | Pending |
+| CLB-01 | Phase 22 | Complete |
+| CLB-02 | Phase 22 | Complete |
+| CLB-03 | Phase 22 | Complete |
 | SPB-01 | Phase 23 | Pending |
 | SPB-02 | Phase 23 | Pending |
 | SPB-03 | Phase 23 | Pending |
