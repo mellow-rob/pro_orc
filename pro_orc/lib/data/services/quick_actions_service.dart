@@ -42,6 +42,19 @@ class QuickActionsService {
     await launchUrl(uri);
   }
 
+  /// Builds the AppleScript command to open Claude in the given directory.
+  /// Exposed for testability.
+  String buildClaudeScript(String projectPath) {
+    return _terminalScript('cd "$projectPath" && claude');
+  }
+
+  /// Opens Terminal.app, cd's into the project directory, and starts Claude Code.
+  Future<void> openClaude(String projectPath) async {
+    final script = buildClaudeScript(projectPath);
+    await Process.run('osascript', ['-e', script], runInShell: true);
+    await Process.run('open', ['-a', 'Terminal'], runInShell: true);
+  }
+
   /// Builds AppleScript to run a command in a new Terminal window.
   String _terminalScript(String command) {
     // Escape backslashes and double quotes for AppleScript string

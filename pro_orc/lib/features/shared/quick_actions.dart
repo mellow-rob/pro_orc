@@ -24,11 +24,6 @@ List<QuickAction> buildProjectQuickActions(
 ) {
   return [
     QuickAction(
-      icon: LucideIcons.terminal100,
-      tooltip: 'Terminal',
-      onPressed: () => qa.openInTerminal(project.path),
-    ),
-    QuickAction(
       icon: LucideIcons.folder100,
       tooltip: 'Finder',
       onPressed: () => qa.openInFinder(project.path),

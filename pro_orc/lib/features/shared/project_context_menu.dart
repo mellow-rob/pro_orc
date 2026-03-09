@@ -6,6 +6,7 @@ import 'package:pro_orc/data/models/project_model.dart';
 import 'package:pro_orc/data/models/project_type.dart';
 import 'package:pro_orc/features/shared/delete_project_dialog.dart';
 import 'package:pro_orc/providers/database_provider.dart';
+import 'package:pro_orc/data/services/quick_actions_service.dart';
 import 'package:pro_orc/providers/hidden_projects_provider.dart';
 import 'package:pro_orc/providers/projects_provider.dart';
 
@@ -47,6 +48,10 @@ void showProjectContextMenu({
         value: 'ignore',
         child: Text('Ignorieren'),
       ),
+      const PopupMenuItem(
+        value: 'terminal',
+        child: Text('Terminal'),
+      ),
       const PopupMenuDivider(),
       const PopupMenuItem(
         value: 'delete',
@@ -69,6 +74,8 @@ void showProjectContextMenu({
       final db = ref.read(appDatabaseProvider);
       await db.addIgnorePattern(project.folderId);
       ref.invalidate(projectsProvider);
+    } else if (value == 'terminal') {
+      QuickActionsService().openInTerminal(project.path);
     } else if (value == 'delete') {
       if (context.mounted) {
         showDialog<bool>(

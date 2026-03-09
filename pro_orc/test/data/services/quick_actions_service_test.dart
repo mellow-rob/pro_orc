@@ -13,7 +13,8 @@ void main() {
       test('generates AppleScript containing cd and claude command', () {
         final script = service.buildClaudeScript('/some/path');
 
-        expect(script, contains('cd "/some/path" && claude'));
+        // Quotes are escaped for AppleScript embedding
+        expect(script, contains(r'cd \"/some/path\" && claude'));
         expect(script, contains('tell application "Terminal"'));
         expect(script, contains('do script'));
       });
@@ -21,7 +22,7 @@ void main() {
       test('handles paths with spaces', () {
         final script = service.buildClaudeScript('/my project/folder');
 
-        expect(script, contains('cd "/my project/folder" && claude'));
+        expect(script, contains(r'cd \"/my project/folder\" && claude'));
       });
     });
   });
