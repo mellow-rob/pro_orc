@@ -142,7 +142,11 @@ Plans:
   1. User sieht im Claude Tools Tab pro Projekt welche Skills und Plugins installiert/aktiv sind
   2. User kann per Quick Action ein Skill oder Plugin im Editor oeffnen oder dessen Dokumentation anzeigen
   3. Jedes Plugin zeigt Metadaten: Autor, Installationsdatum, letzte Aktualisierung
-**Plans**: TBD
+**Plans:** 2 plans
+
+Plans:
+- [ ] 23-01-PLAN.md — Data layer: Plugin-Metadaten + Per-Project Scanner
+- [ ] 23-02-PLAN.md — UI: Projekt-Dropdown, Metadaten-Anzeige, Editor-Quick-Actions
 
 ### Phase 24: Onboarding
 **Goal**: Erstbenutzer werden beim ersten Start durch Claude Code Detection und Ersteinrichtung gefuehrt
@@ -196,6 +200,6 @@ Plans:
 | 20. Folder Import | v1.5 | 2/2 | Complete | 2026-03-05 |
 | ~~21. Memory Tab~~ | v1.5 | — | Gestrichen | — |
 | 22. Claude-Button | v2.0 | 0/1 | Not started | - |
-| 23. Skill/Plugin Browser Upgrade | v2.0 | 0/? | Not started | - |
+| 23. Skill/Plugin Browser Upgrade | v2.0 | 0/2 | Not started | - |
 | 24. Onboarding | v2.0 | 0/? | Not started | - |
 | 25. Open Source Polish | v2.0 | 0/? | Not started | - |
