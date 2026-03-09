@@ -162,14 +162,23 @@ class ClaudeToolsScanner {
         final version = first['version'] as String?;
         final enabled = (enabledPlugins[key] as bool?) ?? false;
 
-        // Description from plugin.json in install cache
+        // Description and author from plugin.json in install cache
         String? description;
+        String? author;
         try {
           final pjPath = '$installPath/.claude-plugin/plugin.json';
           final pjRaw = await File(pjPath).readAsString();
           final pj = jsonDecode(pjRaw) as Map<String, dynamic>;
           description = pj['description'] as String?;
+          author =
+              (pj['author'] as Map<String, dynamic>?)?['name'] as String?;
         } catch (_) {}
+
+        // Parse install/update timestamps from installed_plugins.json
+        final installedAt =
+            DateTime.tryParse(first['installedAt'] as String? ?? '');
+        final lastUpdated =
+            DateTime.tryParse(first['lastUpdated'] as String? ?? '');
 
         // Marketplace URL derived from known_marketplaces.json
         String? marketplaceUrl;
@@ -187,6 +196,9 @@ class ClaudeToolsScanner {
           enabled: enabled,
           description: description,
           marketplaceUrl: marketplaceUrl,
+          author: author,
+          installedAt: installedAt,
+          lastUpdated: lastUpdated,
         ));
       }
 
