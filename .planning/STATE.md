@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Open Source Public Release
 status: building
-stopped_at: Wave 1 complete — Phase 22-01 + 23-01 parallel, Phase 23-02 next
-last_updated: "2026-03-09T13:30:00Z"
-last_activity: 2026-03-09 — Wave 1 parallel (22-01 Claude-Button + 23-01 data enrichment)
+stopped_at: Phase 23-02 Tasks 1+2 complete, Task 3 (visual verification) pending
+last_updated: "2026-03-09T14:10:00Z"
+last_activity: 2026-03-09 — Phase 23-02 UI layer (project selector, metadata, quick actions)
 progress:
   total_phases: 4
   completed_phases: 1
   total_plans: 4
-  completed_plans: 2
-  percent: 50
+  completed_plans: 3
+  percent: 75
 ---
 
 # Project State
@@ -21,17 +21,17 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-06)
 
 **Core value:** Auf einen Blick sehen, wo jedes Projekt steht, was der naechste Schritt ist, und welche Tools zur Verfuegung stehen — ohne Terminal-Hopping oder Notion-Suche.
-**Current focus:** Phase 22 complete, Phase 23 in progress (parallel worktree)
+**Current focus:** Phase 23-02 complete (pending visual verification)
 
 ## Current Position
 
 Milestone: v2.0 Open Source Public Release
-Phase: 22 complete, 23 in progress (23-02 next)
-Plan: 22-01 complete, 23-01 complete, 23-02 next
+Phase: 22 complete, 23 in progress (23-02 visual verify pending)
+Plan: 22-01 complete, 23-01 complete, 23-02 complete (pending verify)
 Status: Building
-Last activity: 2026-03-09 — Wave 1 parallel execution (22-01 + 23-01)
+Last activity: 2026-03-09 — Phase 23-02 UI layer execution
 
-Progress: ██████████░░░░░░░░░░ 50% (2/4 plans)
+Progress: ███████████████░░░░░ 75% (3/4 plans)
 
 ## Performance Metrics
 
@@ -52,8 +52,10 @@ Progress: ██████████░░░░░░░░░░ 50% (2/4 
 - Average duration: ~1.5 min/plan
 
 **v2.0 Velocity:**
-- Total plans completed: 1
+- Total plans completed: 3
 - Phase 22-01: ~5 min (2 tasks, 7 files, 2 tests added)
+- Phase 23-01: ~5 min (2 tasks, 3 files, 16 tests added)
+- Phase 23-02: ~19 min (2 tasks, 6 files, 0 tests added)
 
 ## Accumulated Context
 
@@ -77,6 +79,9 @@ v1.0-v1.4 decisions archived to respective milestones/ files.
 - Scope as string field ('global'/'project') not enum — simpler, extensible
 - Per-project MCP source labeled 'Projekt' (German UI language)
 - PluginData metadata fields all nullable — backward compatible
+- NotifierProvider statt StateProvider fuer Riverpod 3.x Kompatibilitaet
+- Scope badges via Stack overlay — kein Card-API Umbau noetig
+- filePenLine100 statt fileEdit — Lucide Icons 3.x Namenskonvention
 
 ### Pending Todos
 
@@ -90,5 +95,5 @@ None
 ## Session Continuity
 
 Last session: 2026-03-09
-Stopped at: Wave 1 complete (22-01 + 23-01 parallel)
-Resume with: Execute 23-02-PLAN.md (UI upgrade for Claude Tools tab), then verify both phases
+Stopped at: Phase 23-02 Tasks 1+2 complete, Task 3 (visual verification) pending
+Resume with: Run `flutter run -d macos` and verify Claude Tools tab visually (project dropdown, metadata, quick actions)

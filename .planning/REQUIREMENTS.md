@@ -15,9 +15,9 @@ Requirements for Open Source Public Release. Each maps to roadmap phases.
 
 ### Skill/Plugin Browser
 
-- [ ] **SPB-01**: User sieht pro Projekt welche Skills und Plugins aktiv/installiert sind
-- [ ] **SPB-02**: User kann per Quick Action ein Skill/Plugin im Editor oeffnen oder Docs anzeigen
-- [ ] **SPB-03**: Browser zeigt Metadaten (Autor, installiert am, zuletzt aktualisiert) pro Plugin
+- [x] **SPB-01**: User sieht pro Projekt welche Skills und Plugins aktiv/installiert sind
+- [x] **SPB-02**: User kann per Quick Action ein Skill/Plugin im Editor oeffnen oder Docs anzeigen
+- [x] **SPB-03**: Browser zeigt Metadaten (Autor, installiert am, zuletzt aktualisiert) pro Plugin
 
 ### Onboarding
 
@@ -66,9 +66,9 @@ Deferred to future release. Tracked but not in current roadmap.
 | CLB-01 | Phase 22 | Complete |
 | CLB-02 | Phase 22 | Complete |
 | CLB-03 | Phase 22 | Complete |
-| SPB-01 | Phase 23 | Pending |
-| SPB-02 | Phase 23 | Pending |
-| SPB-03 | Phase 23 | Pending |
+| SPB-01 | Phase 23 | Complete |
+| SPB-02 | Phase 23 | Complete |
+| SPB-03 | Phase 23 | Complete |
 | ONB-01 | Phase 24 | Pending |
 | ONB-02 | Phase 24 | Pending |
 | ONB-03 | Phase 24 | Pending |
