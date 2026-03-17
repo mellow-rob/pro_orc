@@ -1,21 +1,55 @@
-# Pro Orc — Project Orchestration Dashboard
+```
 
-Native macOS menubar app that auto-discovers your projects, displays GSD planning status, git activity, and Claude Code tools inventory — all in a glassmorphism dark UI.
+ ██████╗ ██████╗  ██████╗      ██████╗ ██████╗  ██████╗
+ ██╔══██╗██╔══██╗██╔═══██╗    ██╔═══██╗██╔══██╗██╔════╝
+ ██████╔╝██████╔╝██║   ██║    ██║   ██║██████╔╝██║
+ ██╔═══╝ ██╔══██╗██║   ██║    ██║   ██║██╔══██╗██║
+ ██║     ██║  ██║╚██████╔╝    ╚██████╔╝██║  ██║╚██████╗
+ ╚═╝     ╚═╝  ╚═╝ ╚═════╝     ╚═════╝ ╚═╝  ╚═╝ ╚═════╝
+
+         Project Orchestration Dashboard
+```
+
+**Your projects. Your AI tools. One glance.**
+
+A native macOS menubar app that auto-discovers your projects, shows planning progress, git activity, and Claude Code tools — all in a glassmorphism dark UI.
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-cyan.svg)](LICENSE)
+[![Platform: macOS](https://img.shields.io/badge/Platform-macOS-blue.svg)](https://github.com/mellow-rob/pro_orc/releases)
+[![Built with Flutter](https://img.shields.io/badge/Built%20with-Flutter-02569B.svg)](https://flutter.dev)
+[![Tests: 134 passing](https://img.shields.io/badge/Tests-134%20passing-brightgreen.svg)](pro_orc/test)
+
+---
+
+## Why Pro Orc?
+
+If you juggle multiple projects with Claude Code, you know the pain: scattered terminals, forgotten planning docs, "which project was I working on?", and no quick way to see what's in progress.
+
+**Pro Orc fixes that.** It sits in your menubar, watches your project directories, and gives you a live dashboard of everything — planning status, git state, Claude tools, and one-click access to jump into any project.
+
+### Built for people who ship with AI
+
+Pro Orc is designed for founders, consultants, and developers who use Claude Code as their daily driver. Not a terminal replacement — a command center.
+
+---
 
 ## Features
 
-- **Auto-scan** configurable directories for projects (code and research)
-- **GSD status** at a glance — phase progress, completion percentage, next steps
-- **Git integration** — last commit, branch, dirty state, GitHub links
-- **Claude Tools inventory** — discovers installed Skills, Plugins, and MCP servers from `~/.claude/`
-- **Memory indicator** — shows Claude rem-sleep memory consolidation status per project (brain+zzz icon), click to trigger rem-sleep
-- **Claude-Button** — start Claude Code sessions directly from project cards
-- **Onboarding wizard** — first-run setup with Claude Code detection and directory configuration
-- **Skill/Plugin browser** — view per-project skills, plugins, and MCP servers with metadata
-- **Quick actions** — Claude-Button, open in Terminal, Finder, GitHub; right-click context menus
-- **Menubar-only** — lives in the macOS menubar, no Dock icon
-- **Reactive** — file watcher auto-refreshes when projects change on disk
-- **Private projects** — hide projects from the main view, toggle visibility
+| Feature | Description |
+|---------|-------------|
+| **Auto-Scan** | Watches configurable directories, discovers projects automatically |
+| **GSD Status** | Phase progress, completion %, next steps — at a glance |
+| **Git Integration** | Last commit, branch, dirty state, GitHub links |
+| **Claude Tools** | Discovers Skills, Plugins, and MCP servers from `~/.claude/` |
+| **Claude-Button** | Start Claude Code sessions directly from project cards |
+| **Skill/Plugin Browser** | View per-project skills, plugins, MCP servers with metadata |
+| **Onboarding Wizard** | First-run setup with Claude Code detection and directory config |
+| **Quick Actions** | Terminal, Finder, GitHub, Editor — one click away |
+| **Menubar-Only** | Lives in macOS menubar, no Dock icon, always accessible |
+| **Reactive** | File watcher auto-refreshes when projects change on disk |
+| **Private Projects** | Hide projects from the main view, toggle visibility |
+
+---
 
 ## Installation
 
@@ -41,30 +75,35 @@ flutter build macos --release
 # App bundle at build/macos/Build/Products/Release/pro_orc.app
 ```
 
+---
+
 ## Getting Started
 
-1. Launch Pro Orc — a menubar icon appears
-2. On first launch, a setup wizard guides you through Claude Code detection and directory configuration
-3. Or open **Settings** manually (gear icon in the navigation rail) to add project directories
-4. Projects appear automatically in the **Code** and **Research** tabs
-5. Browse installed Claude tools in the **Claude Tools** tab
+1. **Launch** — a menubar icon appears (no Dock icon)
+2. **Setup wizard** guides you through Claude Code detection and directory configuration
+3. **Projects appear** automatically in the **Code** and **Research** tabs
+4. **Browse Claude tools** in the **Claude Tools** tab
+5. **Click any project card** to open it in Claude Code, Terminal, Finder, or your editor
+
+---
 
 ## Stack
 
 - **Flutter** (macOS native) with **Dart**
-- **Riverpod 3.x** for reactive state management
-- **Drift** (SQLite) for app configuration and per-project settings
-- **tray_manager** + **window_manager** for menubar integration
+- **Riverpod 3.x** — reactive state management
+- **Drift** (SQLite v2) — app configuration and per-project settings
+- **tray_manager** + **window_manager** — native menubar integration
 - Glassmorphism dark theme with animated gradient background
+
+---
 
 ## Development
 
 ```bash
 cd pro_orc
 flutter run -d macos          # Debug run
-flutter build macos            # Release build
-flutter test                   # Run tests
-flutter analyze                # Static analysis
+flutter test                   # Run 134 tests
+flutter analyze                # Static analysis (0 issues)
 ```
 
 ### Building a DMG
@@ -74,6 +113,8 @@ brew install create-dmg
 ./scripts/build-dmg.sh
 # Output: dist/ProOrc-<version>-macOS.dmg
 ```
+
+---
 
 ## Project Structure
 
@@ -90,10 +131,12 @@ pro_orc/                    # Flutter macOS app
 .planning/                  # GSD planning docs
 ```
 
-## GSD Workflow
+---
 
-This project uses the GSD (Get Shit Done) framework for structured planning and execution. Phase artifacts live in `.planning/` — see `ROADMAP.md` for the full phase breakdown.
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 ## License
 
-[MIT](LICENSE)
+[MIT](LICENSE) — Copyright 2026 mellow-rob
