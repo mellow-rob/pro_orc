@@ -529,7 +529,9 @@ class _CreateProjectDialogState extends ConsumerState<CreateProjectDialog>
           DropdownMenuItem(value: GitignoreTemplate.none, child: Text('Kein .gitignore')),
           DropdownMenuItem(value: GitignoreTemplate.flutter, child: Text('Flutter')),
           DropdownMenuItem(value: GitignoreTemplate.nodejs, child: Text('Node.js')),
+          DropdownMenuItem(value: GitignoreTemplate.nextjs, child: Text('HTML + Next.js')),
           DropdownMenuItem(value: GitignoreTemplate.python, child: Text('Python')),
+          DropdownMenuItem(value: GitignoreTemplate.html, child: Text('HTML (statisch)')),
         ],
         onChanged: (value) {
           if (value != null) setState(() => _gitignoreTemplate = value);

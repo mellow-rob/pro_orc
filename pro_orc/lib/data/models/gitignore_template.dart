@@ -3,5 +3,7 @@ enum GitignoreTemplate {
   none,
   flutter,
   nodejs,
+  nextjs,
   python,
+  html,
 }

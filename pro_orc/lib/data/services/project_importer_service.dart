@@ -427,6 +427,23 @@ build/
 .idea/
 coverage/
 ''';
+    case GitignoreTemplate.nextjs:
+      return '''
+node_modules/
+.next/
+out/
+build/
+.env
+.env.local
+.env*.local
+*.log
+.DS_Store
+.vscode/
+.idea/
+coverage/
+.vercel/
+.tailwind/
+''';
     case GitignoreTemplate.python:
       return '''
 __pycache__/
@@ -440,6 +457,16 @@ build/
 .DS_Store
 .idea/
 .vscode/
+''';
+    case GitignoreTemplate.html:
+      return '''
+.DS_Store
+.idea/
+.vscode/
+*.log
+Thumbs.db
+node_modules/
+.tailwind/
 ''';
     case GitignoreTemplate.none:
       return null;
