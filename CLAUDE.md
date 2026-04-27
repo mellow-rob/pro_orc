@@ -123,11 +123,11 @@ The parser (`gsd_parser.dart`) extracts data from `.planning/` with multi-level 
 - **Status normalization** (`_deriveStatus`): maps keywords to research|planning|building|paused|done|archived. Recognizes: shipped, complete, finish, done, build, progress, etc.
 - **Phase info**: `### Phase N: Name` headings from ROADMAP, or `N of N` pattern from currentPhase string
 
-## Current State (v2.0 Open Source Public Release)
+## Current State (v2.1 — Released 2026-04-27)
 
-v1.0-v1.5 shipped. Currently at v2.0 milestone (Phases 22-25): Claude-Button, Skill/Plugin Browser Upgrade, Onboarding, Open Source Polish. 104 tests, ~12,400 LOC Dart.
+v1.0-v2.0 shipped. v2.1 adds editable project titles (DB displayName override). 143 tests, ~13,500 LOC Dart.
 
 ### Build Baseline
-- `flutter test`: 104 tests (2 known failures — space encoding + truncation limit)
-- `flutter analyze`: 10 info-level warnings (not errors)
-- Distribution: `scripts/build-dmg.sh` builds DMG installer
+- `flutter test`: 143 tests, 0 failures
+- `flutter analyze`: 0 issues
+- Distribution: `scripts/build-dmg.sh` builds DMG installer, GitHub Actions release on tag push
