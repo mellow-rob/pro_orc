@@ -5,6 +5,7 @@ import 'package:pro_orc/data/db/app_database.dart';
 import 'package:pro_orc/data/models/project_model.dart';
 import 'package:pro_orc/data/models/project_type.dart';
 import 'package:pro_orc/features/shared/delete_project_dialog.dart';
+import 'package:pro_orc/features/shared/rename_project_dialog.dart';
 import 'package:pro_orc/providers/database_provider.dart';
 import 'package:pro_orc/data/services/quick_actions_service.dart';
 import 'package:pro_orc/providers/hidden_projects_provider.dart';
@@ -45,6 +46,10 @@ void showProjectContextMenu({
         child: Text(moveLabel),
       ),
       const PopupMenuItem(
+        value: 'rename',
+        child: Text('Umbenennen…'),
+      ),
+      const PopupMenuItem(
         value: 'ignore',
         child: Text('Ignorieren'),
       ),
@@ -70,6 +75,14 @@ void showProjectContextMenu({
         ),
       );
       ref.invalidate(projectsProvider);
+    } else if (value == 'rename') {
+      if (context.mounted) {
+        await showDialog<bool>(
+          context: context,
+          barrierDismissible: false,
+          builder: (_) => RenameProjectDialog(project: project),
+        );
+      }
     } else if (value == 'ignore') {
       final db = ref.read(appDatabaseProvider);
       await db.addIgnorePattern(project.folderId);

@@ -152,4 +152,19 @@ class AppDatabase extends _$AppDatabase {
       ProjectSettingsTableCompanion companion) async {
     await into(projectSettingsTable).insertOnConflictUpdate(companion);
   }
+
+  /// Sets a custom display name override for a project.
+  ///
+  /// Pass `null` or an empty/whitespace-only string to clear the override
+  /// (the app will then fall back to PROJECT.md H1 or the folder name).
+  Future<void> setProjectDisplayName(String folderId, String? name) async {
+    final trimmed = name?.trim();
+    final value = (trimmed == null || trimmed.isEmpty) ? null : trimmed;
+    await upsertProjectSettings(
+      ProjectSettingsTableCompanion.insert(
+        folderId: folderId,
+        displayName: Value(value),
+      ),
+    );
+  }
 }

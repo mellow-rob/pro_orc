@@ -12,6 +12,7 @@ import 'package:pro_orc/features/agents/agent_card.dart';
 import 'package:pro_orc/features/shared/claude_tool_detail_panel.dart';
 import 'package:pro_orc/data/services/quick_actions_service.dart';
 import 'package:pro_orc/features/shared/quick_actions.dart';
+import 'package:pro_orc/features/shared/rename_project_dialog.dart';
 import 'package:pro_orc/features/shared/status_badge.dart';
 import 'package:pro_orc/features/shell/glass_card.dart';
 import 'package:pro_orc/providers/claude_tools_provider.dart';
@@ -144,6 +145,23 @@ class ProjectDetailPanel extends ConsumerWidget {
                       fontWeight: FontWeight.w500,
                     ),
                     overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                SizedBox(
+                  width: 28,
+                  height: 28,
+                  child: IconButton(
+                    padding: EdgeInsets.zero,
+                    iconSize: 14,
+                    icon: Icon(LucideIcons.pencil100,
+                        color: colors.textDim, size: 14),
+                    tooltip: 'Umbenennen',
+                    onPressed: () => showDialog<bool>(
+                      context: context,
+                      barrierDismissible: false,
+                      builder: (_) => RenameProjectDialog(project: project),
+                    ),
                   ),
                 ),
                 if (version != null) ...[

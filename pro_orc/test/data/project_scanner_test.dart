@@ -241,6 +241,31 @@ void main() {
         expect(results.first.displayName, equals('folder-name'));
       });
 
+      test('DB displayName override beats PROJECT.md H1', () async {
+        await createGsdProject(scanRoot, 'my-project');
+        await db.setProjectDisplayName('my-project', 'Custom Name');
+
+        final results = await scanner.scanAll(scanDirOverride: scanRoot.path);
+        expect(results.first.displayName, equals('Custom Name'));
+      });
+
+      test('clearing DB displayName falls back to PROJECT.md H1', () async {
+        await createGsdProject(scanRoot, 'my-project');
+        await db.setProjectDisplayName('my-project', 'Custom Name');
+        await db.setProjectDisplayName('my-project', null);
+
+        final results = await scanner.scanAll(scanDirOverride: scanRoot.path);
+        expect(results.first.displayName, equals('my-project'));
+      });
+
+      test('whitespace-only DB displayName is treated as cleared', () async {
+        await createGsdProject(scanRoot, 'my-project');
+        await db.setProjectDisplayName('my-project', '   ');
+
+        final results = await scanner.scanAll(scanDirOverride: scanRoot.path);
+        expect(results.first.displayName, equals('my-project'));
+      });
+
       test('folderId is the folder basename', () async {
         await createPlainProject(scanRoot, 'project-folder');
 

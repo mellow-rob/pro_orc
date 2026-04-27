@@ -184,9 +184,15 @@ class ProjectScanner {
       // Scan for .md files
       final mdFiles = await _scanMdFiles(path);
 
+      // Resolve displayName: DB override > PROJECT.md H1 > folderId
+      final overrideName = settings?.displayName?.trim();
+      final resolvedName = (overrideName != null && overrideName.isNotEmpty)
+          ? overrideName
+          : (gsdResult.displayName ?? folderId);
+
       models.add(ProjectModel(
         folderId: folderId,
-        displayName: gsdResult.displayName ?? folderId,
+        displayName: resolvedName,
         path: path,
         projectType: projectType,
         description: gsdResult.description,
