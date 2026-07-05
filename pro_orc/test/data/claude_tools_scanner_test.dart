@@ -367,4 +367,166 @@ description: Project version
       expect(projectSkill.description, 'Project version');
     });
   });
+
+  group('Project-local agents (M3)', () {
+    late String claudeDir;
+    late String projectDir;
+
+    setUp(() async {
+      final tempClaudeDir =
+          await Directory.systemTemp.createTemp('claude_proj_agents_test_');
+      claudeDir = tempClaudeDir.path;
+      await File('$claudeDir/settings.json').writeAsString(jsonEncode({}));
+
+      final tempProjectDir =
+          await Directory.systemTemp.createTemp('project_agents_test_');
+      projectDir = tempProjectDir.path;
+    });
+
+    tearDown(() async {
+      await Directory(claudeDir).delete(recursive: true);
+      await Directory(projectDir).delete(recursive: true);
+    });
+
+    test('scanProjectTools returns agents from project .claude/agents/', () async {
+      final agentsDir = Directory('$projectDir/.claude/agents');
+      await agentsDir.create(recursive: true);
+      await File('${agentsDir.path}/niimo-qa.md').writeAsString('''---
+name: niimo-qa
+description: "Niimo QA agent"
+model: sonnet
+color: green
+---
+Body content.
+''');
+
+      final scanner = ClaudeToolsScanner(claudeDirOverride: claudeDir);
+      final result = await scanner.scanProjectTools(projectDir, projectName: 'Niimo');
+
+      expect(result.agents, hasLength(1));
+      expect(result.agents.first.name, 'niimo-qa');
+      expect(result.agents.first.scope, 'project');
+      expect(result.agents.first.projectName, 'Niimo');
+    });
+
+    test('scanProjectTools returns empty agents list when no project agents dir exists',
+        () async {
+      final scanner = ClaudeToolsScanner(claudeDirOverride: claudeDir);
+      final result = await scanner.scanProjectTools(projectDir);
+
+      expect(result.agents, isEmpty);
+    });
+
+    test('global agents have scope=global and null projectName', () async {
+      final agentsDir = Directory('$claudeDir/agents');
+      await agentsDir.create(recursive: true);
+      await File('${agentsDir.path}/some-agent.md').writeAsString('''---
+name: some-agent
+description: "A global agent"
+---
+''');
+
+      final scanner = ClaudeToolsScanner(claudeDirOverride: claudeDir);
+      final result = await scanner.scanAll();
+
+      expect(result.agents, hasLength(1));
+      expect(result.agents.first.scope, 'global');
+      expect(result.agents.first.projectName, isNull);
+    });
+
+    test('unreadable/malformed agent file is skipped without throwing', () async {
+      final agentsDir = Directory('$projectDir/.claude/agents');
+      await agentsDir.create(recursive: true);
+      // A directory named like an .md file — not a real file, must be skipped.
+      await Directory('${agentsDir.path}/broken.md').create();
+      await File('${agentsDir.path}/good.md').writeAsString('''---
+name: good-agent
+---
+''');
+
+      final scanner = ClaudeToolsScanner(claudeDirOverride: claudeDir);
+      final result = await scanner.scanProjectTools(projectDir);
+
+      expect(result.agents, hasLength(1));
+      expect(result.agents.first.name, 'good-agent');
+    });
+  });
+
+  group('Project tools caching (M3 rescan cost fix)', () {
+    late String claudeDir;
+    late String projectDir;
+
+    setUp(() async {
+      final tempClaudeDir =
+          await Directory.systemTemp.createTemp('claude_cache_test_');
+      claudeDir = tempClaudeDir.path;
+      await File('$claudeDir/settings.json').writeAsString(jsonEncode({}));
+
+      final tempProjectDir =
+          await Directory.systemTemp.createTemp('project_cache_test_');
+      projectDir = tempProjectDir.path;
+      // scanProjectTools's cache signature is the mtime of <project>/.claude —
+      // create it up front so there is something to key the cache on.
+      await Directory('$projectDir/.claude').create(recursive: true);
+    });
+
+    tearDown(() async {
+      await Directory(claudeDir).delete(recursive: true);
+      await Directory(projectDir).delete(recursive: true);
+    });
+
+    test('repeated scanProjectTools() with no changes returns stable data from cache',
+        () async {
+      final agentsDir = Directory('$projectDir/.claude/agents');
+      await agentsDir.create(recursive: true);
+      await File('${agentsDir.path}/stable-agent.md').writeAsString('''---
+name: stable-agent
+---
+''');
+
+      final scanner = ClaudeToolsScanner(claudeDirOverride: claudeDir);
+      final result1 = await scanner.scanProjectTools(projectDir);
+      final result2 = await scanner.scanProjectTools(projectDir);
+
+      expect(result1.agents.length, equals(result2.agents.length));
+      expect(result1.agents.first.name, equals(result2.agents.first.name));
+    });
+
+    test('scan after .claude dir changes picks up new agent', () async {
+      final scanner = ClaudeToolsScanner(claudeDirOverride: claudeDir);
+      final before = await scanner.scanProjectTools(projectDir);
+      expect(before.agents, isEmpty);
+
+      // Touch <project>/.claude so its mtime changes, then add a new agent.
+      await Future.delayed(const Duration(milliseconds: 50));
+      final agentsDir = Directory('$projectDir/.claude/agents');
+      await agentsDir.create(recursive: true);
+      await File('${agentsDir.path}/new-agent.md').writeAsString('''---
+name: new-agent
+---
+''');
+      // Bump the parent .claude dir's mtime explicitly (creating a
+      // subdirectory does not reliably touch the parent's mtime on all
+      // filesystems), mirroring how a real edit event would be observed.
+      final now = DateTime.now();
+      await Process.run(
+        'touch',
+        ['-t', _touchFormat(now), Directory('$projectDir/.claude').path],
+      );
+
+      final after = await scanner.scanProjectTools(projectDir);
+      expect(after.agents, hasLength(1));
+      expect(after.agents.first.name, 'new-agent');
+    });
+  });
+}
+
+/// Formats a DateTime for the macOS `touch -t` command (YYYYMMDDhhmm.ss).
+String _touchFormat(DateTime dt) {
+  return '${dt.year}'
+      '${dt.month.toString().padLeft(2, '0')}'
+      '${dt.day.toString().padLeft(2, '0')}'
+      '${dt.hour.toString().padLeft(2, '0')}'
+      '${dt.minute.toString().padLeft(2, '0')}'
+      '.${dt.second.toString().padLeft(2, '0')}';
 }
