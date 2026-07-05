@@ -121,6 +121,11 @@ class SessionReader {
 
       DateTime? startedAt;
       int messageCount = 0;
+      String? model;
+      // Insertion-ordered sets to keep first-seen order and de-duplicate.
+      final skills = <String>{};
+      final subagents = <String>{};
+      String? lastActivityText;
 
       final lineStream = file
           .openRead()
@@ -140,6 +145,20 @@ class SessionReader {
 
           messageCount++;
 
+          final message = decoded['message'];
+          if (message is Map<String, dynamic>) {
+            // Model is recorded on assistant lines under `message.model`.
+            final m = message['model'];
+            if (m is String && m.isNotEmpty) model = m;
+
+            _extractFromContent(
+              message['content'],
+              skills: skills,
+              subagents: subagents,
+              onText: (text) => lastActivityText = text,
+            );
+          }
+
           final tsRaw = decoded['timestamp'] as String?;
           if (tsRaw == null) continue;
           final ts = DateTime.tryParse(tsRaw);
@@ -154,10 +173,71 @@ class SessionReader {
         }
       }
 
-      return session.withDetail(startedAt: startedAt, messageCount: messageCount);
+      return session.withDetail(
+        startedAt: startedAt,
+        messageCount: messageCount,
+        model: model,
+        skills: skills.toList(),
+        subagents: subagents.toList(),
+        lastActivityText: lastActivityText,
+      );
     } catch (e) {
       developer.log('Failed to read session detail for ${session.path}: $e', name: 'session_reader');
       return session;
     }
+  }
+
+  /// Inspects a message `content` field (which may be a plain string or a list
+  /// of content blocks) and pulls out skill invocations, subagent spawns, and
+  /// the latest textual snippet. Never throws — unknown shapes are ignored, in
+  /// line with AD-1 (parser tolerates arbitrary JSONL variants).
+  void _extractFromContent(
+    Object? content, {
+    required Set<String> skills,
+    required Set<String> subagents,
+    required void Function(String) onText,
+  }) {
+    if (content is String) {
+      final snippet = _snippet(content);
+      if (snippet != null) onText(snippet);
+      return;
+    }
+    if (content is! List) return;
+
+    for (final block in content) {
+      if (block is! Map<String, dynamic>) continue;
+      final blockType = block['type'] as String?;
+
+      if (blockType == 'text') {
+        final snippet = _snippet(block['text']);
+        if (snippet != null) onText(snippet);
+      } else if (blockType == 'tool_use') {
+        final name = block['name'] as String?;
+        final input = block['input'];
+        if (input is! Map<String, dynamic>) continue;
+
+        if (name == 'Skill') {
+          final skill = input['skill'];
+          if (skill is String && skill.isNotEmpty) skills.add(skill);
+        } else if (name == 'Agent' || name == 'Task') {
+          final subagentType = input['subagent_type'];
+          if (subagentType is String && subagentType.isNotEmpty) {
+            subagents.add(subagentType);
+          }
+        }
+      }
+    }
+  }
+
+  /// Trims and truncates a text snippet for the last-activity preview.
+  /// Returns null for empty/whitespace-only input.
+  String? _snippet(Object? text) {
+    if (text is! String) return null;
+    final collapsed = text.replaceAll(RegExp(r'\s+'), ' ').trim();
+    if (collapsed.isEmpty) return null;
+    const maxLen = 140;
+    return collapsed.length <= maxLen
+        ? collapsed
+        : '${collapsed.substring(0, maxLen)}…';
   }
 }

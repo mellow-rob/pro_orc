@@ -16,6 +16,7 @@ import 'package:pro_orc/data/services/quick_actions_service.dart';
 import 'package:pro_orc/features/shared/collaboration_mini_graph.dart';
 import 'package:pro_orc/features/shared/quick_actions.dart';
 import 'package:pro_orc/features/shared/rename_project_dialog.dart';
+import 'package:pro_orc/features/shared/skill_launcher_dialog.dart';
 import 'package:pro_orc/features/shared/status_badge.dart';
 import 'package:pro_orc/features/shell/glass_card.dart';
 import 'package:pro_orc/providers/claude_tools_provider.dart';
@@ -360,7 +361,7 @@ class ProjectDetailPanel extends ConsumerWidget {
 
         // --- Quick Actions ---
         const SizedBox(height: 8),
-        _buildQuickActions(colors, accent, qa),
+        _buildQuickActions(context, colors, accent, qa),
       ],
     );
   }
@@ -640,8 +641,24 @@ class ProjectDetailPanel extends ConsumerWidget {
     );
   }
 
-  Widget _buildQuickActions(AppColors colors, Color accent, QuickActionsService qa) {
-    final actions = buildProjectQuickActions(project, qa);
+  Widget _buildQuickActions(
+    BuildContext context,
+    AppColors colors,
+    Color accent,
+    QuickActionsService qa,
+  ) {
+    final actions = [
+      ...buildProjectQuickActions(project, qa),
+      QuickAction(
+        icon: LucideIcons.sparkles100,
+        tooltip: 'Mit Skill starten',
+        onPressed: () => SkillLauncherDialog.show(
+          context,
+          projectPath: project.path,
+          projectName: project.displayName,
+        ),
+      ),
+    ];
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.start,
@@ -1261,9 +1278,11 @@ class _MdFileRowState extends State<_MdFileRow> {
   }
 }
 
-/// Row showing a single session: active/inactive dot, id, and last-activity
-/// timestamp. Read-only — no interaction beyond the row itself.
-class _SessionRow extends StatelessWidget {
+/// Expandable row showing a single session: active/inactive dot, id, and
+/// last-activity timestamp. Tapping expands to a deep-dive (model, invoked
+/// skills, spawned subagents, last-activity preview), which is parsed lazily
+/// via [sessionDetailProvider] only on first expand (AD-1). Read-only.
+class _SessionRow extends ConsumerStatefulWidget {
   const _SessionRow({
     required this.session,
     required this.colors,
@@ -1275,44 +1294,105 @@ class _SessionRow extends StatelessWidget {
   final Color accent;
 
   @override
+  ConsumerState<_SessionRow> createState() => _SessionRowState();
+}
+
+class _SessionRowState extends ConsumerState<_SessionRow> {
+  bool _expanded = false;
+
+  @override
   Widget build(BuildContext context) {
+    final session = widget.session;
+    final colors = widget.colors;
     final statusColor = session.isActive ? colors.emerald : colors.textDim;
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        children: [
-          Container(
-            width: 7,
-            height: 7,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: statusColor,
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              session.id,
-              style: TextStyle(
-                color: colors.textPri,
-                fontSize: 12,
-                fontFamily: 'monospace',
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        MouseRegion(
+          cursor: SystemMouseCursors.click,
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () => setState(() => _expanded = !_expanded),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Row(
+                children: [
+                  Container(
+                    width: 7,
+                    height: 7,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: statusColor,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      session.id,
+                      style: TextStyle(
+                        color: colors.textPri,
+                        fontSize: 12,
+                        fontFamily: 'monospace',
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    session.isActive
+                        ? 'Aktiv'
+                        : _formatSessionTime(session.lastActivity),
+                    style: TextStyle(
+                      color: session.isActive ? colors.emerald : colors.textDim,
+                      fontSize: 11,
+                      fontWeight:
+                          session.isActive ? FontWeight.w600 : FontWeight.w400,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Icon(
+                    _expanded
+                        ? LucideIcons.chevronUp100
+                        : LucideIcons.chevronDown100,
+                    color: colors.textDim,
+                    size: 14,
+                  ),
+                ],
               ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
             ),
           ),
-          const SizedBox(width: 8),
-          Text(
-            session.isActive ? 'Aktiv' : _formatSessionTime(session.lastActivity),
-            style: TextStyle(
-              color: session.isActive ? colors.emerald : colors.textDim,
-              fontSize: 11,
-              fontWeight: session.isActive ? FontWeight.w600 : FontWeight.w400,
-            ),
-          ),
-        ],
+        ),
+        if (_expanded) _buildDetail(),
+      ],
+    );
+  }
+
+  Widget _buildDetail() {
+    final detailAsync = ref.watch(sessionDetailProvider(widget.session));
+    final colors = widget.colors;
+
+    return Padding(
+      padding: const EdgeInsets.only(left: 17, bottom: 8),
+      child: detailAsync.when(
+        loading: () => _detailHint('Lade Details…'),
+        error: (_, _) => _detailHint('Nicht lesbar'),
+        data: (detail) => _SessionDetailBody(
+          detail: detail,
+          colors: colors,
+          accent: widget.accent,
+        ),
+      ),
+    );
+  }
+
+  Widget _detailHint(String text) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Text(
+        text,
+        style: TextStyle(color: widget.colors.textDim, fontSize: 11),
       ),
     );
   }
@@ -1323,6 +1403,125 @@ class _SessionRow extends StatelessWidget {
     final hh = dt.hour.toString().padLeft(2, '0');
     final mm = dt.minute.toString().padLeft(2, '0');
     return '$d.$m. $hh:$mm';
+  }
+}
+
+/// Body of an expanded session row: model, skills, subagents, last activity.
+class _SessionDetailBody extends StatelessWidget {
+  const _SessionDetailBody({
+    required this.detail,
+    required this.colors,
+    required this.accent,
+  });
+
+  final SessionInfo detail;
+  final AppColors colors;
+  final Color accent;
+
+  @override
+  Widget build(BuildContext context) {
+    final rows = <Widget>[];
+
+    if (detail.model != null) {
+      rows.add(_metaRow('Modell', detail.model!));
+    }
+    if (detail.messageCount != null) {
+      rows.add(_metaRow('Nachrichten', '${detail.messageCount}'));
+    }
+    if (detail.skills.isNotEmpty) {
+      rows.add(_chipRow('Skills', detail.skills, LucideIcons.sparkles100));
+    }
+    if (detail.subagents.isNotEmpty) {
+      rows.add(_chipRow('Subagents', detail.subagents, LucideIcons.bot100));
+    }
+    if (detail.lastActivityText != null) {
+      rows.add(_metaRow('Letzte Aktivität', detail.lastActivityText!));
+    }
+
+    if (rows.isEmpty) {
+      return Text(
+        'Keine Details verfügbar',
+        style: TextStyle(color: colors.textDim, fontSize: 11),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        for (int i = 0; i < rows.length; i++) ...[
+          rows[i],
+          if (i < rows.length - 1) const SizedBox(height: 6),
+        ],
+      ],
+    );
+  }
+
+  Widget _metaRow(String label, String value) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 96,
+          child: Text(
+            label,
+            style: TextStyle(color: colors.textDim, fontSize: 11),
+          ),
+        ),
+        Expanded(
+          child: Text(
+            value,
+            style: TextStyle(color: colors.textPri, fontSize: 11),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _chipRow(String label, List<String> items, IconData icon) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 96,
+          child: Text(
+            label,
+            style: TextStyle(color: colors.textDim, fontSize: 11),
+          ),
+        ),
+        Expanded(
+          child: Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: [
+              for (final item in items)
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: accent.withValues(alpha: 0.06),
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(
+                      color: accent.withValues(alpha: 0.15),
+                      width: 0.5,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(icon, color: accent, size: 11),
+                      const SizedBox(width: 5),
+                      Text(
+                        item,
+                        style: TextStyle(color: accent, fontSize: 11),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ],
+    );
   }
 }
 

@@ -27,6 +27,26 @@ class SessionInfo {
   /// cheap stat-based scan was performed.
   final int? messageCount;
 
+  /// The model id last seen on an `assistant` line (e.g. `claude-opus-4-8`),
+  /// if the log recorded one. Null when detail was not parsed or no model
+  /// appeared in the log.
+  final String? model;
+
+  /// Skills invoked in this session (via the `Skill` tool), in first-seen
+  /// order, de-duplicated. Empty when detail was not parsed or none were
+  /// invoked.
+  final List<String> skills;
+
+  /// Subagents spawned in this session (via the `Agent` tool), identified by
+  /// their `subagent_type`, in first-seen order, de-duplicated. Empty when
+  /// detail was not parsed or none were spawned.
+  final List<String> subagents;
+
+  /// Short excerpt of the most recent parsed user/assistant text, if any —
+  /// used as a "last activity" preview. Null when detail was not parsed or no
+  /// textual content was found.
+  final String? lastActivityText;
+
   const SessionInfo({
     required this.id,
     required this.path,
@@ -34,10 +54,22 @@ class SessionInfo {
     required this.isActive,
     this.startedAt,
     this.messageCount,
+    this.model,
+    this.skills = const [],
+    this.subagents = const [],
+    this.lastActivityText,
   });
 
-  /// Returns a copy with detail fields ([startedAt], [messageCount]) filled in.
-  SessionInfo withDetail({DateTime? startedAt, int? messageCount}) {
+  /// Returns a copy with detail fields filled in. All parameters are additive:
+  /// omitted arguments preserve the existing value.
+  SessionInfo withDetail({
+    DateTime? startedAt,
+    int? messageCount,
+    String? model,
+    List<String>? skills,
+    List<String>? subagents,
+    String? lastActivityText,
+  }) {
     return SessionInfo(
       id: id,
       path: path,
@@ -45,6 +77,10 @@ class SessionInfo {
       isActive: isActive,
       startedAt: startedAt ?? this.startedAt,
       messageCount: messageCount ?? this.messageCount,
+      model: model ?? this.model,
+      skills: skills ?? this.skills,
+      subagents: subagents ?? this.subagents,
+      lastActivityText: lastActivityText ?? this.lastActivityText,
     );
   }
 
