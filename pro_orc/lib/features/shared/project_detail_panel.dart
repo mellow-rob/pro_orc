@@ -8,6 +8,7 @@ import 'package:pro_orc/data/models/phase_info.dart';
 import 'package:pro_orc/data/models/phase_status.dart';
 import 'package:pro_orc/data/models/project_model.dart';
 import 'package:pro_orc/data/models/project_type.dart';
+import 'package:pro_orc/data/models/session_data.dart';
 import 'package:pro_orc/features/agents/agent_card.dart';
 import 'package:pro_orc/features/shared/claude_tool_detail_panel.dart';
 import 'package:pro_orc/data/services/quick_actions_service.dart';
@@ -17,6 +18,7 @@ import 'package:pro_orc/features/shared/status_badge.dart';
 import 'package:pro_orc/features/shell/glass_card.dart';
 import 'package:pro_orc/providers/claude_tools_provider.dart';
 import 'package:pro_orc/providers/database_provider.dart';
+import 'package:pro_orc/providers/session_provider.dart';
 import 'package:pro_orc/theme/n3_colors.dart';
 
 /// Opens a [ProjectDetailPanel] as a modal dialog with slide-up + fade animation.
@@ -281,6 +283,9 @@ class ProjectDetailPanel extends ConsumerWidget {
         // --- Agents ---
         if (project.usedAgents != null && project.usedAgents!.isNotEmpty)
           _buildAgentsSection(context, ref, colors, accent),
+
+        // --- Sessions ---
+        _buildSessionsSection(ref, colors, accent),
 
         // --- Decisions (collapsed by default) ---
         if (gsd?.decisions != null && gsd!.decisions!.isNotEmpty)
@@ -548,6 +553,37 @@ class ProjectDetailPanel extends ConsumerWidget {
           );
         }).toList(),
       ),
+    );
+  }
+
+  Widget _buildSessionsSection(WidgetRef ref, AppColors colors, Color accent) {
+    final sessionsAsync = ref.watch(projectSessionsProvider(project.path));
+
+    return sessionsAsync.when(
+      loading: () => const SizedBox.shrink(),
+      error: (_, _) => const SizedBox.shrink(),
+      data: (data) {
+        if (data.sessions.isEmpty) return const SizedBox.shrink();
+
+        return _SectionCard(
+          colors: colors,
+          accent: accent,
+          title: 'SESSIONS',
+          child: Column(
+            children: [
+              for (int i = 0; i < data.recentFive.length; i++) ...[
+                _SessionRow(
+                  session: data.recentFive[i],
+                  colors: colors,
+                  accent: accent,
+                ),
+                if (i < data.recentFive.length - 1)
+                  Divider(height: 1, color: colors.bgElev.withValues(alpha: 0.8)),
+              ],
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -1190,6 +1226,71 @@ class _MdFileRowState extends State<_MdFileRow> {
         ),
       ),
     );
+  }
+}
+
+/// Row showing a single session: active/inactive dot, id, and last-activity
+/// timestamp. Read-only — no interaction beyond the row itself.
+class _SessionRow extends StatelessWidget {
+  const _SessionRow({
+    required this.session,
+    required this.colors,
+    required this.accent,
+  });
+
+  final SessionInfo session;
+  final AppColors colors;
+  final Color accent;
+
+  @override
+  Widget build(BuildContext context) {
+    final statusColor = session.isActive ? colors.emerald : colors.textDim;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        children: [
+          Container(
+            width: 7,
+            height: 7,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: statusColor,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              session.id,
+              style: TextStyle(
+                color: colors.textPri,
+                fontSize: 12,
+                fontFamily: 'monospace',
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            session.isActive ? 'Aktiv' : _formatSessionTime(session.lastActivity),
+            style: TextStyle(
+              color: session.isActive ? colors.emerald : colors.textDim,
+              fontSize: 11,
+              fontWeight: session.isActive ? FontWeight.w600 : FontWeight.w400,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatSessionTime(DateTime dt) {
+    final d = dt.day.toString().padLeft(2, '0');
+    final m = dt.month.toString().padLeft(2, '0');
+    final hh = dt.hour.toString().padLeft(2, '0');
+    final mm = dt.minute.toString().padLeft(2, '0');
+    return '$d.$m. $hh:$mm';
   }
 }
 

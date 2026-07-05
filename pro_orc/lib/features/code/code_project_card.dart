@@ -7,10 +7,12 @@ import 'package:pro_orc/data/models/project_type.dart';
 import 'package:pro_orc/features/shared/memory_indicator.dart';
 import 'package:pro_orc/features/shared/project_context_menu.dart';
 import 'package:pro_orc/features/shared/quick_actions.dart';
+import 'package:pro_orc/features/shared/session_live_indicator.dart';
 import 'package:pro_orc/features/shared/status_badge.dart';
 import 'package:pro_orc/features/shell/glass_card.dart';
 import 'package:pro_orc/providers/database_provider.dart';
 import 'package:pro_orc/providers/hidden_projects_provider.dart';
+import 'package:pro_orc/providers/session_provider.dart';
 import 'package:pro_orc/theme/n3_colors.dart';
 
 /// Card widget for a single code project.
@@ -132,6 +134,9 @@ class _CodeProjectCardState extends ConsumerState<CodeProjectCard> {
 
   Widget _buildTitleRow(AppColors colors, bool isHidden) {
     final version = widget.project.gsd?.version;
+    final sessionsAsync = ref.watch(projectSessionsProvider(widget.project.path));
+    final hasActiveSession = sessionsAsync.value?.hasActiveSession ?? false;
+
     return Row(
       children: [
         Icon(LucideIcons.codeXml100, color: colors.cyan, size: 15),
@@ -150,6 +155,10 @@ class _CodeProjectCardState extends ConsumerState<CodeProjectCard> {
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
+              if (hasActiveSession) ...[
+                const SizedBox(width: 6),
+                SessionLiveIndicator(colors: colors),
+              ],
               if (version != null) ...[
                 const SizedBox(width: 6),
                 Text(

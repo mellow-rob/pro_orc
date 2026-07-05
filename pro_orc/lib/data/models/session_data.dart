@@ -47,6 +47,16 @@ class SessionInfo {
       messageCount: messageCount ?? this.messageCount,
     );
   }
+
+  /// Equality based on [path] + [lastActivity] — sufficient to distinguish
+  /// sessions and to detect a stale cache entry after a file is rewritten.
+  /// Used as a Riverpod `family` provider key (see `sessionDetailProvider`).
+  @override
+  bool operator ==(Object other) =>
+      other is SessionInfo && other.path == path && other.lastActivity == lastActivity;
+
+  @override
+  int get hashCode => Object.hash(path, lastActivity);
 }
 
 /// Aggregated session data for a project — used by [SessionReader].
