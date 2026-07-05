@@ -37,13 +37,13 @@ Automatisierungen. Read-only.
 
 ## Wave 2 — a1-Phasen-Status im Projekt-Detail
 
-- [ ] Service-Erweiterung (gsd_parser oder neuer `a1_reader.dart`): liest `.a1/roadmap.md`
+- [x] Service-Erweiterung (gsd_parser oder neuer `a1_reader.dart`): liest `.a1/roadmap.md`
       (Milestone-Tabelle: Name + Status-Spalte) und `.a1/phases/*/PLAN.md` (Checkbox-Fortschritt
       `- [x]`/`- [ ]`), analog zum bestehenden GSD-Parsing — a1 ist das Nachfolge-Format von GSD.
-- [ ] UI: ProjectDetailPanel-Sektion „a1 Roadmap": Milestones mit Status-Badge, pro aktiver
+- [x] UI: ProjectDetailPanel-Sektion „a1 Roadmap": Milestones mit Status-Badge, pro aktiver
       Phase ein Fortschrittsbalken (abgehakte/gesamt Checkboxen). Auf der CodeProjectCard:
       a1-Fortschritt als Fallback, wenn kein GSD-`.planning/` existiert.
-- [ ] Tests: Temp-Dirs mit .a1-Fixtures (Roadmap-Tabelle, PLAN-Checkboxen, fehlende Dateien).
+- [x] Tests: Temp-Dirs mit .a1-Fixtures (Roadmap-Tabelle, PLAN-Checkboxen, fehlende Dateien).
 
 ## Wave 3 — Workflows/Automatisierungen (best-effort, AD-3)
 

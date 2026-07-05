@@ -101,7 +101,13 @@ class _CodeProjectCardState extends ConsumerState<CodeProjectCard> {
         const SizedBox(height: 10),
 
         // --- GSD progress block (3 lines: status+%, bar, phases+plans) ---
-        _buildGsdBlock(colors),
+        // Falls back to a1 phase progress when a project has no GSD .planning/.
+        if (widget.project.gsd != null)
+          _buildGsdBlock(colors)
+        else if (_a1Progress != null)
+          _buildA1Block(colors, _a1Progress!)
+        else
+          _buildGsdBlock(colors),
 
         // --- Next step (conditional) ---
         if (widget.project.gsd?.nextStep != null) ...[
@@ -254,6 +260,74 @@ class _CodeProjectCardState extends ConsumerState<CodeProjectCard> {
                 style: TextStyle(color: colors.textSec, fontSize: 11),
               ),
             ],
+          ),
+        ],
+      ],
+    );
+  }
+
+  /// Aggregate a1 phase progress (0-100), or null when the project has no
+  /// measurable a1 phases. Used as the card fallback when there is no GSD.
+  int? get _a1Progress => widget.project.a1?.overallProgress;
+
+  /// Compact a1 progress block shown in place of the GSD block for projects
+  /// that plan with `.a1/` instead of `.planning/`.
+  Widget _buildA1Block(AppColors colors, int progress) {
+    final a1 = widget.project.a1!;
+    final active = a1.activePhase;
+    final clamped = progress.clamp(0, 100);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              decoration: BoxDecoration(
+                color: colors.cyan.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(5),
+              ),
+              child: Text(
+                'a1',
+                style: TextStyle(
+                  color: colors.cyan,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            const Spacer(),
+            Text(
+              '$clamped%',
+              style: TextStyle(color: colors.textSec, fontSize: 11),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(4),
+          child: Container(
+            height: 4,
+            color: colors.bgElev,
+            child: FractionallySizedBox(
+              alignment: Alignment.centerLeft,
+              widthFactor: clamped / 100.0,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: colors.cyan,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+            ),
+          ),
+        ),
+        if (active != null) ...[
+          const SizedBox(height: 8),
+          Text(
+            'Phase ${active.name} · ${active.checkedTasks}/${active.totalTasks}',
+            style: TextStyle(color: colors.textSec, fontSize: 11),
+            overflow: TextOverflow.ellipsis,
           ),
         ],
       ],
