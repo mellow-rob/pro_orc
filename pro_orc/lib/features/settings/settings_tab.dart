@@ -11,6 +11,7 @@ import 'package:pro_orc/features/onboarding/onboarding_wizard.dart';
 import 'package:pro_orc/features/shell/glass_card.dart';
 import 'package:pro_orc/providers/database_provider.dart';
 import 'package:pro_orc/providers/projects_provider.dart';
+import 'package:pro_orc/providers/theme_mode_provider.dart';
 import 'package:pro_orc/providers/watcher_provider.dart';
 import 'package:pro_orc/theme/n3_colors.dart';
 
@@ -196,6 +197,11 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
             ),
           ),
           const SizedBox(height: 24),
+
+          // --- Erscheinungsbild ---
+          _buildThemeSection(colors),
+
+          const SizedBox(height: 20),
 
           // --- Scan-Ordner ---
           _buildSection(
@@ -383,6 +389,60 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildThemeSection(AppColors colors) {
+    final currentMode = ref.watch(themeModeProvider);
+
+    return _buildSection(
+      colors: colors,
+      icon: Icons.palette_outlined,
+      title: 'Erscheinungsbild',
+      subtitle: 'Hell, Dunkel oder System-Einstellung folgen',
+      child: SegmentedButton<ThemeMode>(
+        segments: const [
+          ButtonSegment(
+            value: ThemeMode.light,
+            label: Text('Hell'),
+            icon: Icon(Icons.light_mode_outlined, size: 16),
+          ),
+          ButtonSegment(
+            value: ThemeMode.dark,
+            label: Text('Dunkel'),
+            icon: Icon(Icons.dark_mode_outlined, size: 16),
+          ),
+          ButtonSegment(
+            value: ThemeMode.system,
+            label: Text('System'),
+            icon: Icon(Icons.settings_suggest_outlined, size: 16),
+          ),
+        ],
+        selected: {currentMode},
+        onSelectionChanged: (selected) {
+          ref.read(themeModeProvider.notifier).setMode(selected.first);
+        },
+        style: ButtonStyle(
+          textStyle: WidgetStatePropertyAll(
+            TextStyle(fontSize: 12, color: colors.textPri),
+          ),
+          side: WidgetStatePropertyAll(
+            BorderSide(color: colors.textDim.withValues(alpha: 0.3)),
+          ),
+          backgroundColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.selected)) {
+              return colors.cyan.withValues(alpha: 0.18);
+            }
+            return colors.bgElev.withValues(alpha: 0.4);
+          }),
+          foregroundColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.selected)) {
+              return colors.cyan;
+            }
+            return colors.textSec;
+          }),
+        ),
       ),
     );
   }
