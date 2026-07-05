@@ -30,6 +30,7 @@ void main() async {
 
   WindowOptions windowOptions = const WindowOptions(
     size: Size(800, 600),
+    minimumSize: Size(680, 480),
     center: true,
     backgroundColor: Colors.transparent,
     titleBarStyle: TitleBarStyle.hidden,

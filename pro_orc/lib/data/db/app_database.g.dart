@@ -70,6 +70,18 @@ class $AppConfigTableTable extends AppConfigTable
     requiredDuringInsert: false,
     defaultValue: const Constant('dark'),
   );
+  static const VerificationMeta _vaultDirMeta = const VerificationMeta(
+    'vaultDir',
+  );
+  @override
+  late final GeneratedColumn<String> vaultDir = GeneratedColumn<String>(
+    'vault_dir',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -77,6 +89,7 @@ class $AppConfigTableTable extends AppConfigTable
     ignoreListJson,
     gitBinaryPath,
     themeMode,
+    vaultDir,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -123,6 +136,12 @@ class $AppConfigTableTable extends AppConfigTable
         themeMode.isAcceptableOrUnknown(data['theme_mode']!, _themeModeMeta),
       );
     }
+    if (data.containsKey('vault_dir')) {
+      context.handle(
+        _vaultDirMeta,
+        vaultDir.isAcceptableOrUnknown(data['vault_dir']!, _vaultDirMeta),
+      );
+    }
     return context;
   }
 
@@ -152,6 +171,10 @@ class $AppConfigTableTable extends AppConfigTable
         DriftSqlType.string,
         data['${effectivePrefix}theme_mode'],
       )!,
+      vaultDir: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}vault_dir'],
+      )!,
     );
   }
 
@@ -171,12 +194,19 @@ class AppConfigTableData extends DataClass
   /// One of 'light', 'dark', 'system'. Default 'dark' preserves the existing
   /// look for current users (v2.2 Design-Refresh).
   final String themeMode;
+
+  /// Absolute path to the Obsidian vault root used for the a1 learning-loop
+  /// view (M6). Empty string means "use the default" (`$HOME/N3URAL-Vault`),
+  /// resolved by the reader — kept empty by default so per-machine HOME is not
+  /// baked into the DB.
+  final String vaultDir;
   const AppConfigTableData({
     required this.id,
     required this.scanDir,
     required this.ignoreListJson,
     required this.gitBinaryPath,
     required this.themeMode,
+    required this.vaultDir,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -186,6 +216,7 @@ class AppConfigTableData extends DataClass
     map['ignore_list_json'] = Variable<String>(ignoreListJson);
     map['git_binary_path'] = Variable<String>(gitBinaryPath);
     map['theme_mode'] = Variable<String>(themeMode);
+    map['vault_dir'] = Variable<String>(vaultDir);
     return map;
   }
 
@@ -196,6 +227,7 @@ class AppConfigTableData extends DataClass
       ignoreListJson: Value(ignoreListJson),
       gitBinaryPath: Value(gitBinaryPath),
       themeMode: Value(themeMode),
+      vaultDir: Value(vaultDir),
     );
   }
 
@@ -210,6 +242,7 @@ class AppConfigTableData extends DataClass
       ignoreListJson: serializer.fromJson<String>(json['ignoreListJson']),
       gitBinaryPath: serializer.fromJson<String>(json['gitBinaryPath']),
       themeMode: serializer.fromJson<String>(json['themeMode']),
+      vaultDir: serializer.fromJson<String>(json['vaultDir']),
     );
   }
   @override
@@ -221,6 +254,7 @@ class AppConfigTableData extends DataClass
       'ignoreListJson': serializer.toJson<String>(ignoreListJson),
       'gitBinaryPath': serializer.toJson<String>(gitBinaryPath),
       'themeMode': serializer.toJson<String>(themeMode),
+      'vaultDir': serializer.toJson<String>(vaultDir),
     };
   }
 
@@ -230,12 +264,14 @@ class AppConfigTableData extends DataClass
     String? ignoreListJson,
     String? gitBinaryPath,
     String? themeMode,
+    String? vaultDir,
   }) => AppConfigTableData(
     id: id ?? this.id,
     scanDir: scanDir ?? this.scanDir,
     ignoreListJson: ignoreListJson ?? this.ignoreListJson,
     gitBinaryPath: gitBinaryPath ?? this.gitBinaryPath,
     themeMode: themeMode ?? this.themeMode,
+    vaultDir: vaultDir ?? this.vaultDir,
   );
   AppConfigTableData copyWithCompanion(AppConfigTableCompanion data) {
     return AppConfigTableData(
@@ -248,6 +284,7 @@ class AppConfigTableData extends DataClass
           ? data.gitBinaryPath.value
           : this.gitBinaryPath,
       themeMode: data.themeMode.present ? data.themeMode.value : this.themeMode,
+      vaultDir: data.vaultDir.present ? data.vaultDir.value : this.vaultDir,
     );
   }
 
@@ -258,14 +295,21 @@ class AppConfigTableData extends DataClass
           ..write('scanDir: $scanDir, ')
           ..write('ignoreListJson: $ignoreListJson, ')
           ..write('gitBinaryPath: $gitBinaryPath, ')
-          ..write('themeMode: $themeMode')
+          ..write('themeMode: $themeMode, ')
+          ..write('vaultDir: $vaultDir')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode =>
-      Object.hash(id, scanDir, ignoreListJson, gitBinaryPath, themeMode);
+  int get hashCode => Object.hash(
+    id,
+    scanDir,
+    ignoreListJson,
+    gitBinaryPath,
+    themeMode,
+    vaultDir,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -274,7 +318,8 @@ class AppConfigTableData extends DataClass
           other.scanDir == this.scanDir &&
           other.ignoreListJson == this.ignoreListJson &&
           other.gitBinaryPath == this.gitBinaryPath &&
-          other.themeMode == this.themeMode);
+          other.themeMode == this.themeMode &&
+          other.vaultDir == this.vaultDir);
 }
 
 class AppConfigTableCompanion extends UpdateCompanion<AppConfigTableData> {
@@ -283,12 +328,14 @@ class AppConfigTableCompanion extends UpdateCompanion<AppConfigTableData> {
   final Value<String> ignoreListJson;
   final Value<String> gitBinaryPath;
   final Value<String> themeMode;
+  final Value<String> vaultDir;
   const AppConfigTableCompanion({
     this.id = const Value.absent(),
     this.scanDir = const Value.absent(),
     this.ignoreListJson = const Value.absent(),
     this.gitBinaryPath = const Value.absent(),
     this.themeMode = const Value.absent(),
+    this.vaultDir = const Value.absent(),
   });
   AppConfigTableCompanion.insert({
     this.id = const Value.absent(),
@@ -296,6 +343,7 @@ class AppConfigTableCompanion extends UpdateCompanion<AppConfigTableData> {
     this.ignoreListJson = const Value.absent(),
     this.gitBinaryPath = const Value.absent(),
     this.themeMode = const Value.absent(),
+    this.vaultDir = const Value.absent(),
   });
   static Insertable<AppConfigTableData> custom({
     Expression<int>? id,
@@ -303,6 +351,7 @@ class AppConfigTableCompanion extends UpdateCompanion<AppConfigTableData> {
     Expression<String>? ignoreListJson,
     Expression<String>? gitBinaryPath,
     Expression<String>? themeMode,
+    Expression<String>? vaultDir,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -310,6 +359,7 @@ class AppConfigTableCompanion extends UpdateCompanion<AppConfigTableData> {
       if (ignoreListJson != null) 'ignore_list_json': ignoreListJson,
       if (gitBinaryPath != null) 'git_binary_path': gitBinaryPath,
       if (themeMode != null) 'theme_mode': themeMode,
+      if (vaultDir != null) 'vault_dir': vaultDir,
     });
   }
 
@@ -319,6 +369,7 @@ class AppConfigTableCompanion extends UpdateCompanion<AppConfigTableData> {
     Value<String>? ignoreListJson,
     Value<String>? gitBinaryPath,
     Value<String>? themeMode,
+    Value<String>? vaultDir,
   }) {
     return AppConfigTableCompanion(
       id: id ?? this.id,
@@ -326,6 +377,7 @@ class AppConfigTableCompanion extends UpdateCompanion<AppConfigTableData> {
       ignoreListJson: ignoreListJson ?? this.ignoreListJson,
       gitBinaryPath: gitBinaryPath ?? this.gitBinaryPath,
       themeMode: themeMode ?? this.themeMode,
+      vaultDir: vaultDir ?? this.vaultDir,
     );
   }
 
@@ -347,6 +399,9 @@ class AppConfigTableCompanion extends UpdateCompanion<AppConfigTableData> {
     if (themeMode.present) {
       map['theme_mode'] = Variable<String>(themeMode.value);
     }
+    if (vaultDir.present) {
+      map['vault_dir'] = Variable<String>(vaultDir.value);
+    }
     return map;
   }
 
@@ -357,7 +412,8 @@ class AppConfigTableCompanion extends UpdateCompanion<AppConfigTableData> {
           ..write('scanDir: $scanDir, ')
           ..write('ignoreListJson: $ignoreListJson, ')
           ..write('gitBinaryPath: $gitBinaryPath, ')
-          ..write('themeMode: $themeMode')
+          ..write('themeMode: $themeMode, ')
+          ..write('vaultDir: $vaultDir')
           ..write(')'))
         .toString();
   }
@@ -775,6 +831,7 @@ typedef $$AppConfigTableTableCreateCompanionBuilder =
       Value<String> ignoreListJson,
       Value<String> gitBinaryPath,
       Value<String> themeMode,
+      Value<String> vaultDir,
     });
 typedef $$AppConfigTableTableUpdateCompanionBuilder =
     AppConfigTableCompanion Function({
@@ -783,6 +840,7 @@ typedef $$AppConfigTableTableUpdateCompanionBuilder =
       Value<String> ignoreListJson,
       Value<String> gitBinaryPath,
       Value<String> themeMode,
+      Value<String> vaultDir,
     });
 
 class $$AppConfigTableTableFilterComposer
@@ -816,6 +874,11 @@ class $$AppConfigTableTableFilterComposer
 
   ColumnFilters<String> get themeMode => $composableBuilder(
     column: $table.themeMode,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get vaultDir => $composableBuilder(
+    column: $table.vaultDir,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -853,6 +916,11 @@ class $$AppConfigTableTableOrderingComposer
     column: $table.themeMode,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get vaultDir => $composableBuilder(
+    column: $table.vaultDir,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$AppConfigTableTableAnnotationComposer
@@ -882,6 +950,9 @@ class $$AppConfigTableTableAnnotationComposer
 
   GeneratedColumn<String> get themeMode =>
       $composableBuilder(column: $table.themeMode, builder: (column) => column);
+
+  GeneratedColumn<String> get vaultDir =>
+      $composableBuilder(column: $table.vaultDir, builder: (column) => column);
 }
 
 class $$AppConfigTableTableTableManager
@@ -926,12 +997,14 @@ class $$AppConfigTableTableTableManager
                 Value<String> ignoreListJson = const Value.absent(),
                 Value<String> gitBinaryPath = const Value.absent(),
                 Value<String> themeMode = const Value.absent(),
+                Value<String> vaultDir = const Value.absent(),
               }) => AppConfigTableCompanion(
                 id: id,
                 scanDir: scanDir,
                 ignoreListJson: ignoreListJson,
                 gitBinaryPath: gitBinaryPath,
                 themeMode: themeMode,
+                vaultDir: vaultDir,
               ),
           createCompanionCallback:
               ({
@@ -940,12 +1013,14 @@ class $$AppConfigTableTableTableManager
                 Value<String> ignoreListJson = const Value.absent(),
                 Value<String> gitBinaryPath = const Value.absent(),
                 Value<String> themeMode = const Value.absent(),
+                Value<String> vaultDir = const Value.absent(),
               }) => AppConfigTableCompanion.insert(
                 id: id,
                 scanDir: scanDir,
                 ignoreListJson: ignoreListJson,
                 gitBinaryPath: gitBinaryPath,
                 themeMode: themeMode,
+                vaultDir: vaultDir,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))

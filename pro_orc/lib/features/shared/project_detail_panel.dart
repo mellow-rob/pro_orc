@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:path/path.dart' as p;
+import 'package:pro_orc/data/models/a1_data.dart';
 import 'package:pro_orc/data/models/phase_info.dart';
 import 'package:pro_orc/data/models/phase_status.dart';
 import 'package:pro_orc/data/models/project_model.dart';
@@ -283,6 +284,10 @@ class ProjectDetailPanel extends ConsumerWidget {
             ),
           ),
 
+        // --- a1 Roadmap (Milestones + Phasen-Fortschritt) ---
+        if (project.a1 != null && !project.a1!.isEmpty)
+          _buildA1Section(colors, accent, project.a1!),
+
         // --- Agents ---
         if (project.usedAgents != null && project.usedAgents!.isNotEmpty)
           _buildAgentsSection(context, ref, colors, accent),
@@ -452,6 +457,104 @@ class ProjectDetailPanel extends ConsumerWidget {
           ),
         ),
       ],
+    );
+  }
+
+  /// a1 roadmap/phase status section: milestones with a status badge, and each
+  /// phase that has checkboxes rendered with a progress bar. Mirrors the GSD
+  /// "PHASEN" section since a1 is the successor planning format.
+  Widget _buildA1Section(AppColors colors, Color accent, A1Data a1) {
+    final phasesWithTasks =
+        a1.phases.where((ph) => ph.totalTasks > 0).toList();
+
+    return _SectionCard(
+      colors: colors,
+      accent: accent,
+      title: 'A1 ROADMAP',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          for (int i = 0; i < a1.milestones.length; i++) ...[
+            _buildA1MilestoneRow(colors, accent, a1.milestones[i]),
+            if (i < a1.milestones.length - 1)
+              Divider(height: 1, color: colors.bgElev.withValues(alpha: 0.8)),
+          ],
+          if (phasesWithTasks.isNotEmpty) ...[
+            if (a1.milestones.isNotEmpty) const SizedBox(height: 12),
+            for (final phase in phasesWithTasks) ...[
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 6),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            phase.name,
+                            style: TextStyle(
+                              color: colors.textPri,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                        Text(
+                          '${phase.checkedTasks}/${phase.totalTasks}',
+                          style: TextStyle(color: colors.textDim, fontSize: 12),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    _buildProgressBar(colors, accent, phase.progress ?? 0),
+                  ],
+                ),
+              ),
+            ],
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildA1MilestoneRow(
+      AppColors colors, Color accent, A1Milestone milestone) {
+    final (icon, iconColor) = milestone.isDone
+        ? (LucideIcons.circleCheck100, const Color(0xFF22C55E))
+        : milestone.isActive
+            ? (LucideIcons.circlePlay100, accent)
+            : (LucideIcons.circle100, colors.textDim);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(top: 1),
+            child: Icon(icon, color: iconColor, size: 15),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  milestone.name,
+                  style: TextStyle(color: colors.textPri, fontSize: 13),
+                ),
+                if (milestone.status.isNotEmpty) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    milestone.status,
+                    style: TextStyle(color: colors.textDim, fontSize: 11),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 

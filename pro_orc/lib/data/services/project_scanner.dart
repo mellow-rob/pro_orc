@@ -5,10 +5,12 @@ import 'dart:io';
 import 'package:path/path.dart' as p;
 
 import 'package:pro_orc/data/db/app_database.dart';
+import 'package:pro_orc/data/models/a1_data.dart';
 import 'package:pro_orc/data/models/git_data.dart';
 import 'package:pro_orc/data/models/memory_data.dart';
 import 'package:pro_orc/data/models/project_model.dart';
 import 'package:pro_orc/data/models/project_type.dart';
+import 'package:pro_orc/data/services/a1_reader.dart';
 import 'package:pro_orc/data/services/gsd_parser.dart';
 import 'package:pro_orc/data/services/git_reader.dart';
 import 'package:pro_orc/data/services/memory_reader.dart';
@@ -151,6 +153,39 @@ Future<DateTime?> _phasesSignature(String projectPath) async {
   }
 }
 
+/// Computes a signature mtime for a project's `.a1` directory, combining the
+/// `.a1/phases` dir mtime and `.a1/roadmap.md` mtime, used to detect changes
+/// relevant to the a1 roadmap/phase scan. Null when the project has no `.a1/`.
+Future<DateTime?> _a1Signature(String projectPath) async {
+  final a1Dir = Directory(p.join(projectPath, '.a1'));
+  try {
+    if (!await a1Dir.exists()) return null;
+    var latest = (await a1Dir.stat()).modified;
+
+    final phasesDir = Directory(p.join(a1Dir.path, 'phases'));
+    if (await phasesDir.exists()) {
+      // Include each PLAN.md mtime so a checkbox toggle (which changes the file
+      // but not the phases dir) still invalidates the cache.
+      await for (final entity
+          in phasesDir.list(recursive: true, followLinks: false)) {
+        if (entity is! File) continue;
+        if (p.basename(entity.path) != 'PLAN.md') continue;
+        final s = (await entity.stat()).modified;
+        if (s.isAfter(latest)) latest = s;
+      }
+    }
+    final roadmap = File(p.join(a1Dir.path, 'roadmap.md'));
+    if (await roadmap.exists()) {
+      final s = (await roadmap.stat()).modified;
+      if (s.isAfter(latest)) latest = s;
+    }
+    return latest;
+  } catch (e) {
+    developer.log('Failed to compute a1 signature for $projectPath: $e', name: 'project_scanner');
+    return null;
+  }
+}
+
 // ---------------------------------------------------------------------------
 // ProjectScanner
 // ---------------------------------------------------------------------------
@@ -166,6 +201,8 @@ class ProjectScanner {
   final _ScanResultCache<GitData> _gitCache = _ScanResultCache<GitData>();
   final _ScanResultCache<MemoryData> _memoryCache = _ScanResultCache<MemoryData>();
   final _ScanResultCache<List<String>?> _usedAgentsCache = _ScanResultCache<List<String>?>();
+  final _ScanResultCache<A1Data> _a1Cache = _ScanResultCache<A1Data>();
+  final A1Reader _a1Reader = A1Reader();
 
   /// Overrides `$HOME/.claude` for memory lookups — used by tests to point
   /// at a temp directory instead of the real Claude home.
@@ -248,6 +285,11 @@ class ProjectScanner {
       projectPaths.map((path) => _readMemoryWithCache(path)),
     );
 
+    // --- 4c. Read a1 roadmap/phase data for all projects (with cache) ---
+    final a1Results = await Future.wait(
+      projectPaths.map((path) => _readA1WithCache(path)),
+    );
+
     // --- 5. Assemble ProjectModel for each project ---
     final models = <ProjectModel>[];
 
@@ -257,6 +299,7 @@ class ProjectScanner {
       final gsdResult = gsdResults[i];
       final gitData = gitResults[i];
       final memoryData = memoryResults[i];
+      final a1Data = a1Results[i];
 
       // Resolve project type: DB override > content heuristic
       final settings = await _db.getProjectSettings(folderId);
@@ -289,6 +332,7 @@ class ProjectScanner {
         projectType: projectType,
         description: gsdResult.description,
         gsd: gsd,
+        a1: a1Data.isEmpty ? null : a1Data,
         git: git,
         memory: memoryData.hasMemory ? memoryData : null,
         hasParseError: gsdResult.hasParseError,
@@ -440,6 +484,20 @@ class ProjectScanner {
     );
     if (signature != null) {
       _memoryCache.put(projectPath, signature, result);
+    }
+    return result;
+  }
+
+  /// Reads a1 roadmap/phase data using the cache to avoid re-parsing `.a1/`
+  /// for projects whose roadmap/phases have not changed since the last scan.
+  Future<A1Data> _readA1WithCache(String projectPath) async {
+    final signature = await _a1Signature(projectPath);
+    final cached = _a1Cache.getBoxed(projectPath, signature);
+    if (cached != null) return cached.value;
+
+    final result = await _a1Reader.read(projectPath);
+    if (signature != null) {
+      _a1Cache.put(projectPath, signature, result);
     }
     return result;
   }
