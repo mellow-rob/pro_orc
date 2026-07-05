@@ -5,6 +5,8 @@ import 'dart:io';
 import 'package:path/path.dart' as p;
 
 import 'package:pro_orc/data/db/app_database.dart';
+import 'package:pro_orc/data/models/git_data.dart';
+import 'package:pro_orc/data/models/memory_data.dart';
 import 'package:pro_orc/data/models/project_model.dart';
 import 'package:pro_orc/data/models/project_type.dart';
 import 'package:pro_orc/data/services/gsd_parser.dart';
@@ -73,6 +75,83 @@ class _FileCache {
 }
 
 // ---------------------------------------------------------------------------
+// Scan result cache (git / memory / used-agents)
+// ---------------------------------------------------------------------------
+
+/// Caches arbitrary per-project scan results keyed by a "signature" mtime.
+///
+/// A single FS event previously caused [ProjectScanner.scanAll] to re-run git,
+/// memory, and agent-usage scans for EVERY project. This cache lets each of
+/// those scans be skipped for projects whose relevant source files have not
+/// changed since the last scan, so one changed project no longer pays for a
+/// rescan of all the others.
+class _ScanResultCache<T> {
+  /// Map from "path:signature" → boxed cached result (boxing distinguishes a
+  /// cached `null` value from a cache miss).
+  final Map<String, _Box<T>> _cache = {};
+
+  String _key(String projectPath, DateTime signature) =>
+      '$projectPath:${signature.microsecondsSinceEpoch}';
+
+  /// Returns the cached result for [projectPath] if [signature] matches the
+  /// signature it was stored under, boxed so a cached `null` is distinguishable
+  /// from a cache miss. Returns null on cache miss.
+  _Box<T>? getBoxed(String projectPath, DateTime? signature) {
+    if (signature == null) return null;
+    return _cache[_key(projectPath, signature)];
+  }
+
+  /// Stores [result] for [projectPath] under [signature].
+  void put(String projectPath, DateTime signature, T result) {
+    _cache[_key(projectPath, signature)] = _Box(result);
+  }
+}
+
+/// Simple box so a cached `null` value is distinguishable from "not cached".
+class _Box<T> {
+  final T value;
+  const _Box(this.value);
+}
+
+/// Computes a combined "signature" mtime for a project's git state.
+///
+/// Uses `.git/HEAD` (changes on checkout/commit) and `.git/refs/heads` — the
+/// directory mtime changes whenever a branch ref is updated (new commit).
+/// Returns null if the project is not a git repo (cache is then always missed,
+/// which is correct: [readGitData] itself handles the non-git case cheaply).
+Future<DateTime?> _gitSignature(String projectPath) async {
+  final headPath = p.join(projectPath, '.git', 'HEAD');
+  try {
+    final stat = await FileStat.stat(headPath);
+    if (stat.type == FileSystemEntityType.notFound) return null;
+
+    var latest = stat.modified;
+    final refsHeadsDir = Directory(p.join(projectPath, '.git', 'refs', 'heads'));
+    if (await refsHeadsDir.exists()) {
+      final refsStat = await refsHeadsDir.stat();
+      if (refsStat.modified.isAfter(latest)) latest = refsStat.modified;
+    }
+    return latest;
+  } catch (e) {
+    developer.log('Failed to compute git signature for $projectPath: $e', name: 'project_scanner');
+    return null;
+  }
+}
+
+/// Computes a signature mtime for a project's `.planning/phases` directory,
+/// used to detect changes relevant to the used-agents scan.
+Future<DateTime?> _phasesSignature(String projectPath) async {
+  final phasesDir = Directory(p.join(projectPath, '.planning', 'phases'));
+  try {
+    if (!await phasesDir.exists()) return null;
+    return (await phasesDir.stat()).modified;
+  } catch (e) {
+    developer.log('Failed to compute phases signature for $projectPath: $e', name: 'project_scanner');
+    return null;
+  }
+}
+
+// ---------------------------------------------------------------------------
 // ProjectScanner
 // ---------------------------------------------------------------------------
 
@@ -84,6 +163,9 @@ class _FileCache {
 class ProjectScanner {
   final AppDatabase _db;
   final _FileCache _cache = _FileCache();
+  final _ScanResultCache<GitData> _gitCache = _ScanResultCache<GitData>();
+  final _ScanResultCache<MemoryData> _memoryCache = _ScanResultCache<MemoryData>();
+  final _ScanResultCache<List<String>?> _usedAgentsCache = _ScanResultCache<List<String>?>();
 
   ProjectScanner(this._db);
 
@@ -151,12 +233,14 @@ class ProjectScanner {
       projectPaths.map((path) => _parseGsdWithCache(path)),
     );
 
-    // --- 4. Read git data for all projects ---
-    final gitResults = await readAllGitData(projectPaths, gitBinary: gitBinary);
+    // --- 4. Read git data for all projects (with cache) ---
+    final gitResults = await Future.wait(
+      projectPaths.map((path) => _readGitWithCache(path, gitBinary)),
+    );
 
-    // --- 4b. Read memory data for all projects ---
+    // --- 4b. Read memory data for all projects (with cache) ---
     final memoryResults = await Future.wait(
-      projectPaths.map((path) => readMemoryData(path)),
+      projectPaths.map((path) => _readMemoryWithCache(path)),
     );
 
     // --- 5. Assemble ProjectModel for each project ---
@@ -181,8 +265,8 @@ class ProjectScanner {
       // Compute stale
       final isStale = await _computeStale(path, git?.lastCommitDate);
 
-      // Extract used agents from .planning/ VERIFICATION.md files
-      final usedAgents = gsd != null ? await _extractUsedAgents(path) : null;
+      // Extract used agents from .planning/ VERIFICATION.md files (with cache)
+      final usedAgents = gsd != null ? await _extractUsedAgentsWithCache(path) : null;
 
       // Scan for .md files
       final mdFiles = await _scanMdFiles(path);
@@ -307,6 +391,67 @@ class ProjectScanner {
     final result = await parseGsdData(projectPath);
     if (mtime != null) {
       _cache.put(projectPath, mtime, result);
+    }
+    return result;
+  }
+
+  /// Reads git data using the cache to avoid spawning a git subprocess for
+  /// projects whose `.git/HEAD`/refs have not changed since the last scan.
+  Future<GitData> _readGitWithCache(String projectPath, String gitBinary) async {
+    final signature = await _gitSignature(projectPath);
+    final cached = _gitCache.getBoxed(projectPath, signature);
+    if (cached != null) return cached.value;
+
+    final result = await readGitData(projectPath, gitBinary: gitBinary);
+    if (signature != null) {
+      _gitCache.put(projectPath, signature, result);
+    }
+    return result;
+  }
+
+  /// Reads memory data using the cache to avoid the fuzzy-match directory
+  /// scan under `~/.claude/projects/` for projects whose memory has not
+  /// changed since the last scan.
+  ///
+  /// Signature is the mtime of the project directory itself combined with
+  /// whether memory was previously found — cheap to compute and changes
+  /// whenever rem-sleep consolidates a new MEMORY.md (which touches the
+  /// project dir's watched parent, invalidating the whole scan anyway).
+  Future<MemoryData> _readMemoryWithCache(String projectPath) async {
+    final signature = await _projectDirSignature(projectPath);
+    final cached = _memoryCache.getBoxed(projectPath, signature);
+    if (cached != null) return cached.value;
+
+    final result = await readMemoryData(projectPath);
+    if (signature != null) {
+      _memoryCache.put(projectPath, signature, result);
+    }
+    return result;
+  }
+
+  /// Returns the mtime of [projectPath] itself, used as a cheap signature
+  /// for memory-scan caching.
+  Future<DateTime?> _projectDirSignature(String projectPath) async {
+    try {
+      final stat = await Directory(projectPath).stat();
+      return stat.modified;
+    } catch (e) {
+      developer.log('Failed to stat $projectPath for memory signature: $e', name: 'project_scanner');
+      return null;
+    }
+  }
+
+  /// Extracts used agents using the cache to avoid re-walking
+  /// `.planning/phases/` recursively for projects whose phases directory has
+  /// not changed since the last scan.
+  Future<List<String>?> _extractUsedAgentsWithCache(String projectPath) async {
+    final signature = await _phasesSignature(projectPath);
+    final cached = _usedAgentsCache.getBoxed(projectPath, signature);
+    if (cached != null) return cached.value;
+
+    final result = await _extractUsedAgents(projectPath);
+    if (signature != null) {
+      _usedAgentsCache.put(projectPath, signature, result);
     }
     return result;
   }

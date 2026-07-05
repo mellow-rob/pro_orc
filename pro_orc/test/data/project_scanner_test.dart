@@ -475,5 +475,55 @@ void main() {
         expect(results2.first.gsd!.status, equals(GsdStatus.done));
       });
     });
+
+    // -----------------------------------------------------------------------
+    // Git/memory/used-agents result caching (MAJOR-2 rescan cost fix)
+    // -----------------------------------------------------------------------
+
+    group('rescan caching (git/memory/used-agents)', () {
+      test('unrelated project is unaffected when only one project changes', () async {
+        await createGsdProject(scanRoot, 'project-a', withGit: true);
+        await createGsdProject(scanRoot, 'project-b', withGit: true);
+
+        final results1 = await scanner.scanAll(scanDirOverride: scanRoot.path);
+        final byId1 = {for (final r in results1) r.folderId: r};
+        final bHashBefore = byId1['project-b']!.git!.lastCommitHash;
+
+        // Add a new commit to project-a only.
+        final projectADir = Directory(p.join(scanRoot.path, 'project-a'));
+        await File(p.join(projectADir.path, 'new-file.txt')).writeAsString('x');
+        await Process.run('git', ['add', '.'], workingDirectory: projectADir.path, runInShell: true);
+        await Process.run(
+          'git',
+          ['commit', '-m', 'Second commit'],
+          workingDirectory: projectADir.path,
+          runInShell: true,
+        );
+
+        final results2 = await scanner.scanAll(scanDirOverride: scanRoot.path);
+        final byId2 = {for (final r in results2) r.folderId: r};
+
+        // project-a picked up the new commit.
+        expect(
+          byId2['project-a']!.git!.lastCommitMessage,
+          equals('Second commit'),
+        );
+        // project-b's cached git data is unchanged (same commit hash).
+        expect(byId2['project-b']!.git!.lastCommitHash, equals(bHashBefore));
+      });
+
+      test('repeated scanAll() with no changes returns stable git data from cache',
+          () async {
+        await createGsdProject(scanRoot, 'stable-project', withGit: true);
+
+        final results1 = await scanner.scanAll(scanDirOverride: scanRoot.path);
+        final results2 = await scanner.scanAll(scanDirOverride: scanRoot.path);
+
+        expect(
+          results1.first.git!.lastCommitHash,
+          equals(results2.first.git!.lastCommitHash),
+        );
+      });
+    });
   });
 }
