@@ -7,4 +7,8 @@ class AppConfigTable extends Table {
         const Constant('[".*","node_modules","build",".dart_tool"]'),
       )();
   TextColumn get gitBinaryPath => text().withDefault(const Constant('git'))();
+
+  /// One of 'light', 'dark', 'system'. Default 'dark' preserves the existing
+  /// look for current users (v2.2 Design-Refresh).
+  TextColumn get themeMode => text().withDefault(const Constant('dark'))();
 }

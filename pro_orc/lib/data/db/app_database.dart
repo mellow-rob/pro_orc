@@ -15,13 +15,16 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? e]) : super(e ?? _connect());
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
     onUpgrade: (m, from, to) async {
       if (from < 2) {
         await m.addColumn(projectSettingsTable, projectSettingsTable.isHidden);
+      }
+      if (from < 3) {
+        await m.addColumn(appConfigTable, appConfigTable.themeMode);
       }
     },
   );
@@ -101,6 +104,7 @@ class AppDatabase extends _$AppDatabase {
     String? scanDir,
     String? ignoreListJson,
     String? gitBinaryPath,
+    String? themeMode,
   }) async {
     await (update(appConfigTable)..where((t) => t.id.equals(1))).write(
       AppConfigTableCompanion(
@@ -111,8 +115,25 @@ class AppDatabase extends _$AppDatabase {
         gitBinaryPath: gitBinaryPath != null
             ? Value(gitBinaryPath)
             : const Value.absent(),
+        themeMode: themeMode != null ? Value(themeMode) : const Value.absent(),
       ),
     );
+  }
+
+  /// Returns the persisted theme mode preference: 'light', 'dark', or
+  /// 'system'. Defaults to 'dark' (via the column default) if never set.
+  Future<String> getThemeMode() async {
+    final config = await getConfig();
+    return config.themeMode;
+  }
+
+  /// Persists the theme mode preference. [mode] must be one of 'light',
+  /// 'dark', 'system'.
+  Future<void> setThemeMode(String mode) async {
+    // Ensure the id=1 config row exists before updating it — updateConfig
+    // is a no-op if the row hasn't been created yet (first-ever DB access).
+    await getConfig();
+    await updateConfig(themeMode: mode);
   }
 
   /// Adds a pattern to the ignore list (if not already present).

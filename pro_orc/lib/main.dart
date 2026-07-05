@@ -7,6 +7,7 @@ import 'package:macos_window_utils/macos_window_utils.dart';
 import 'package:window_manager/window_manager.dart';
 
 import 'package:pro_orc/features/shell/shell_screen.dart';
+import 'package:pro_orc/providers/theme_mode_provider.dart';
 import 'package:pro_orc/theme/app_theme.dart';
 import 'package:pro_orc/window/activation_policy_service.dart';
 import 'package:pro_orc/window/window_geometry_service.dart';
@@ -48,15 +49,19 @@ void main() async {
   runApp(const ProviderScope(child: ProOrcApp()));
 }
 
-class ProOrcApp extends StatelessWidget {
+class ProOrcApp extends ConsumerWidget {
   const ProOrcApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final themeMode = ref.watch(themeModeProvider);
+
     return MaterialApp(
       title: 'Pro Orc',
       debugShowCheckedModeBanner: false,
-      theme: buildAppTheme(),
+      theme: buildAppLightTheme(),
+      darkTheme: buildAppTheme(),
+      themeMode: themeMode,
       home: const ShellScreen(),
     );
   }
