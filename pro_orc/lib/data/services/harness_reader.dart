@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:path/path.dart' as p;
 
 import 'package:pro_orc/data/models/harness_data.dart';
+import 'package:pro_orc/data/services/secret_masking.dart';
 
 /// Reads the Claude Code "harness" — hooks, permissions, env vars, rules and
 /// MCP servers — across the three configuration levels (global / project /
@@ -182,9 +183,12 @@ class HarnessReader {
   void _extractEnv(Object? raw, HarnessLevel level, List<HarnessEnvVar> out) {
     if (raw is! Map) return;
     for (final entry in raw.entries) {
+      final key = entry.key.toString();
       out.add(HarnessEnvVar(
-        key: entry.key.toString(),
-        value: entry.value?.toString() ?? '',
+        key: key,
+        // Mask values of secret-looking keys so credentials are never shown
+        // in plain text (security review).
+        value: maskEnvValue(key, entry.value?.toString() ?? ''),
         level: level,
       ));
     }
@@ -231,12 +235,12 @@ class HarnessReader {
   String _mcpDetail(Object? config) {
     if (config is! Map) return '';
     final url = config['url'];
-    if (url is String && url.isNotEmpty) return url;
+    if (url is String && url.isNotEmpty) return maskSecrets(url);
     final command = config['command'];
     if (command is String && command.isNotEmpty) {
       final args = config['args'];
       if (args is List && args.isNotEmpty) {
-        return '$command ${args.join(' ')}';
+        return maskSecrets('$command ${args.join(' ')}');
       }
       return command;
     }

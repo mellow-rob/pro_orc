@@ -1,6 +1,15 @@
+import 'dart:developer' as developer;
 import 'dart:io';
 
 import 'package:url_launcher/url_launcher.dart';
+
+/// Valid slash-command skill names: an optional leading slash, then letters,
+/// digits and `:_-`. Guards against typos and shell-metacharacter injection.
+final RegExp _skillNamePattern = RegExp(r'^/?[A-Za-z0-9:_-]+$');
+
+/// True if [skillName] is a syntactically valid skill/slash-command name.
+bool isValidSkillName(String skillName) =>
+    _skillNamePattern.hasMatch(skillName);
 
 class QuickActionsService {
   /// Opens Terminal.app and cd's into the project directory.
@@ -66,8 +75,14 @@ class QuickActionsService {
   }
 
   /// Opens Terminal.app, cd's into [projectPath], and starts Claude Code with
-  /// [skillName] invoked as a slash command.
+  /// [skillName] invoked as a slash command. Rejects (and logs) a skill name
+  /// that fails [isValidSkillName] — an early typo/injection guard.
   Future<void> openClaudeWithSkill(String projectPath, String skillName) async {
+    if (!isValidSkillName(skillName)) {
+      developer.log('Refusing to launch invalid skill name: "$skillName"',
+          name: 'quick_actions');
+      return;
+    }
     final script = _terminalScript(buildSkillLaunchCommand(projectPath, skillName));
     await Process.run('osascript', ['-e', script], runInShell: true);
     await Process.run('open', ['-a', 'Terminal'], runInShell: true);

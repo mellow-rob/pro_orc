@@ -58,5 +58,22 @@ void main() {
         expect(cmd, r'cd "/p" && claude "/we\"ird\\name"');
       });
     });
+
+    group('isValidSkillName', () {
+      test('accepts plausible skill names, with or without leading slash', () {
+        expect(isValidSkillName('a1-fix'), isTrue);
+        expect(isValidSkillName('/a1-plan'), isTrue);
+        expect(isValidSkillName('vercel:deploy'), isTrue);
+        expect(isValidSkillName('rem_sleep'), isTrue);
+      });
+
+      test('rejects shell metacharacters and whitespace', () {
+        expect(isValidSkillName('a1-fix; rm -rf /'), isFalse);
+        expect(isValidSkillName('foo bar'), isFalse);
+        expect(isValidSkillName(r'$(whoami)'), isFalse);
+        expect(isValidSkillName('"quote'), isFalse);
+        expect(isValidSkillName(''), isFalse);
+      });
+    });
   });
 }
