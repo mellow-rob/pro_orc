@@ -31,16 +31,16 @@ starten. Read-only-Grundsatz: App liest Konfiguration, schreibt sie nie.
 
 ## Wave 2 — Harness-Tab
 
-- [ ] Service `harness_reader.dart`: liest read-only
+- [x] Service `harness_reader.dart`: liest read-only
       (a) `~/.claude/settings.json`, `<projekt>/.claude/settings.json`, `.claude/settings.local.json`
           — Hooks-Einträge, Permissions-Listen, env (Ebene wird mitgeführt, AD-2),
       (b) `~/.claude/rules/**/*.md` — Titel (H1) + Dateiname,
       (c) globale MCP-Server (`~/.claude.json` mcpServers bzw. settings) + projekt `.mcp.json` (existiert schon im Scanner — wiederverwenden).
       Defensiv: fehlende Dateien/kaputtes JSON → leere Ergebnisse + Log.
-- [ ] Neuer „Harness"-Tab in der NavigationRail (Icon: Schaltkreis/Tune): Sektionen
+- [x] Neuer „Harness"-Tab in der NavigationRail (Icon: Schaltkreis/Tune): Sektionen
       Hooks, Rules, Permissions, MCP-Server, jeweils mit Ebenen-Badge (Global/Projekt/Local)
       und „Im Finder zeigen". GlassCard-Muster, beide Themes, UI Deutsch.
-- [ ] Tests: harness_reader mit Temp-Dir-Fixtures (3 Ebenen, kaputtes JSON, fehlende Dateien).
+- [x] Tests: harness_reader mit Temp-Dir-Fixtures (3 Ebenen, kaputtes JSON, fehlende Dateien).
 
 ## Wave 3 — Skill-Launcher (Quick-Win)
 

@@ -19,6 +19,7 @@ import 'package:pro_orc/window/window_geometry_service.dart';
 import 'package:pro_orc/features/agents/agents_tab.dart';
 import 'package:pro_orc/features/claude_tools/claude_tools_tab.dart';
 import 'package:pro_orc/features/code/code_tab.dart';
+import 'package:pro_orc/features/harness/harness_tab.dart';
 import 'package:pro_orc/features/research/research_tab.dart';
 import 'package:pro_orc/features/settings/settings_tab.dart';
 import 'package:pro_orc/features/shell/glow_border_shell.dart';
@@ -152,6 +153,7 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
                         ClaudeToolsTab(),
                         AgentsTab(),
                         SkillsTab(),
+                        HarnessTab(),
                         SettingsTab(),
                       ],
                     ),
@@ -187,6 +189,7 @@ class _SideNav extends StatelessWidget {
     (icon: LucideIcons.brain100, label: 'Tools'),
     (icon: LucideIcons.bot100, label: 'Agents'),
     (icon: LucideIcons.sparkles100, label: 'Skills'),
+    (icon: LucideIcons.slidersHorizontal100, label: 'Harness'),
   ];
 
   @override
