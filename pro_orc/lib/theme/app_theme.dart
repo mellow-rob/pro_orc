@@ -5,21 +5,33 @@ import 'package:pro_orc/theme/n3_colors.dart';
 ///
 /// Registers [AppColors.dark] as a ThemeExtension so all widgets can access
 /// typed color tokens via `Theme.of(context).extension<AppColors>()!`.
-ThemeData buildAppTheme() {
-  const colors = AppColors.dark;
+ThemeData buildAppTheme() => _buildTheme(AppColors.dark, Brightness.dark);
 
-  return ThemeData.dark().copyWith(
+/// Builds the light theme variant (v2.2 "Design-Refresh heller").
+///
+/// Same glassmorphism structure as the dark theme, but on warm off-white
+/// surfaces. Registers [AppColors.light] as a ThemeExtension.
+ThemeData buildAppLightTheme() => _buildTheme(AppColors.light, Brightness.light);
+
+ThemeData _buildTheme(AppColors colors, Brightness brightness) {
+  final base = brightness == Brightness.dark ? ThemeData.dark() : ThemeData.light();
+
+  return base.copyWith(
     scaffoldBackgroundColor: colors.bgBase,
-    colorScheme: ColorScheme.dark(
+    colorScheme: ColorScheme(
+      brightness: brightness,
       surface: colors.bgSurf,
       primary: colors.cyan,
       secondary: colors.fuch,
       onSurface: colors.textPri,
-      onPrimary: colors.bgBase,
+      onPrimary: brightness == Brightness.dark ? colors.bgBase : Colors.white,
+      onSecondary: brightness == Brightness.dark ? colors.bgBase : Colors.white,
+      error: const Color(0xFFDC2626),
+      onError: Colors.white,
     ),
     navigationRailTheme: NavigationRailThemeData(
       backgroundColor: Colors.transparent,
-      indicatorColor: const Color(0x2200CDDC),
+      indicatorColor: colors.cyan.withValues(alpha: 0.13),
       selectedIconTheme: IconThemeData(color: colors.cyan),
       unselectedIconTheme: IconThemeData(color: colors.textDim),
       selectedLabelTextStyle: TextStyle(
@@ -32,6 +44,6 @@ ThemeData buildAppTheme() {
         fontSize: 11,
       ),
     ),
-    extensions: const [AppColors.dark],
+    extensions: [colors],
   );
 }
