@@ -1,5 +1,7 @@
+import 'dart:developer' as developer;
 import 'dart:ui';
 
+import 'package:screen_retriever/screen_retriever.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:window_manager/window_manager.dart';
 
@@ -32,13 +34,39 @@ class WindowGeometryService {
 
     await windowManager.setSize(Size(w, h));
 
-    // Off-screen guard for disconnected monitors
-    if (x < -100 || y < -100) {
-      await windowManager.center();
-    } else {
+    // Off-screen guard: clamp against the real bounds of currently connected
+    // displays instead of a fixed magic threshold, so geometry saved while a
+    // second monitor was attached doesn't strand the window off-screen once
+    // that monitor is disconnected.
+    if (await _isOnAnyDisplay(x, y, w, h)) {
       await windowManager.setPosition(Offset(x, y));
+    } else {
+      await windowManager.center();
     }
 
     return true;
+  }
+
+  /// Returns true if the saved window rect overlaps at least one currently
+  /// connected display. Falls back to true (trust the saved position) if the
+  /// display list cannot be retrieved, to avoid unnecessarily re-centering.
+  Future<bool> _isOnAnyDisplay(double x, double y, double w, double h) async {
+    try {
+      final displays = await screenRetriever.getAllDisplays();
+      for (final display in displays) {
+        final bounds = Rect.fromLTWH(
+          display.visiblePosition?.dx ?? 0,
+          display.visiblePosition?.dy ?? 0,
+          display.size.width,
+          display.size.height,
+        );
+        final windowRect = Rect.fromLTWH(x, y, w, h);
+        if (bounds.overlaps(windowRect)) return true;
+      }
+      return false;
+    } catch (e) {
+      developer.log('Failed to query displays for off-screen guard: $e', name: 'window_geometry_service');
+      return true;
+    }
   }
 }
