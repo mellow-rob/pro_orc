@@ -103,3 +103,116 @@ class CollaborationGraphData {
     );
   }
 }
+
+/// One project's contribution to a multi-project collaboration graph: the
+/// project's identity plus the agent and skill names it is connected to.
+///
+/// Used as the input to [MultiCollaborationGraphData.buildAll] so the caller
+/// (the full network view) can assemble per-project agent/skill lists however
+/// it likes (local `.claude/` scan + `usedAgents`) without this model needing
+/// to know about `ProjectModel` or the scanner.
+class ProjectGraphInput {
+  final String projectId;
+  final String projectName;
+
+  /// Agent names this project uses (local + referenced), de-duplicated by
+  /// [MultiCollaborationGraphData.buildAll].
+  final List<String> agentNames;
+
+  /// Skill names this project uses, de-duplicated by
+  /// [MultiCollaborationGraphData.buildAll].
+  final List<String> skillNames;
+
+  const ProjectGraphInput({
+    required this.projectId,
+    required this.projectName,
+    this.agentNames = const [],
+    this.skillNames = const [],
+  });
+}
+
+/// A multi-project collaboration graph: every project is its own node, and
+/// each distinct agent/skill is a single shared node that connects to every
+/// project referencing it. Shared agents/skills therefore bridge multiple
+/// projects visually — the whole point of the full network view (M7 AD-2).
+///
+/// Reuses [GraphNode]/[GraphEdge]/[GraphNodeKind] from the mini-graph so the
+/// same painter/label widgets render both. Agent and skill node ids share the
+/// `agent:`/`skill:` namespace with the mini-graph, guaranteeing a given
+/// agent name maps to exactly one node no matter how many projects use it.
+class MultiCollaborationGraphData {
+  final List<GraphNode> projectNodes;
+  final List<GraphNode> agentNodes;
+  final List<GraphNode> skillNodes;
+  final List<GraphEdge> edges;
+
+  const MultiCollaborationGraphData({
+    required this.projectNodes,
+    required this.agentNodes,
+    required this.skillNodes,
+    required this.edges,
+  });
+
+  bool get isEmpty => projectNodes.isEmpty;
+
+  /// All nodes (projects, then agents, then skills) in a stable order.
+  List<GraphNode> get allNodes => [...projectNodes, ...agentNodes, ...skillNodes];
+
+  /// Builds a deduplicated multi-project graph from per-project [inputs].
+  ///
+  /// A given agent/skill name produces exactly one shared node regardless of
+  /// how many projects reference it; each project→agent and project→skill
+  /// reference produces one edge. Duplicate references within a single project
+  /// (same name listed twice) collapse to a single edge. Empty [inputs]
+  /// yields an empty graph.
+  factory MultiCollaborationGraphData.buildAll(List<ProjectGraphInput> inputs) {
+    final projectNodes = <GraphNode>[];
+    final agentNodeById = <String, GraphNode>{};
+    final skillNodeById = <String, GraphNode>{};
+    final edges = <GraphEdge>[];
+    final seenEdges = <String>{};
+
+    void addEdge(String fromId, String toId) {
+      final key = '$fromId->$toId';
+      if (seenEdges.add(key)) {
+        edges.add(GraphEdge(fromId: fromId, toId: toId));
+      }
+    }
+
+    for (final input in inputs) {
+      final projectNode = GraphNode(
+        id: 'project:${input.projectId}',
+        label: input.projectName,
+        kind: GraphNodeKind.project,
+      );
+      projectNodes.add(projectNode);
+
+      for (final name in input.agentNames) {
+        if (name.isEmpty) continue;
+        final id = 'agent:$name';
+        agentNodeById.putIfAbsent(
+          id,
+          () => GraphNode(id: id, label: name, kind: GraphNodeKind.agent),
+        );
+        addEdge(projectNode.id, id);
+      }
+
+      for (final name in input.skillNames) {
+        if (name.isEmpty) continue;
+        final id = 'skill:$name';
+        skillNodeById.putIfAbsent(
+          id,
+          () => GraphNode(id: id, label: name, kind: GraphNodeKind.skill),
+        );
+        addEdge(projectNode.id, id);
+      }
+    }
+
+    return MultiCollaborationGraphData(
+      projectNodes: projectNodes,
+      agentNodes: agentNodeById.values.toList(),
+      skillNodes: skillNodeById.values.toList(),
+      edges: edges,
+    );
+  }
+}
