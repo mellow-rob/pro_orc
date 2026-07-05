@@ -14,6 +14,7 @@ import 'package:pro_orc/providers/projects_provider.dart';
 import 'package:pro_orc/providers/watcher_provider.dart';
 import 'package:pro_orc/theme/n3_colors.dart';
 import 'package:pro_orc/tray/tray_service.dart';
+import 'package:pro_orc/window/activation_policy_service.dart';
 import 'package:pro_orc/window/window_geometry_service.dart';
 import 'package:pro_orc/features/agents/agents_tab.dart';
 import 'package:pro_orc/features/claude_tools/claude_tools_tab.dart';
@@ -34,13 +35,14 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
     with WindowListener, TrayListener {
   late final TrayService _trayService;
   final WindowGeometryService _geometryService = WindowGeometryService();
+  final ActivationPolicyService _activationPolicyService = ActivationPolicyService();
   int _selectedIndex = 0;
 
   @override
   void initState() {
     super.initState();
     windowManager.addListener(this);
-    _trayService = TrayService();
+    _trayService = TrayService(activationPolicyService: _activationPolicyService);
     _trayService.init();
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
@@ -97,6 +99,7 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
   @override
   void onWindowClose() async {
     await windowManager.hide();
+    await _activationPolicyService.setAccessory();
   }
 
   @override

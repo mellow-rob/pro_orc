@@ -8,6 +8,7 @@ import 'package:window_manager/window_manager.dart';
 
 import 'package:pro_orc/features/shell/shell_screen.dart';
 import 'package:pro_orc/theme/app_theme.dart';
+import 'package:pro_orc/window/activation_policy_service.dart';
 import 'package:pro_orc/window/window_geometry_service.dart';
 
 void main() async {
@@ -23,7 +24,6 @@ void main() async {
     size: Size(800, 600),
     center: true,
     backgroundColor: Colors.transparent,
-    skipTaskbar: true,
     titleBarStyle: TitleBarStyle.hidden,
   );
 
@@ -40,6 +40,7 @@ void main() async {
       await windowManager.center();
     }
 
+    await ActivationPolicyService().setRegular();
     await windowManager.show();
     await windowManager.focus();
   });

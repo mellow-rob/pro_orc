@@ -10,7 +10,7 @@ class AppDelegate: FlutterAppDelegate {
   }
 
   override func applicationDidFinishLaunching(_ notification: Notification) {
-    NSApp.setActivationPolicy(.accessory)  // No Dock icon
+    NSApp.setActivationPolicy(.accessory)  // Start hidden: menubar-only, no Dock icon
     super.applicationDidFinishLaunching(notification)
   }
 
