@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:developer' as developer;
 import 'dart:io';
 
 import 'package:path/path.dart' as p;
@@ -64,7 +65,8 @@ class _FileCache {
       final stat = await FileStat.stat(statePath);
       if (stat.type == FileSystemEntityType.notFound) return null;
       return stat.modified;
-    } catch (_) {
+    } catch (e) {
+      developer.log('Failed to stat $statePath: $e', name: 'project_scanner');
       return null;
     }
   }
@@ -121,8 +123,9 @@ class ProjectScanner {
         final config = await _db.getConfig();
         gitBinary = config.gitBinaryPath;
         ignorePatterns = _parseIgnoreList(config.ignoreListJson);
-      } catch (_) {
+      } catch (e) {
         // If DB read fails, proceed with empty ignore list
+        developer.log('Failed to read DB config for ignore list: $e', name: 'project_scanner');
       }
     }
 
@@ -328,8 +331,9 @@ class ProjectScanner {
       if (stat.type != FileSystemEntityType.notFound) {
         return now.difference(stat.modified) > threshold;
       }
-    } catch (_) {
+    } catch (e) {
       // Ignore errors — no signal means not stale
+      developer.log('Failed to stat $statePath for staleness check: $e', name: 'project_scanner');
     }
 
     return false;
@@ -362,9 +366,13 @@ class ProjectScanner {
           for (final match in spawnedPattern.allMatches(content)) {
             agents.add(match.group(1)!);
           }
-        } catch (_) {}
+        } catch (e) {
+          developer.log('Failed to read ${entity.path}: $e', name: 'project_scanner');
+        }
       }
-    } catch (_) {}
+    } catch (e) {
+      developer.log('Failed to list $planningDir: $e', name: 'project_scanner');
+    }
 
     if (agents.isEmpty) return null;
     final sorted = agents.toList()..sort();
@@ -411,7 +419,9 @@ class ProjectScanner {
           role: _roleMap[name] ?? _suffixRole(name),
         ));
       }
-    } catch (_) {}
+    } catch (e) {
+      developer.log('Failed to list root .md files in $projectPath: $e', name: 'project_scanner');
+    }
 
     // 2. .planning/ recursive (max depth ~3)
     final planningDir = Directory(p.join(projectPath, '.planning'));
@@ -436,7 +446,9 @@ class ProjectScanner {
             role: _roleMap[name] ?? _suffixRole(name),
           ));
         }
-      } catch (_) {}
+      } catch (e) {
+        developer.log('Failed to list $planningDir: $e', name: 'project_scanner');
+      }
     }
 
     if (results.isEmpty) return null;
@@ -456,8 +468,8 @@ class ProjectScanner {
             .where((p) => p != '.*')
             .toList();
       }
-    } catch (_) {
-      // Malformed JSON — return empty list
+    } catch (e) {
+      developer.log('Malformed ignore list JSON, using empty list: $e', name: 'project_scanner');
     }
     return [];
   }

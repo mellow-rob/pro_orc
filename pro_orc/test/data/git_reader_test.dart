@@ -126,6 +126,17 @@ void main() {
         expect(result.githubUrl, equals('https://github.com/myorg/myrepo'));
       });
 
+      test('normalizes HTTPS remote with userinfo (access token) prefix', () async {
+        final tmp = await createTempGitRepo(
+          remote: 'https://x-access-token:TOKEN@github.com/myorg/myrepo.git',
+        );
+        addTearDown(() => tmp.delete(recursive: true));
+
+        final result = await readGitData(tmp.path);
+
+        expect(result.githubUrl, equals('https://github.com/myorg/myrepo'));
+      });
+
       test('returns null for non-GitHub HTTPS remote', () async {
         final tmp = await createTempGitRepo(
           remote: 'https://bitbucket.org/owner/repo.git',
