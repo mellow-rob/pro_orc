@@ -8,10 +8,12 @@ import 'package:pro_orc/data/models/phase_info.dart';
 import 'package:pro_orc/data/models/phase_status.dart';
 import 'package:pro_orc/data/models/project_model.dart';
 import 'package:pro_orc/data/models/project_type.dart';
+import 'package:pro_orc/data/models/collaboration_graph.dart';
 import 'package:pro_orc/data/models/session_data.dart';
 import 'package:pro_orc/features/agents/agent_card.dart';
 import 'package:pro_orc/features/shared/claude_tool_detail_panel.dart';
 import 'package:pro_orc/data/services/quick_actions_service.dart';
+import 'package:pro_orc/features/shared/collaboration_mini_graph.dart';
 import 'package:pro_orc/features/shared/quick_actions.dart';
 import 'package:pro_orc/features/shared/rename_project_dialog.dart';
 import 'package:pro_orc/features/shared/status_badge.dart';
@@ -283,6 +285,9 @@ class ProjectDetailPanel extends ConsumerWidget {
         // --- Agents ---
         if (project.usedAgents != null && project.usedAgents!.isNotEmpty)
           _buildAgentsSection(context, ref, colors, accent),
+
+        // --- Zusammenarbeits-Graph (Projekt + lokale Agents/Skills) ---
+        _buildCollaborationGraphSection(ref, colors, accent),
 
         // --- Sessions ---
         _buildSessionsSection(ref, colors, accent),
@@ -582,6 +587,33 @@ class ProjectDetailPanel extends ConsumerWidget {
               ],
             ],
           ),
+        );
+      },
+    );
+  }
+
+  Widget _buildCollaborationGraphSection(WidgetRef ref, AppColors colors, Color accent) {
+    final toolsAsync = ref.watch(projectToolsByPathProvider(project.path));
+
+    return toolsAsync.when(
+      loading: () => const SizedBox.shrink(),
+      error: (_, _) => const SizedBox.shrink(),
+      data: (tools) {
+        final graphData = CollaborationGraphData.build(
+          projectId: project.folderId,
+          projectName: project.displayName,
+          localAgentNames: tools.agents.map((a) => a.name).toList(),
+          localSkillNames: tools.skills.map((s) => s.name).toList(),
+          usedAgentNames: project.usedAgents ?? const [],
+        );
+
+        if (graphData.isEmpty) return const SizedBox.shrink();
+
+        return _SectionCard(
+          colors: colors,
+          accent: accent,
+          title: 'ZUSAMMENARBEIT',
+          child: CollaborationMiniGraph(data: graphData, colors: colors),
         );
       },
     );

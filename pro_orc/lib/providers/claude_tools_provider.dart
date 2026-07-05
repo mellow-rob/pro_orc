@@ -43,6 +43,17 @@ final projectToolsProvider = FutureProvider<ClaudeToolsData?>((ref) async {
   return ClaudeToolsScanner().scanProjectTools(projectPath);
 });
 
+/// Per-project tools keyed directly by project path — a `family`, independent
+/// of the [selectedProjectPathProvider] global-selector state used by the
+/// Claude Tools tab's dropdown. Used by the collaboration mini-graph in
+/// `ProjectDetailPanel` to show a project's local agents/skills without
+/// disturbing the tools-tab's own selection.
+final projectToolsByPathProvider =
+    FutureProvider.family<ClaudeToolsData, String>((ref, projectPath) async {
+  final scanner = ref.watch(_sharedClaudeToolsScannerProvider);
+  return scanner.scanProjectTools(projectPath);
+});
+
 /// Reuses a single [ClaudeToolsScanner] instance across [allAgentsProvider]
 /// rebuilds so its internal per-project mtime cache (M3 rescan-cost fix)
 /// survives watcher-triggered re-scans instead of starting cold every time.
