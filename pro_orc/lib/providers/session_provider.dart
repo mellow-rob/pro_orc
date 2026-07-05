@@ -36,3 +36,26 @@ final sessionDetailProvider =
   final reader = ref.watch(_sessionReaderProvider);
   return reader.readSessionDetail(session);
 });
+
+/// Estimated total token usage (AD-4) summed across the recent sessions shown
+/// for a project. Detail-parses only the displayed `recentFive` sessions (not
+/// the whole history), matching AD-4's "lazy per detail + per-project sum"
+/// rule. Returns null when none of those sessions carry a usage estimate, so
+/// the UI can hide the summary rather than show a misleading 0.
+///
+/// Keyed by project path; reuses [projectSessionsProvider] for the cheap list
+/// and [sessionDetailProvider]'s reader for the per-session parse.
+final projectTokenEstimateProvider =
+    FutureProvider.family<int?, String>((ref, projectPath) async {
+  final sessionData =
+      await ref.watch(projectSessionsProvider(projectPath).future);
+  final recent = sessionData.recentFive;
+  if (recent.isEmpty) return null;
+
+  final reader = ref.watch(_sessionReaderProvider);
+  final details = await Future.wait(recent.map(reader.readSessionDetail));
+
+  final withEstimate = details.where((s) => s.hasTokenEstimate);
+  if (withEstimate.isEmpty) return null;
+  return withEstimate.fold<int>(0, (sum, s) => sum + s.totalTokens);
+});

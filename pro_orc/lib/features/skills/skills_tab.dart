@@ -69,6 +69,7 @@ class _SkillsTabState extends ConsumerState<SkillsTab> {
 
     final globalFiltered = filtered.where((s) => s.scope == 'global').toList();
     final projectFiltered = filtered.where((s) => s.scope == 'project').toList();
+    final pluginFiltered = filtered.where((s) => s.scope == 'plugin').toList();
 
     if (allSkills.isEmpty && _searchQuery.isEmpty) {
       return _buildEmptyState(colors);
@@ -101,6 +102,17 @@ class _SkillsTabState extends ConsumerState<SkillsTab> {
             count: projectFiltered.length,
             emptyText: 'Keine projekt-lokalen Skills gefunden',
             cards: projectFiltered.map((s) => SkillCard(skill: s)).toList(),
+          ),
+          const SizedBox(height: 32),
+
+          _buildSection(
+            colors,
+            icon: Icons.extension_outlined,
+            iconColor: colors.violet,
+            label: 'Plugin-Skills',
+            count: pluginFiltered.length,
+            emptyText: 'Keine Plugin-Skills gefunden',
+            cards: pluginFiltered.map((s) => SkillCard(skill: s)).toList(),
           ),
         ],
       ),

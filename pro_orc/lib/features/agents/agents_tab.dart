@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import 'package:pro_orc/data/models/agent_category.dart';
 import 'package:pro_orc/data/models/claude_tool_model.dart';
 import 'package:pro_orc/features/agents/agent_card.dart';
+import 'package:pro_orc/features/network/network_screen.dart';
 import 'package:pro_orc/providers/claude_tools_provider.dart';
 import 'package:pro_orc/theme/n3_colors.dart';
 
@@ -82,8 +84,14 @@ class _AgentsTabState extends ConsumerState<AgentsTab> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Search field
-          _buildSearchField(colors),
+          // Search field + Netzwerk button
+          Row(
+            children: [
+              Expanded(child: _buildSearchField(colors)),
+              const SizedBox(width: 12),
+              _buildNetworkButton(context, colors),
+            ],
+          ),
           const SizedBox(height: 24),
 
           // General Agents section
@@ -121,6 +129,28 @@ class _AgentsTabState extends ConsumerState<AgentsTab> {
             cards: projectAgents.map((a) => AgentCard(agent: a)).toList(),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildNetworkButton(BuildContext context, AppColors colors) {
+    return Tooltip(
+      message: 'Zusammenarbeits-Netzwerk aller Projekte anzeigen',
+      child: TextButton.icon(
+        onPressed: () => showNetworkScreen(context),
+        icon: Icon(LucideIcons.workflow100, color: colors.cyan, size: 16),
+        label: Text(
+          'Netzwerk anzeigen',
+          style: TextStyle(color: colors.cyan, fontSize: 13),
+        ),
+        style: TextButton.styleFrom(
+          backgroundColor: colors.cyan.withValues(alpha: 0.08),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+            side: BorderSide(color: colors.cyan.withValues(alpha: 0.25)),
+          ),
+        ),
       ),
     );
   }

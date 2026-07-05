@@ -345,6 +345,102 @@ void main() {
         expect(detail.lastActivityText, isNull);
         expect(detail.messageCount, 3);
       });
+
+      test('sums usage tokens across assistant messages (AD-4)', () async {
+        final tempDir = await Directory.systemTemp.createTemp('session_usage_');
+        addTearDown(() => tempDir.delete(recursive: true));
+
+        final file = File(p.join(tempDir.path, 'sess.jsonl'));
+        await file.writeAsString([
+          '{"type":"user","timestamp":"2026-01-01T10:00:00Z"}',
+          '{"type":"assistant","timestamp":"2026-01-01T10:00:05Z",'
+              '"message":{"model":"claude-opus-4-8","usage":{'
+              '"input_tokens":100,"output_tokens":50,'
+              '"cache_creation_input_tokens":200,"cache_read_input_tokens":300}}}',
+          '{"type":"assistant","timestamp":"2026-01-01T10:00:10Z",'
+              '"message":{"model":"claude-opus-4-8","usage":{'
+              '"input_tokens":10,"output_tokens":5,'
+              '"cache_creation_input_tokens":0,"cache_read_input_tokens":1000}}}',
+        ].join('\n'));
+
+        final base = SessionInfo(
+          id: 'sess',
+          path: file.path,
+          lastActivity: DateTime.now(),
+          isActive: false,
+        );
+
+        final detail = await SessionReader().readSessionDetail(base);
+
+        expect(detail.inputTokens, 110);
+        expect(detail.outputTokens, 55);
+        expect(detail.cacheTokens, 1500); // 200+300+0+1000
+        expect(detail.hasTokenEstimate, isTrue);
+        expect(detail.totalTokens, 1665);
+      });
+
+      test('reports null token fields when no usage block is present', () async {
+        final tempDir = await Directory.systemTemp.createTemp('session_nousage_');
+        addTearDown(() => tempDir.delete(recursive: true));
+
+        final file = File(p.join(tempDir.path, 'sess.jsonl'));
+        await file.writeAsString([
+          '{"type":"user","timestamp":"2026-01-01T10:00:00Z"}',
+          '{"type":"assistant","timestamp":"2026-01-01T10:00:05Z",'
+              '"message":{"model":"claude-opus-4-8","content":[]}}',
+        ].join('\n'));
+
+        final base = SessionInfo(
+          id: 'sess',
+          path: file.path,
+          lastActivity: DateTime.now(),
+          isActive: false,
+        );
+
+        final detail = await SessionReader().readSessionDetail(base);
+
+        expect(detail.inputTokens, isNull);
+        expect(detail.outputTokens, isNull);
+        expect(detail.cacheTokens, isNull);
+        expect(detail.hasTokenEstimate, isFalse);
+      });
+
+      test('tolerates partial and string-typed usage fields', () async {
+        final tempDir = await Directory.systemTemp.createTemp('session_partial_');
+        addTearDown(() => tempDir.delete(recursive: true));
+
+        final file = File(p.join(tempDir.path, 'sess.jsonl'));
+        await file.writeAsString([
+          // Only input_tokens present, as a numeric string; others missing.
+          '{"type":"assistant","timestamp":"2026-01-01T10:00:05Z",'
+              '"message":{"usage":{"input_tokens":"42"}}}',
+        ].join('\n'));
+
+        final base = SessionInfo(
+          id: 'sess',
+          path: file.path,
+          lastActivity: DateTime.now(),
+          isActive: false,
+        );
+
+        final detail = await SessionReader().readSessionDetail(base);
+
+        expect(detail.hasTokenEstimate, isTrue);
+        expect(detail.inputTokens, 42);
+        expect(detail.outputTokens, 0);
+        expect(detail.cacheTokens, 0);
+      });
+    });
+  });
+
+  group('formatTokenCount', () {
+    test('formats small, thousands, and millions', () {
+      expect(formatTokenCount(0), '0');
+      expect(formatTokenCount(-5), '0');
+      expect(formatTokenCount(950), '950');
+      expect(formatTokenCount(12300), '12.3k');
+      expect(formatTokenCount(250000), '250k');
+      expect(formatTokenCount(1200000), '1.2M');
     });
   });
 }

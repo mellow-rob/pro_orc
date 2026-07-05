@@ -114,4 +114,104 @@ void main() {
       expect(data.isEmpty, isFalse);
     });
   });
+
+  group('MultiCollaborationGraphData.buildAll', () {
+    test('empty input yields an empty graph', () {
+      final data = MultiCollaborationGraphData.buildAll(const []);
+
+      expect(data.isEmpty, isTrue);
+      expect(data.projectNodes, isEmpty);
+      expect(data.agentNodes, isEmpty);
+      expect(data.skillNodes, isEmpty);
+      expect(data.edges, isEmpty);
+    });
+
+    test('creates one project node per input', () {
+      final data = MultiCollaborationGraphData.buildAll(const [
+        ProjectGraphInput(projectId: 'a', projectName: 'Alpha'),
+        ProjectGraphInput(projectId: 'b', projectName: 'Beta'),
+      ]);
+
+      expect(data.projectNodes, hasLength(2));
+      expect(
+        data.projectNodes.map((n) => n.id).toSet(),
+        {'project:a', 'project:b'},
+      );
+      expect(data.projectNodes.every((n) => n.kind == GraphNodeKind.project), isTrue);
+    });
+
+    test('a shared agent produces a single node connecting both projects', () {
+      final data = MultiCollaborationGraphData.buildAll(const [
+        ProjectGraphInput(projectId: 'a', projectName: 'Alpha', agentNames: ['shared']),
+        ProjectGraphInput(projectId: 'b', projectName: 'Beta', agentNames: ['shared']),
+      ]);
+
+      // Deduplicated to exactly one shared agent node.
+      expect(data.agentNodes, hasLength(1));
+      expect(data.agentNodes.first.id, 'agent:shared');
+
+      // But one edge from each project to it.
+      final edgesToShared =
+          data.edges.where((e) => e.toId == 'agent:shared').toList();
+      expect(edgesToShared, hasLength(2));
+      expect(
+        edgesToShared.map((e) => e.fromId).toSet(),
+        {'project:a', 'project:b'},
+      );
+    });
+
+    test('deduplicates skills across projects and builds correct edges', () {
+      final data = MultiCollaborationGraphData.buildAll(const [
+        ProjectGraphInput(projectId: 'a', projectName: 'Alpha', skillNames: ['s1', 's2']),
+        ProjectGraphInput(projectId: 'b', projectName: 'Beta', skillNames: ['s2']),
+      ]);
+
+      expect(data.skillNodes.map((n) => n.id).toSet(), {'skill:s1', 'skill:s2'});
+      final edgesToS2 = data.edges.where((e) => e.toId == 'skill:s2').toList();
+      expect(edgesToS2, hasLength(2));
+    });
+
+    test('collapses duplicate references within a single project to one edge', () {
+      final data = MultiCollaborationGraphData.buildAll(const [
+        ProjectGraphInput(
+          projectId: 'a',
+          projectName: 'Alpha',
+          agentNames: ['dup', 'dup'],
+        ),
+      ]);
+
+      expect(data.agentNodes, hasLength(1));
+      expect(data.edges.where((e) => e.toId == 'agent:dup'), hasLength(1));
+    });
+
+    test('skips empty agent/skill names', () {
+      final data = MultiCollaborationGraphData.buildAll(const [
+        ProjectGraphInput(
+          projectId: 'a',
+          projectName: 'Alpha',
+          agentNames: ['', 'real'],
+          skillNames: [''],
+        ),
+      ]);
+
+      expect(data.agentNodes.map((n) => n.id).toList(), ['agent:real']);
+      expect(data.skillNodes, isEmpty);
+    });
+
+    test('allNodes returns projects, then agents, then skills', () {
+      final data = MultiCollaborationGraphData.buildAll(const [
+        ProjectGraphInput(
+          projectId: 'a',
+          projectName: 'Alpha',
+          agentNames: ['ag'],
+          skillNames: ['sk'],
+        ),
+      ]);
+
+      expect(
+        data.allNodes.map((n) => n.id).toList(),
+        ['project:a', 'agent:ag', 'skill:sk'],
+      );
+    });
+  });
 }

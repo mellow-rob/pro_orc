@@ -679,7 +679,13 @@ class ProjectDetailPanel extends ConsumerWidget {
           accent: accent,
           title: 'SESSIONS',
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              _SessionsTokenSummary(
+                projectPath: project.path,
+                colors: colors,
+                accent: accent,
+              ),
               for (int i = 0; i < data.recentFive.length; i++) ...[
                 _SessionRow(
                   session: data.recentFive[i],
@@ -1509,6 +1515,53 @@ class _SessionRowState extends ConsumerState<_SessionRow> {
   }
 }
 
+/// Compact per-project token estimate summed over the recent sessions shown
+/// (M7 AD-4). Explicitly labelled "ca." — it is an estimate parsed from the
+/// session logs' `usage` fields, not a billed figure, and carries no euro
+/// amount. Renders nothing while loading, on error, or when no estimate
+/// exists.
+class _SessionsTokenSummary extends ConsumerWidget {
+  const _SessionsTokenSummary({
+    required this.projectPath,
+    required this.colors,
+    required this.accent,
+  });
+
+  final String projectPath;
+  final AppColors colors;
+  final Color accent;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final estimateAsync = ref.watch(projectTokenEstimateProvider(projectPath));
+
+    return estimateAsync.maybeWhen(
+      data: (total) {
+        if (total == null || total <= 0) return const SizedBox.shrink();
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 6),
+          child: Row(
+            children: [
+              Icon(LucideIcons.coins100, color: colors.textDim, size: 13),
+              const SizedBox(width: 8),
+              Text(
+                'ca. ${formatTokenCount(total)} Tokens',
+                style: TextStyle(color: colors.textSec, fontSize: 12),
+              ),
+              const SizedBox(width: 6),
+              Text(
+                '(Schätzung, letzte 5 Sessions)',
+                style: TextStyle(color: colors.textDim, fontSize: 11),
+              ),
+            ],
+          ),
+        );
+      },
+      orElse: () => const SizedBox.shrink(),
+    );
+  }
+}
+
 /// Body of an expanded session row: model, skills, subagents, last activity.
 class _SessionDetailBody extends StatelessWidget {
   const _SessionDetailBody({
@@ -1530,6 +1583,14 @@ class _SessionDetailBody extends StatelessWidget {
     }
     if (detail.messageCount != null) {
       rows.add(_metaRow('Nachrichten', '${detail.messageCount}'));
+    }
+    if (detail.hasTokenEstimate) {
+      rows.add(_metaRow(
+        'Tokens (ca.)',
+        'ca. ${formatTokenCount(detail.totalTokens)} '
+            '(${formatTokenCount(detail.inputTokens ?? 0)} in / '
+            '${formatTokenCount(detail.outputTokens ?? 0)} out)',
+      ));
     }
     if (detail.skills.isNotEmpty) {
       rows.add(_chipRow('Skills', detail.skills, LucideIcons.sparkles100));

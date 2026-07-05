@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'dart:developer' as developer;
 import 'dart:io';
 
+import 'package:path/path.dart' as p;
+
 import 'package:pro_orc/data/models/agent_category.dart';
 import 'package:pro_orc/data/models/claude_tool_model.dart';
 
@@ -40,11 +42,12 @@ class ClaudeToolsScanner {
   Future<ClaudeToolsData> scanAll() async {
     try {
       final skills = await _scanSkills();
+      final pluginSkills = await _scanPluginSkills();
       final plugins = await _scanPlugins();
       final mcpServers = await _scanMcpServers();
       final agents = await _scanAgents();
       return ClaudeToolsData(
-        skills: skills,
+        skills: [...skills, ...pluginSkills],
         plugins: plugins,
         mcpServers: mcpServers,
         agents: agents,
@@ -189,6 +192,87 @@ class ClaudeToolsScanner {
       name: id,
       path: dirPath,
     );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Plugin-bundled Skills (AD-3)
+  // ---------------------------------------------------------------------------
+
+  /// Max directory depth (below `~/.claude/plugins/`) at which a `SKILL.md`
+  /// is still considered. Real layouts nest a skill's `SKILL.md` up to ~5
+  /// levels deep (e.g. `marketplaces/<mkt>/<plugin>/skills/<skill>/SKILL.md`);
+  /// the limit keeps the recursive walk bounded and cheap without a full
+  /// unbounded tree scan.
+  static const _pluginSkillMaxDepth = 8;
+
+  /// Discovers skills bundled inside installed plugins by walking
+  /// `~/.claude/plugins/**` for `skills/<name>/SKILL.md` files (AD-3).
+  ///
+  /// Deliberately narrow: it reads ONLY this documented-stable layout and does
+  /// not parse plugin manifests. On a missing `plugins/` directory it returns
+  /// an empty list (silent empty state). Each result carries
+  /// `scope = 'plugin'` and the owning plugin's name derived from the path
+  /// segment that directly contains the top-level `skills/` folder.
+  Future<List<SkillData>> _scanPluginSkills() async {
+    final pluginsDir = Directory('$claudeDir/plugins');
+    if (!await pluginsDir.exists()) return [];
+
+    final result = <SkillData>[];
+    final seenPaths = <String>{};
+
+    try {
+      await for (final entity in pluginsDir.list(
+        recursive: true,
+        followLinks: false,
+      )) {
+        if (entity is! File) continue;
+        if (p.basename(entity.path) != 'SKILL.md') continue;
+
+        // The skill directory is the parent of SKILL.md; its parent must be a
+        // `skills` folder for this to be a plugin-skill in the AD-3 layout.
+        final skillDir = p.dirname(entity.path);
+        final skillsParent = p.dirname(skillDir);
+        if (p.basename(skillsParent) != 'skills') continue;
+
+        // Depth guard relative to the plugins/ root.
+        final rel = p.relative(entity.path, from: pluginsDir.path);
+        if (p.split(rel).length > _pluginSkillMaxDepth) continue;
+
+        if (!seenPaths.add(skillDir)) continue;
+
+        final id = p.basename(skillDir);
+        final pluginName = _pluginNameFromSkillPath(skillsParent);
+
+        final base = await _readSkillDir(skillDir, id);
+        result.add(SkillData(
+          id: base.id,
+          name: base.name,
+          description: base.description,
+          homepage: base.homepage,
+          path: base.path,
+          scope: 'plugin',
+          pluginName: pluginName,
+        ));
+      }
+    } catch (e) {
+      developer.log('Failed to scan plugin skills: $e', name: 'claude_tools_scanner');
+    }
+
+    result.sort((a, b) {
+      final byPlugin = (a.pluginName ?? '').compareTo(b.pluginName ?? '');
+      return byPlugin != 0 ? byPlugin : a.name.compareTo(b.name);
+    });
+    return result;
+  }
+
+  /// Derives the owning plugin's name from the absolute path of the `skills`
+  /// folder that contains a plugin skill. The plugin is the directory holding
+  /// that `skills` folder (e.g. `.../obsidian-skills/skills` -> `obsidian-skills`,
+  /// `.../autoresearch/claude-plugin/skills` -> `claude-plugin`). Falls back to
+  /// `'Plugin'` if the path is unexpectedly shallow.
+  String _pluginNameFromSkillPath(String skillsParentDir) {
+    final owner = p.basename(p.dirname(skillsParentDir));
+    return owner.isEmpty ? 'Plugin' : owner;
   }
 
   // ---------------------------------------------------------------------------

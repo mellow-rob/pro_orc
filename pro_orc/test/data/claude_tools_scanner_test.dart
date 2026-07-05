@@ -519,6 +519,113 @@ name: new-agent
       expect(after.agents.first.name, 'new-agent');
     });
   });
+
+  group('Plugin-bundled skills (M7 AD-3)', () {
+    late String claudeDir;
+
+    setUp(() async {
+      final tempDir = await Directory.systemTemp.createTemp('plugin_skills_');
+      claudeDir = tempDir.path;
+      await File('$claudeDir/settings.json').writeAsString(jsonEncode({}));
+    });
+
+    tearDown(() async {
+      await Directory(claudeDir).delete(recursive: true);
+    });
+
+    Future<void> writeSkill(String relDirBelowPlugins, String skillId,
+        {String? frontmatter}) async {
+      final dir = Directory('$claudeDir/plugins/$relDirBelowPlugins/$skillId');
+      await dir.create(recursive: true);
+      await File('${dir.path}/SKILL.md').writeAsString(frontmatter ??
+          '''---
+name: $skillId
+description: Desc for $skillId
+---
+Body.
+''');
+    }
+
+    test('discovers a plugin skill and tags it scope=plugin with plugin name',
+        () async {
+      await writeSkill('marketplaces/obsidian-skills/skills', 'defuddle');
+
+      final scanner = ClaudeToolsScanner(claudeDirOverride: claudeDir);
+      final data = await scanner.scanAll();
+
+      final pluginSkills =
+          data.skills.where((s) => s.scope == 'plugin').toList();
+      expect(pluginSkills, hasLength(1));
+      expect(pluginSkills.first.id, 'defuddle');
+      expect(pluginSkills.first.pluginName, 'obsidian-skills');
+      expect(pluginSkills.first.description, 'Desc for defuddle');
+    });
+
+    test('derives plugin name from the dir that holds the skills folder',
+        () async {
+      // Nested layout: .../autoresearch/claude-plugin/skills/<skill>
+      await writeSkill('marketplaces/autoresearch/claude-plugin/skills',
+          'autoresearch');
+
+      final scanner = ClaudeToolsScanner(claudeDirOverride: claudeDir);
+      final data = await scanner.scanAll();
+
+      final skill = data.skills.firstWhere((s) => s.scope == 'plugin');
+      expect(skill.pluginName, 'claude-plugin');
+    });
+
+    test('ignores a SKILL.md not directly under a skills/ folder', () async {
+      // SKILL.md sitting under some other folder must NOT be picked up.
+      final dir = Directory('$claudeDir/plugins/marketplaces/foo/docs/bar');
+      await dir.create(recursive: true);
+      await File('${dir.path}/SKILL.md').writeAsString('''---
+name: bar
+---
+''');
+
+      final scanner = ClaudeToolsScanner(claudeDirOverride: claudeDir);
+      final data = await scanner.scanAll();
+
+      expect(data.skills.where((s) => s.scope == 'plugin'), isEmpty);
+    });
+
+    test('respects the depth limit for very deeply nested SKILL.md', () async {
+      final deep = List.filled(10, 'x').join('/');
+      await writeSkill('$deep/skills', 'toodeep');
+
+      final scanner = ClaudeToolsScanner(claudeDirOverride: claudeDir);
+      final data = await scanner.scanAll();
+
+      expect(
+        data.skills.where((s) => s.id == 'toodeep' && s.scope == 'plugin'),
+        isEmpty,
+      );
+    });
+
+    test('returns no plugin skills when the plugins/ directory is absent',
+        () async {
+      // Fresh claudeDir with only settings.json, no plugins/ dir at all.
+      final scanner = ClaudeToolsScanner(claudeDirOverride: claudeDir);
+      final data = await scanner.scanAll();
+
+      expect(data.skills.where((s) => s.scope == 'plugin'), isEmpty);
+      expect(data.hasError, isFalse);
+    });
+
+    test('multiple plugin skills are sorted by plugin then name', () async {
+      await writeSkill('marketplaces/zeta/skills', 'alpha');
+      await writeSkill('marketplaces/alpha-plugin/skills', 'zebra');
+
+      final scanner = ClaudeToolsScanner(claudeDirOverride: claudeDir);
+      final data = await scanner.scanAll();
+
+      final plugin = data.skills.where((s) => s.scope == 'plugin').toList();
+      expect(plugin, hasLength(2));
+      // 'alpha-plugin' sorts before 'zeta'.
+      expect(plugin.first.pluginName, 'alpha-plugin');
+      expect(plugin.last.pluginName, 'zeta');
+    });
+  });
 }
 
 /// Formats a DateTime for the macOS `touch -t` command (YYYYMMDDhhmm.ss).
