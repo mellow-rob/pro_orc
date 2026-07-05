@@ -44,10 +44,10 @@ starten. Read-only-Grundsatz: App liest Konfiguration, schreibt sie nie.
 
 ## Wave 3 — Skill-Launcher (Quick-Win)
 
-- [ ] Quick-Action auf Projekt-Karte/Detail-Panel: „Mit Skill starten…" → GlassDialog mit
+- [x] Quick-Action auf Projekt-Karte/Detail-Panel: „Mit Skill starten…" → GlassDialog mit
       Skill-Liste (aus bestehendem Skills-Provider, Suchfeld) → startet Terminal im
       Projektpfad mit `claude "/<skill>"` (osascript-Muster, AD-4).
-- [ ] Tests: Kommando-Bau (Escaping von Pfaden/Skill-Namen) als pure Funktion getestet.
+- [x] Tests: Kommando-Bau (Escaping von Pfaden/Skill-Namen) als pure Funktion getestet.
 
 ## Verifikation (jede Wave)
 

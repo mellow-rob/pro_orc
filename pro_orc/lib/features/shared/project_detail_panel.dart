@@ -16,6 +16,7 @@ import 'package:pro_orc/data/services/quick_actions_service.dart';
 import 'package:pro_orc/features/shared/collaboration_mini_graph.dart';
 import 'package:pro_orc/features/shared/quick_actions.dart';
 import 'package:pro_orc/features/shared/rename_project_dialog.dart';
+import 'package:pro_orc/features/shared/skill_launcher_dialog.dart';
 import 'package:pro_orc/features/shared/status_badge.dart';
 import 'package:pro_orc/features/shell/glass_card.dart';
 import 'package:pro_orc/providers/claude_tools_provider.dart';
@@ -360,7 +361,7 @@ class ProjectDetailPanel extends ConsumerWidget {
 
         // --- Quick Actions ---
         const SizedBox(height: 8),
-        _buildQuickActions(colors, accent, qa),
+        _buildQuickActions(context, colors, accent, qa),
       ],
     );
   }
@@ -640,8 +641,24 @@ class ProjectDetailPanel extends ConsumerWidget {
     );
   }
 
-  Widget _buildQuickActions(AppColors colors, Color accent, QuickActionsService qa) {
-    final actions = buildProjectQuickActions(project, qa);
+  Widget _buildQuickActions(
+    BuildContext context,
+    AppColors colors,
+    Color accent,
+    QuickActionsService qa,
+  ) {
+    final actions = [
+      ...buildProjectQuickActions(project, qa),
+      QuickAction(
+        icon: LucideIcons.sparkles100,
+        tooltip: 'Mit Skill starten',
+        onPressed: () => SkillLauncherDialog.show(
+          context,
+          projectPath: project.path,
+          projectName: project.displayName,
+        ),
+      ),
+    ];
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.start,
