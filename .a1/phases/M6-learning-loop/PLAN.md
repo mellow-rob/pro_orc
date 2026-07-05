@@ -47,15 +47,16 @@ Automatisierungen. Read-only.
 
 ## Wave 3 — Workflows/Automatisierungen (best-effort, AD-3)
 
-- [ ] Service `automation_reader.dart`: sammelt read-only, was auffindbar ist:
+- [x] Service `automation_reader.dart`: sammelt read-only, was auffindbar ist:
       (a) launchd-Agents des Users (`~/Library/LaunchAgents/*.plist`), die `claude` im
       ProgramArguments enthalten; (b) crontab des Users (`crontab -l`, runInShell) gefiltert
       auf `claude`; (c) Stop-/Cron-Hooks aus HarnessData wiederverwenden (Sektion „Automatisch
       bei Events" — Hooks SIND Workflows).
-- [ ] UI: Sektion „Automatisierungen" im Learning-Tab (oder Harness-Tab, was besser passt —
-      Entscheidung dem Executor überlassen, im Bericht begründen): Quelle-Badge
+- [x] UI: Sektion „Automatisierungen" im Learning-Tab (Entscheidung: Learning-Tab statt
+      Harness-Tab — der a1-Lern-Loop und seine Automatisierungen wie Stop-Hooks für Retros
+      oder cron für a1-evolve gehören konzeptionell zusammen): Quelle-Badge
       (launchd/cron/Hook), Kommando maskiert via bestehendem `maskSecrets`.
-- [ ] Tests: Plist-/Crontab-Parsing als pure Funktionen mit String-Fixtures.
+- [x] Tests: Plist-/Crontab-Parsing als pure Funktionen mit String-Fixtures.
 
 ## Verifikation
 

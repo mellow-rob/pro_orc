@@ -5,8 +5,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:path/path.dart' as p;
 
+import 'package:pro_orc/data/models/automation_data.dart';
 import 'package:pro_orc/data/models/learning_data.dart';
 import 'package:pro_orc/features/shell/glass_card.dart';
+import 'package:pro_orc/providers/automation_provider.dart';
 import 'package:pro_orc/providers/learning_provider.dart';
 import 'package:pro_orc/theme/n3_colors.dart';
 
@@ -38,22 +40,6 @@ class LearningTab extends ConsumerWidget {
   }
 
   Widget _buildContent(AppColors colors, LearningData data) {
-    if (data.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32),
-          child: Text(
-            'Keine Learnings gefunden.\n'
-            'Erwartet unter dem Obsidian-Vault (pattern/a1-learnings/) '
-            'und in .a1/phases/*/observations.jsonl der Projekte.\n'
-            'Vault-Pfad in den Einstellungen konfigurierbar.',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: colors.textSec, fontSize: 14),
-          ),
-        ),
-      );
-    }
-
     final accent = colors.emerald;
 
     return SingleChildScrollView(
@@ -61,6 +47,18 @@ class LearningTab extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          if (data.isEmpty)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 24),
+              child: Text(
+                'Keine Learnings gefunden.\n'
+                'Erwartet unter dem Obsidian-Vault (pattern/a1-learnings/) '
+                'und in .a1/phases/*/observations.jsonl der Projekte.\n'
+                'Vault-Pfad in den Einstellungen konfigurierbar.',
+                style: TextStyle(color: colors.textSec, fontSize: 14),
+              ),
+            ),
+          if (!data.isEmpty) ...[
           if (data.evolveDue)
             _EvolveBanner(colors: colors, count: data.totalSinceLastSynthesis),
           if (data.evolveDue) const SizedBox(height: 20),
@@ -110,6 +108,11 @@ class LearningTab extends ConsumerWidget {
                 _ObservationRow(colors: colors, accent: accent, obs: o),
             ],
           ),
+          const SizedBox(height: 24),
+          ],
+
+          // --- Automatisierungen (best-effort, AD-3) — always shown ---
+          _AutomationsSection(colors: colors),
         ],
       ),
     );
@@ -472,6 +475,119 @@ class _CountBadge extends StatelessWidget {
         style: TextStyle(
           color: accent,
           fontSize: 12,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+}
+
+/// Best-effort automations section (AD-3): launchd agents, crontab lines and
+/// harness hooks that reference Claude. Loads independently of the learnings so
+/// hooks show even without a vault. Honest empty state when nothing is found.
+class _AutomationsSection extends ConsumerWidget {
+  const _AutomationsSection({required this.colors});
+
+  final AppColors colors;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final async = ref.watch(automationProvider);
+    final accent = colors.violet;
+
+    final rows = async.maybeWhen(
+      data: (data) => [
+        for (final a in data.automations)
+          _AutomationRow(colors: colors, automation: a),
+      ],
+      orElse: () => <Widget>[],
+    );
+
+    return _LearningSection(
+      colors: colors,
+      accent: accent,
+      icon: LucideIcons.workflow100,
+      title: 'Automatisierungen',
+      count: rows.length,
+      emptyText: async.isLoading
+          ? 'Wird gesucht…'
+          : 'Keine geplanten Workflows gefunden',
+      children: rows,
+    );
+  }
+}
+
+class _AutomationRow extends StatelessWidget {
+  const _AutomationRow({required this.colors, required this.automation});
+
+  final AppColors colors;
+  final Automation automation;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _SourceBadge(colors: colors, source: automation.source),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  automation.schedule.isEmpty
+                      ? automation.name
+                      : '${automation.name} · ${automation.schedule}',
+                  style: TextStyle(color: colors.textPri, fontSize: 13),
+                ),
+                if (automation.command.isNotEmpty) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    automation.command,
+                    style: TextStyle(
+                      color: colors.textDim,
+                      fontSize: 11,
+                      fontFamily: 'monospace',
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SourceBadge extends StatelessWidget {
+  const _SourceBadge({required this.colors, required this.source});
+
+  final AppColors colors;
+  final AutomationSource source;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = switch (source) {
+      AutomationSource.launchd => colors.cyan,
+      AutomationSource.cron => colors.amber,
+      AutomationSource.hook => colors.violet,
+    };
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(5),
+        border: Border.all(color: color.withValues(alpha: 0.25), width: 0.5),
+      ),
+      child: Text(
+        source.label,
+        style: TextStyle(
+          color: color,
+          fontSize: 10,
           fontWeight: FontWeight.w600,
         ),
       ),
