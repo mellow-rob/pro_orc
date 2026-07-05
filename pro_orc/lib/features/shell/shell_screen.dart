@@ -23,6 +23,7 @@ import 'package:pro_orc/features/research/research_tab.dart';
 import 'package:pro_orc/features/settings/settings_tab.dart';
 import 'package:pro_orc/features/shell/glow_border_shell.dart';
 import 'package:pro_orc/features/shell/orb_background.dart';
+import 'package:pro_orc/features/skills/skills_tab.dart';
 
 class ShellScreen extends ConsumerStatefulWidget {
   const ShellScreen({super.key});
@@ -143,6 +144,7 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
                         ResearchTab(),
                         ClaudeToolsTab(),
                         AgentsTab(),
+                        SkillsTab(),
                         SettingsTab(),
                       ],
                     ),
@@ -177,6 +179,7 @@ class _SideNav extends StatelessWidget {
     (icon: LucideIcons.beaker100, label: 'Research'),
     (icon: LucideIcons.brain100, label: 'Tools'),
     (icon: LucideIcons.bot100, label: 'Agents'),
+    (icon: LucideIcons.sparkles100, label: 'Skills'),
   ];
 
   @override
@@ -212,10 +215,10 @@ class _SideNav extends StatelessWidget {
             child: _NavItem(
               icon: LucideIcons.settings100,
               label: 'Settings',
-              selected: selectedIndex == 4,
+              selected: selectedIndex == _items.length,
               accent: colors.cyan,
               dimColor: colors.textDim,
-              onTap: () => onSelect(4),
+              onTap: () => onSelect(_items.length),
             ),
           ),
         ],
