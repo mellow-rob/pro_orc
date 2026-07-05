@@ -60,6 +60,33 @@ void main() {
         expect(result.hasActiveSession, isFalse);
       });
 
+      test(
+          'does not fall back to fuzzy match when the exact encoded dir exists '
+          'but has no sessions yet (code review MINOR fix)', () async {
+        final claudeHome = await Directory.systemTemp.createTemp('claude_home_');
+        addTearDown(() => claudeHome.delete(recursive: true));
+
+        final projectPath = '/Users/rob/code/empty-exact-dir';
+        final encoded = encodeProjectPath(projectPath);
+
+        // Exact dir exists (e.g. only a memory/ subfolder, no sessions yet).
+        final exactDir = Directory(p.join(claudeHome.path, 'projects', encoded));
+        await exactDir.create(recursive: true);
+
+        // A differently-named dir that merely happens to end with the same
+        // encoded suffix — must NOT be picked up now that the exact dir exists.
+        final decoyDir = Directory(
+          p.join(claudeHome.path, 'projects', '-Users-rob-other-parent-$encoded'),
+        );
+        await decoyDir.create(recursive: true);
+        await File(p.join(decoyDir.path, 'decoy-session.jsonl')).writeAsString('{}\n');
+
+        final reader = SessionReader(claudeHomeDirOverride: claudeHome.path);
+        final result = await reader.readProjectSessions(projectPath);
+
+        expect(result.sessions, isEmpty);
+      });
+
       test('returns empty for nonexistent claudeHome (never throws)', () async {
         final reader = SessionReader(
           claudeHomeDirOverride: '/tmp/nonexistent_claude_home_xyz_999',

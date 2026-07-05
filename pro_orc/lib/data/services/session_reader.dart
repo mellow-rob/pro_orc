@@ -44,11 +44,14 @@ class SessionReader {
       final projectsDir = p.join(claudeHome, 'projects');
       final encodedPath = encodeProjectPath(projectPath);
 
-      // Strategy 1: exact encoded path match.
+      // Strategy 1: exact encoded path match. If this directory exists at
+      // all, it is unambiguously "the" Claude project dir for this project —
+      // return its sessions (possibly none) without falling back to the
+      // fuzzy match, which could otherwise pick up an unrelated project's
+      // sessions just because this one happens to have no .jsonl files yet.
       final exactDir = Directory(p.join(projectsDir, encodedPath));
       if (await exactDir.exists()) {
-        final sessions = await _readSessionsAt(exactDir);
-        if (sessions.isNotEmpty) return ProjectSessionData(sessions: sessions);
+        return ProjectSessionData(sessions: await _readSessionsAt(exactDir));
       }
 
       // Strategy 2: fuzzy suffix match, bounded by length (mirrors
@@ -105,7 +108,9 @@ class SessionReader {
   }
 
   /// Lazily parses [session]'s JSONL content to fill in [startedAt] and
-  /// [messageCount]. Parses line by line, skipping malformed lines — never
+  /// [messageCount]. Streams the file line by line (rather than loading it
+  /// fully into memory via `readAsLines`) since session files can grow large
+  /// (observed 1000+ lines in real usage). Skips malformed lines — never
   /// throws. The inoffizielle JSONL format varies by `type` field (user,
   /// assistant, system, attachment, etc.); only `user`/`assistant` lines with
   /// a `timestamp` field count toward [messageCount] and [startedAt].
@@ -114,11 +119,15 @@ class SessionReader {
       final file = File(session.path);
       if (!await file.exists()) return session;
 
-      final lines = await file.readAsLines();
       DateTime? startedAt;
       int messageCount = 0;
 
-      for (final line in lines) {
+      final lineStream = file
+          .openRead()
+          .transform(utf8.decoder)
+          .transform(const LineSplitter());
+
+      await for (final line in lineStream) {
         final trimmed = line.trim();
         if (trimmed.isEmpty) continue;
 

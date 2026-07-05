@@ -26,7 +26,14 @@ import 'package:pro_orc/features/shell/orb_background.dart';
 import 'package:pro_orc/features/skills/skills_tab.dart';
 
 class ShellScreen extends ConsumerStatefulWidget {
-  const ShellScreen({super.key});
+  const ShellScreen({super.key, ActivationPolicyService? activationPolicyService})
+      : activationPolicyService = activationPolicyService ?? const ActivationPolicyService();
+
+  /// Shared instance passed down from main.dart so the whole app talks to
+  /// the native activation-policy MethodChannel through one object. Defaults
+  /// to a fresh instance for callers (e.g. widget tests) that don't wire one
+  /// up explicitly — safe since the service is stateless.
+  final ActivationPolicyService activationPolicyService;
 
   @override
   ConsumerState<ShellScreen> createState() => _ShellScreenState();
@@ -36,14 +43,14 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
     with WindowListener, TrayListener {
   late final TrayService _trayService;
   final WindowGeometryService _geometryService = WindowGeometryService();
-  final ActivationPolicyService _activationPolicyService = ActivationPolicyService();
+
   int _selectedIndex = 0;
 
   @override
   void initState() {
     super.initState();
     windowManager.addListener(this);
-    _trayService = TrayService(activationPolicyService: _activationPolicyService);
+    _trayService = TrayService(activationPolicyService: widget.activationPolicyService);
     _trayService.init();
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
@@ -100,7 +107,7 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
   @override
   void onWindowClose() async {
     await windowManager.hide();
-    await _activationPolicyService.setAccessory();
+    await widget.activationPolicyService.setAccessory();
   }
 
   @override

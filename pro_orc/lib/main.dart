@@ -12,6 +12,13 @@ import 'package:pro_orc/theme/app_theme.dart';
 import 'package:pro_orc/window/activation_policy_service.dart';
 import 'package:pro_orc/window/window_geometry_service.dart';
 
+/// Single shared instance, passed down to [ShellScreen] (which forwards it
+/// to [TrayService]) so the whole app talks to the native activation-policy
+/// MethodChannel through one object instead of ad-hoc `ActivationPolicyService()`
+/// instances scattered across main.dart/shell_screen.dart/tray_service.dart.
+/// Safe to share: the service is stateless, just a MethodChannel wrapper.
+const _activationPolicyService = ActivationPolicyService();
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await windowManager.ensureInitialized();
@@ -41,7 +48,7 @@ void main() async {
       await windowManager.center();
     }
 
-    await ActivationPolicyService().setRegular();
+    await _activationPolicyService.setRegular();
     await windowManager.show();
     await windowManager.focus();
   });
@@ -62,7 +69,7 @@ class ProOrcApp extends ConsumerWidget {
       theme: buildAppLightTheme(),
       darkTheme: buildAppTheme(),
       themeMode: themeMode,
-      home: const ShellScreen(),
+      home: const ShellScreen(activationPolicyService: _activationPolicyService),
     );
   }
 }

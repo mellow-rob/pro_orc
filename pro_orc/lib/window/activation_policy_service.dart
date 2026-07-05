@@ -10,6 +10,8 @@ import 'package:flutter/services.dart';
 /// `LSUIElement=true` in Info.plist still governs the app's state at launch
 /// (menubar-only by default); this service only changes behavior at runtime.
 class ActivationPolicyService {
+  const ActivationPolicyService();
+
   static const _channel = MethodChannel('pro_orc/activation_policy');
 
   /// Switches to `.regular`: shows a Dock icon and allows Cmd+Tab switching
