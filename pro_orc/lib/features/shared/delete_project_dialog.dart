@@ -178,8 +178,8 @@ class _DeleteProjectDialogState extends ConsumerState<DeleteProjectDialog> {
         ),
       ),
       child: Text(
-        'Diese Aktion kann nicht rueckgaengig gemacht werden. '
-        'Der Ordner wird permanent geloescht.',
+        'Der Projektordner wird in den Papierkorb verschoben. '
+        'Du kannst ihn dort bei Bedarf wiederherstellen.',
         style: TextStyle(
           color: colors.textSec,
           fontSize: 13,
