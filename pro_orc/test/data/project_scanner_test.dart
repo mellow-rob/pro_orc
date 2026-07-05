@@ -441,6 +441,81 @@ void main() {
     });
 
     // -----------------------------------------------------------------------
+    // Memory cache invalidation (code review MAJOR fix)
+    //
+    // The cache signature used to be the project directory's own mtime,
+    // which does NOT change when rem-sleep writes a new MEMORY.md under
+    // ~/.claude/projects/<encoded>/memory/ — a completely different
+    // directory. That meant a stale memory indicator survived rescans.
+    // The fix uses the MEMORY.md file's own mtime as the signature instead.
+    // -----------------------------------------------------------------------
+
+    group('memory cache invalidation (rem-sleep consolidation)', () {
+      late Directory claudeHome;
+      late ProjectScanner scannerWithClaudeHome;
+
+      setUp(() {
+        claudeHome = Directory.systemTemp.createTempSync('claude_home_scanner_test_');
+        scannerWithClaudeHome =
+            ProjectScanner(db, claudeHomeDirOverride: claudeHome.path);
+      });
+
+      tearDown(() async {
+        await claudeHome.delete(recursive: true);
+      });
+
+      /// Mirrors memory_reader's encodeProjectPath (kept local to avoid a
+      /// cross-layer test import — the encoding rule is simple and stable).
+      String encode(String path) => path
+          .replaceAll('/', '-')
+          .replaceAll('_', '-')
+          .replaceAll(' ', '-')
+          .replaceAll('.', '-');
+
+      test('rescan after MEMORY.md is updated returns the new consolidation time',
+          () async {
+        final projectDir = await createGsdProject(scanRoot, 'memory-cache-project');
+        final encoded = encode(projectDir.path);
+        final memoryDir = Directory(
+          p.join(claudeHome.path, 'projects', encoded, 'memory'),
+        );
+        await memoryDir.create(recursive: true);
+        final memoryFile = File(p.join(memoryDir.path, 'MEMORY.md'));
+        await memoryFile.writeAsString('# Memory v1');
+
+        final results1 = await scannerWithClaudeHome.scanAll(
+          scanDirOverride: scanRoot.path,
+        );
+        final firstConsolidated = results1.first.memory?.lastConsolidated;
+        expect(firstConsolidated, isNotNull);
+
+        // Simulate rem-sleep writing a new consolidation later. `touch -t`
+        // rounds to whole seconds, so a few-ms delay isn't guaranteed to
+        // land in a different second — push the mtime 5 minutes forward
+        // instead to make the "after" assertion unambiguous.
+        await memoryFile.writeAsString('# Memory v2 - updated');
+        final newMtime = DateTime.now().add(const Duration(minutes: 5));
+        await Process.run(
+          'touch',
+          ['-t', _touchFormat(newMtime), memoryFile.path],
+        );
+
+        final results2 = await scannerWithClaudeHome.scanAll(
+          scanDirOverride: scanRoot.path,
+        );
+        final secondConsolidated = results2.first.memory?.lastConsolidated;
+
+        expect(secondConsolidated, isNotNull);
+        expect(
+          secondConsolidated!.isAfter(firstConsolidated!),
+          isTrue,
+          reason: 'Cache must invalidate on MEMORY.md mtime change, not '
+              'project directory mtime',
+        );
+      });
+    });
+
+    // -----------------------------------------------------------------------
     // _FileCache: mtime-based caching
     // -----------------------------------------------------------------------
 
@@ -526,4 +601,14 @@ void main() {
       });
     });
   });
+}
+
+/// Formats a DateTime for the macOS `touch -t` command (YYYYMMDDhhmm.ss).
+String _touchFormat(DateTime dt) {
+  return '${dt.year}'
+      '${dt.month.toString().padLeft(2, '0')}'
+      '${dt.day.toString().padLeft(2, '0')}'
+      '${dt.hour.toString().padLeft(2, '0')}'
+      '${dt.minute.toString().padLeft(2, '0')}'
+      '.${dt.second.toString().padLeft(2, '0')}';
 }

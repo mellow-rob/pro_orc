@@ -35,6 +35,56 @@ Future<MemoryData?> _checkMemoryAt(String projectDir) async {
   );
 }
 
+/// Returns the mtime of the MEMORY.md that [readMemoryData] would find for
+/// [projectPath], or null if none exists. Uses the same exact + fuzzy match
+/// strategy as [readMemoryData] but only stats the file (no read), making it
+/// cheap enough to call on every rescan as a cache-invalidation signature —
+/// unlike the project directory's own mtime, this actually changes when
+/// rem-sleep consolidates a new MEMORY.md.
+Future<DateTime?> memoryFileSignature(
+  String projectPath, {
+  String? claudeHomeDirOverride,
+}) async {
+  try {
+    final claudeHome =
+        claudeHomeDirOverride ?? p.join(Platform.environment['HOME']!, '.claude');
+    final projectsDir = p.join(claudeHome, 'projects');
+    final encodedPath = encodeProjectPath(projectPath);
+
+    // Strategy 1: exact encoded path.
+    final exactMemoryFile =
+        File(p.join(projectsDir, encodedPath, 'memory', 'MEMORY.md'));
+    if (await exactMemoryFile.exists()) {
+      return (await exactMemoryFile.stat()).modified;
+    }
+
+    // Strategy 2: fuzzy suffix match, bounded by length (mirrors
+    // readMemoryData's approach for Claude's inconsistent dir naming).
+    final projectsDirEntity = Directory(projectsDir);
+    if (!await projectsDirEntity.exists()) return null;
+
+    final encodedName = encodeProjectPath(p.basename(projectPath));
+    final maxDirLen = encodedPath.length + 10;
+
+    DateTime? latest;
+    await for (final entity in projectsDirEntity.list()) {
+      if (entity is! Directory) continue;
+      final dirName = p.basename(entity.path);
+      if (!dirName.endsWith(encodedName)) continue;
+      if (dirName.length > maxDirLen) continue;
+
+      final memoryFile = File(p.join(entity.path, 'memory', 'MEMORY.md'));
+      if (!await memoryFile.exists()) continue;
+      final mtime = (await memoryFile.stat()).modified;
+      if (latest == null || mtime.isAfter(latest)) latest = mtime;
+    }
+
+    return latest;
+  } catch (_) {
+    return null;
+  }
+}
+
 /// Reads Claude rem-sleep memory consolidation status for a project.
 ///
 /// Claude creates project directories with inconsistent naming:

@@ -167,7 +167,12 @@ class ProjectScanner {
   final _ScanResultCache<MemoryData> _memoryCache = _ScanResultCache<MemoryData>();
   final _ScanResultCache<List<String>?> _usedAgentsCache = _ScanResultCache<List<String>?>();
 
-  ProjectScanner(this._db);
+  /// Overrides `$HOME/.claude` for memory lookups — used by tests to point
+  /// at a temp directory instead of the real Claude home.
+  final String? _claudeHomeDirOverride;
+
+  ProjectScanner(this._db, {String? claudeHomeDirOverride})
+      : _claudeHomeDirOverride = claudeHomeDirOverride;
 
   /// Scans the configured (or overridden) scan directory and returns a
   /// [List<ProjectModel>] sorted by displayName.
@@ -413,32 +418,30 @@ class ProjectScanner {
   /// scan under `~/.claude/projects/` for projects whose memory has not
   /// changed since the last scan.
   ///
-  /// Signature is the mtime of the project directory itself combined with
-  /// whether memory was previously found — cheap to compute and changes
-  /// whenever rem-sleep consolidates a new MEMORY.md (which touches the
-  /// project dir's watched parent, invalidating the whole scan anyway).
+  /// Signature is the mtime of the actual MEMORY.md file (via
+  /// [memoryFileSignature]) — NOT the project directory's own mtime. The
+  /// project directory does not change when rem-sleep consolidates a new
+  /// MEMORY.md (that file lives under `~/.claude/projects/<encoded>/memory/`,
+  /// a completely different directory), so using the project dir's mtime as
+  /// the signature meant the cache never invalidated after a real memory
+  /// update — the indicator stayed stale until an unrelated project file
+  /// changed. (Fixed per code review MAJOR finding.)
   Future<MemoryData> _readMemoryWithCache(String projectPath) async {
-    final signature = await _projectDirSignature(projectPath);
+    final signature = await memoryFileSignature(
+      projectPath,
+      claudeHomeDirOverride: _claudeHomeDirOverride,
+    );
     final cached = _memoryCache.getBoxed(projectPath, signature);
     if (cached != null) return cached.value;
 
-    final result = await readMemoryData(projectPath);
+    final result = await readMemoryData(
+      projectPath,
+      claudeHomeDirOverride: _claudeHomeDirOverride,
+    );
     if (signature != null) {
       _memoryCache.put(projectPath, signature, result);
     }
     return result;
-  }
-
-  /// Returns the mtime of [projectPath] itself, used as a cheap signature
-  /// for memory-scan caching.
-  Future<DateTime?> _projectDirSignature(String projectPath) async {
-    try {
-      final stat = await Directory(projectPath).stat();
-      return stat.modified;
-    } catch (e) {
-      developer.log('Failed to stat $projectPath for memory signature: $e', name: 'project_scanner');
-      return null;
-    }
   }
 
   /// Extracts used agents using the cache to avoid re-walking
