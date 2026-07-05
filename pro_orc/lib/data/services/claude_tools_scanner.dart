@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:developer' as developer;
 import 'dart:io';
 
 import 'package:pro_orc/data/models/agent_category.dart';
@@ -14,6 +15,15 @@ import 'package:pro_orc/data/models/claude_tool_model.dart';
 class ClaudeToolsScanner {
   /// Absolute path to the `.claude` directory being scanned.
   final String claudeDir;
+
+  /// Caches [scanProjectTools] results per project path, keyed by the mtime
+  /// of that project's `.claude/agents` directory (the fastest-changing of
+  /// the three per-project sources). Mirrors the mtime-caching pattern from
+  /// [ProjectScanner] (M1) — without it, a single FS event under
+  /// `~/.claude/` would force a full re-scan of every project's local
+  /// agents/skills/MCP config, which is unnecessary when nothing there
+  /// changed.
+  final Map<String, ({DateTime? signature, ClaudeToolsData data})> _projectCache = {};
 
   /// Creates a scanner targeting [claudeDirOverride] if provided, otherwise
   /// defaults to `$HOME/.claude`.
@@ -50,19 +60,66 @@ class ClaudeToolsScanner {
   }
 
   /// Scans per-project Claude tools at [projectPath].
-  /// Returns skills from `<project>/.claude/skills/` and MCP servers from
-  /// `<project>/.mcp.json`. Plugins are always global -- returned as empty list.
-  Future<ClaudeToolsData> scanProjectTools(String projectPath) async {
+  /// Returns skills from `<project>/.claude/skills/`, agents from
+  /// `<project>/.claude/agents/`, and MCP servers from `<project>/.mcp.json`.
+  /// Plugins are always global -- returned as empty list.
+  ///
+  /// [projectName] is attached to each returned [AgentData.projectName] for
+  /// display (e.g. "niimo-qa (Niimo)"); pass the project's display name.
+  ///
+  /// Cached per [projectPath] using the mtime of `<project>/.claude` as a
+  /// cheap change signature — call sites that scan many projects on every
+  /// FS event (e.g. an "all agents across all projects" view) stay cheap
+  /// for projects whose `.claude/` config hasn't changed.
+  Future<ClaudeToolsData> scanProjectTools(
+    String projectPath, {
+    String? projectName,
+  }) async {
+    final signature = await _projectClaudeDirSignature(projectPath);
+    final cached = _projectCache[projectPath];
+    if (cached != null && signature != null && cached.signature == signature) {
+      return cached.data;
+    }
+
+    final result = await _scanProjectToolsUncached(projectPath, projectName);
+
+    if (signature != null) {
+      _projectCache[projectPath] = (signature: signature, data: result);
+    }
+    return result;
+  }
+
+  Future<ClaudeToolsData> _scanProjectToolsUncached(
+    String projectPath,
+    String? projectName,
+  ) async {
     try {
       final skills = await _scanProjectSkills(projectPath);
       final mcpServers = await _scanProjectMcpServers(projectPath);
+      final agents = await _scanProjectAgents(projectPath, projectName: projectName);
       return ClaudeToolsData(
         skills: skills,
         plugins: const [],
         mcpServers: mcpServers,
+        agents: agents,
       );
     } catch (_) {
       return ClaudeToolsData.empty;
+    }
+  }
+
+  /// Returns the mtime of `<projectPath>/.claude`, used as the cache
+  /// signature for [scanProjectTools]. Returns null if the directory does
+  /// not exist (uncached — always re-scan, cheap since there's nothing to
+  /// read anyway).
+  Future<DateTime?> _projectClaudeDirSignature(String projectPath) async {
+    try {
+      final dir = Directory('$projectPath/.claude');
+      if (!await dir.exists()) return null;
+      return (await dir.stat()).modified;
+    } catch (e) {
+      developer.log('Failed to stat .claude dir for $projectPath: $e', name: 'claude_tools_scanner');
+      return null;
     }
   }
 
@@ -433,6 +490,39 @@ class ClaudeToolsScanner {
     final agentsDir = Directory('$claudeDir/agents');
     if (!await agentsDir.exists()) return [];
 
+    final result = await _readAgentsFromDir(agentsDir, scope: 'global');
+    result.sort((a, b) => a.name.compareTo(b.name));
+    return result;
+  }
+
+  /// Scans per-project agents at `<projectPath>/.claude/agents/*.md`.
+  /// Returns an empty list if the directory does not exist. Individual
+  /// unreadable files are skipped and logged, never thrown.
+  Future<List<AgentData>> _scanProjectAgents(
+    String projectPath, {
+    String? projectName,
+  }) async {
+    final agentsDir = Directory('$projectPath/.claude/agents');
+    if (!await agentsDir.exists()) return [];
+
+    final result = await _readAgentsFromDir(
+      agentsDir,
+      scope: 'project',
+      projectName: projectName,
+    );
+    result.sort((a, b) => a.name.compareTo(b.name));
+    return result;
+  }
+
+  /// Reads all `*.md` agent files directly inside [agentsDir] (non-recursive)
+  /// and parses their YAML frontmatter into [AgentData]. Unreadable or
+  /// malformed files are skipped (logged), never thrown — a single bad file
+  /// must not break discovery of the rest.
+  Future<List<AgentData>> _readAgentsFromDir(
+    Directory agentsDir, {
+    required String scope,
+    String? projectName,
+  }) async {
     final result = <AgentData>[];
 
     await for (final entity in agentsDir.list(recursive: false)) {
@@ -465,13 +555,14 @@ class ClaudeToolsScanner {
           tools: tools,
           path: entity.path,
           category: category,
+          scope: scope,
+          projectName: projectName,
         ));
-      } catch (_) {
-        // Unreadable file — skip
+      } catch (e) {
+        developer.log('Failed to parse agent file ${entity.path}: $e', name: 'claude_tools_scanner');
       }
     }
 
-    result.sort((a, b) => a.name.compareTo(b.name));
     return result;
   }
 
@@ -485,37 +576,94 @@ class ClaudeToolsScanner {
   /// - `---` delimiters
   /// - Quoted values (strips surrounding double quotes)
   /// - Values containing colons (splits only at first `:`)
-  Map<String, String> _parseFrontmatter(String content) {
-    final result = <String, String>{};
-    final lines = content.split('\n');
-    bool inFrontmatter = false;
-    int dashCount = 0;
+  /// - Block scalars: `key: >` (folded — newlines become spaces) and
+  ///   `key: |` (literal — newlines preserved), both common in SKILL.md/agent
+  ///   frontmatter for multi-line descriptions
+  Map<String, String> _parseFrontmatter(String content) =>
+      parseYamlFrontmatter(content);
+}
 
-    for (final line in lines) {
-      if (line.trim() == '---') {
-        dashCount++;
-        inFrontmatter = dashCount == 1;
-        if (dashCount == 2) break;
+/// Parses simple single-file YAML frontmatter (delimited by `---` lines)
+/// into a key -> value map. This is NOT a general YAML parser — it only
+/// handles the subset actually used across `~/.claude/agents/*.md` and
+/// `~/.claude/skills/*/SKILL.md`: scalar `key: value` pairs (optionally
+/// double-quoted) and block scalars (`key: >` folded, `key: |` literal).
+///
+/// Shared by [ClaudeToolsScanner] (agents/skills) so both readers handle
+/// multi-line descriptions identically.
+Map<String, String> parseYamlFrontmatter(String content) {
+  final result = <String, String>{};
+  final lines = content.split('\n');
+  bool inFrontmatter = false;
+  int dashCount = 0;
+
+  String? blockKey;
+  bool blockFolded = false; // true for `>`, false for `|`
+  int? blockIndent;
+  final blockLines = <String>[];
+
+  void flushBlock() {
+    if (blockKey == null) return;
+    final joined = blockFolded ? blockLines.join(' ') : blockLines.join('\n');
+    result[blockKey!] = joined.trim();
+    blockKey = null;
+    blockIndent = null;
+    blockLines.clear();
+  }
+
+  for (final line in lines) {
+    if (line.trim() == '---') {
+      dashCount++;
+      if (dashCount == 1) {
+        inFrontmatter = true;
         continue;
       }
-      if (!inFrontmatter) continue;
+      // Second '---' ends the frontmatter block.
+      flushBlock();
+      break;
+    }
+    if (!inFrontmatter) continue;
 
-      final colonIdx = line.indexOf(':');
-      if (colonIdx < 0) continue;
-
-      final key = line.substring(0, colonIdx).trim();
-      var value = line.substring(colonIdx + 1).trim();
-
-      // Strip surrounding double quotes
-      if (value.startsWith('"') && value.endsWith('"') && value.length >= 2) {
-        value = value.substring(1, value.length - 1);
+    // Inside an active block scalar: collect indented continuation lines.
+    if (blockKey != null) {
+      if (line.trim().isEmpty) {
+        blockLines.add('');
+        continue;
       }
-
-      if (key.isNotEmpty) {
-        result[key] = value;
+      final indent = line.length - line.trimLeft().length;
+      blockIndent ??= indent;
+      if (indent >= blockIndent!) {
+        blockLines.add(line.trimLeft());
+        continue;
       }
+      // Dedent below the block's indent level — block scalar ends here.
+      flushBlock();
+      // Fall through to process this line as a normal key: value pair.
     }
 
-    return result;
+    final colonIdx = line.indexOf(':');
+    if (colonIdx < 0) continue;
+
+    final key = line.substring(0, colonIdx).trim();
+    var value = line.substring(colonIdx + 1).trim();
+    if (key.isEmpty) continue;
+
+    if (value == '>' || value == '|') {
+      blockKey = key;
+      blockFolded = value == '>';
+      blockIndent = null;
+      blockLines.clear();
+      continue;
+    }
+
+    // Strip surrounding double quotes
+    if (value.startsWith('"') && value.endsWith('"') && value.length >= 2) {
+      value = value.substring(1, value.length - 1);
+    }
+
+    result[key] = value;
   }
+
+  flushBlock();
+  return result;
 }

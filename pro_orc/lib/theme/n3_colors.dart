@@ -73,12 +73,15 @@ class AppColors extends ThemeExtension<AppColors> {
   final Color violetLo; // oklch(0.55 0.22 290) dim
 
   /// Canonical dark theme instance with all 16 pre-computed sRGB tokens.
+  ///
+  /// Backgrounds are lifted slightly above pure near-black (v2.2 "heller"
+  /// refresh) for a friendlier feel while keeping dark mode as the default.
   static const AppColors dark = AppColors(
     // Background layers
-    bgBase: Color(0xFF0A0A0F),
-    bgSurf: Color(0xFF0A1017),
-    bgElev: Color(0xFF11161E),
-    bgCard: Color(0xFF161B22),
+    bgBase: Color(0xFF0E0E14),
+    bgSurf: Color(0xFF12181F),
+    bgElev: Color(0xFF171D26),
+    bgCard: Color(0xFF1C222B),
 
     // Cyan (PRIMARY)
     cyanHi: Color(0xFF00DEEB),
@@ -112,6 +115,54 @@ class AppColors extends ThemeExtension<AppColors> {
     violetHi: Color(0xFFB28DF5),
     violet: Color(0xFF9D68F0),
     violetLo: Color(0xFF7C42D4),
+  );
+
+  /// Light theme variant (v2.2 "Design-Refresh heller"). Same glassmorphism
+  /// structure and the same Cyan/Fuchsia accent hues as [dark], but on warm
+  /// off-white/grey surfaces. Accent tones are darkened/saturated slightly
+  /// versus their dark-mode counterparts so they still meet WCAG AA (4.5:1)
+  /// contrast against light backgrounds.
+  static const AppColors light = AppColors(
+    // Background layers — warm off-white, not stark white
+    bgBase: Color(0xFFF3F1EE),
+    bgSurf: Color(0xFFEDEBE7),
+    bgElev: Color(0xFFE6E3DE),
+    bgCard: Color(0xFFFCFBF9),
+
+    // Cyan (PRIMARY) — darkened for contrast on light surfaces
+    // (cyan itself tuned to 006B74 for WCAG AA >= 4.5:1 against bgBase)
+    cyanHi: Color(0xFF00A9B8),
+    cyan: Color(0xFF006B74),
+    cyanLo: Color(0xFF00666F),
+    cyanOrb: Color(0xFF4DD0E1),
+
+    // Fuchsia (SECONDARY) — darkened for contrast on light surfaces
+    fuchHi: Color(0xFFB5179E),
+    fuch: Color(0xFF9C1592),
+    fuchLo: Color(0xFF7D0F75),
+    fuchOrb: Color(0xFFE066DE),
+
+    // Text — dark ink tones, not pure black
+    // (textDim tuned to 666C73 for WCAG AA >= 4.5:1 against bgCard/bgBase)
+    textPri: Color(0xFF1E2328),
+    textSec: Color(0xFF4B5259),
+    textDim: Color(0xFF666C73),
+    textDis: Color(0xFFA3A8AD),
+
+    // Amber (Skills accent)
+    amberHi: Color(0xFFB8860B),
+    amber: Color(0xFF9A6E00),
+    amberLo: Color(0xFF7A5700),
+
+    // Emerald (Plugins accent)
+    emeraldHi: Color(0xFF0E9F6E),
+    emerald: Color(0xFF00875B),
+    emeraldLo: Color(0xFF006C48),
+
+    // Violet (MCP accent)
+    violetHi: Color(0xFF7C4FDB),
+    violet: Color(0xFF6A3AC7),
+    violetLo: Color(0xFF52299E),
   );
 
   @override

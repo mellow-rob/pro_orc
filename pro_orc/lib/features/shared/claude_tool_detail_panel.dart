@@ -140,7 +140,7 @@ class _SkillDetailContent extends StatelessWidget {
           children: [
             _ActionChip(
               icon: Icons.folder_open,
-              label: 'In Finder öffnen',
+              label: 'Im Finder zeigen',
               accent: accent,
               colors: colors,
               onTap: () => Process.run('open', [skill.path], runInShell: true),
@@ -475,6 +475,13 @@ class _AgentDetailContent extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _InfoRow(
+                label: 'Geltungsbereich',
+                value: agent.scope == 'project'
+                    ? 'Projekt: ${agent.projectName ?? '-'}'
+                    : 'Global',
+                colors: colors,
+              ),
+              _InfoRow(
                 label: 'Kategorie',
                 value: agent.category == AgentCategory.gsd ? 'GSD' : 'Allgemein',
                 colors: colors,
@@ -496,6 +503,15 @@ class _AgentDetailContent extends StatelessWidget {
           children: [
             _ActionChip(
               icon: Icons.folder_open,
+              label: 'Im Finder zeigen',
+              accent: accent,
+              colors: colors,
+              onTap: () =>
+                  Process.run('open', ['-R', agent.path], runInShell: true),
+            ),
+            const SizedBox(width: 8),
+            _ActionChip(
+              icon: Icons.edit_note,
               label: 'Datei öffnen',
               accent: accent,
               colors: colors,

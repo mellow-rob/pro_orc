@@ -7,8 +7,17 @@ import 'package:macos_window_utils/macos_window_utils.dart';
 import 'package:window_manager/window_manager.dart';
 
 import 'package:pro_orc/features/shell/shell_screen.dart';
+import 'package:pro_orc/providers/theme_mode_provider.dart';
 import 'package:pro_orc/theme/app_theme.dart';
+import 'package:pro_orc/window/activation_policy_service.dart';
 import 'package:pro_orc/window/window_geometry_service.dart';
+
+/// Single shared instance, passed down to [ShellScreen] (which forwards it
+/// to [TrayService]) so the whole app talks to the native activation-policy
+/// MethodChannel through one object instead of ad-hoc `ActivationPolicyService()`
+/// instances scattered across main.dart/shell_screen.dart/tray_service.dart.
+/// Safe to share: the service is stateless, just a MethodChannel wrapper.
+const _activationPolicyService = ActivationPolicyService();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -23,7 +32,6 @@ void main() async {
     size: Size(800, 600),
     center: true,
     backgroundColor: Colors.transparent,
-    skipTaskbar: true,
     titleBarStyle: TitleBarStyle.hidden,
   );
 
@@ -40,6 +48,7 @@ void main() async {
       await windowManager.center();
     }
 
+    await _activationPolicyService.setRegular();
     await windowManager.show();
     await windowManager.focus();
   });
@@ -47,16 +56,20 @@ void main() async {
   runApp(const ProviderScope(child: ProOrcApp()));
 }
 
-class ProOrcApp extends StatelessWidget {
+class ProOrcApp extends ConsumerWidget {
   const ProOrcApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final themeMode = ref.watch(themeModeProvider);
+
     return MaterialApp(
       title: 'Pro Orc',
       debugShowCheckedModeBanner: false,
-      theme: buildAppTheme(),
-      home: const ShellScreen(),
+      theme: buildAppLightTheme(),
+      darkTheme: buildAppTheme(),
+      themeMode: themeMode,
+      home: const ShellScreen(activationPolicyService: _activationPolicyService),
     );
   }
 }

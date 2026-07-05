@@ -1,3 +1,4 @@
+import 'dart:developer' as developer;
 import 'dart:io';
 
 import 'package:path/path.dart' as p;
@@ -34,7 +35,9 @@ Future<List<ExternalResource>> detectExternalResources(
       ));
       seenUris.add(notionUrl);
     }
-  } catch (_) {}
+  } catch (e) {
+    developer.log('Failed to detect Notion resource: $e', name: 'resource_detector');
+  }
 
   // CLN-02: GitHub
   try {
@@ -48,7 +51,9 @@ Future<List<ExternalResource>> detectExternalResources(
       ));
       seenUris.add(githubUrl);
     }
-  } catch (_) {}
+  } catch (e) {
+    developer.log('Failed to detect GitHub resource: $e', name: 'resource_detector');
+  }
 
   // CLN-04: Claude Memory directory
   try {
@@ -66,74 +71,73 @@ Future<List<ExternalResource>> detectExternalResources(
         seenUris.add(claudeProjectDir);
       }
     }
-  } catch (_) {}
+  } catch (e) {
+    developer.log('Failed to detect Claude memory resource: $e', name: 'resource_detector');
+  }
 
-  // CLN-03: Figma and other URLs from .md files
+  // CLN-03: Figma and other URLs from .md files.
+  // Reuses project.mdFiles (already discovered by ProjectScanner._scanMdFiles)
+  // instead of re-walking the directory tree — avoids scanning .planning/ twice.
   try {
-    final urlResources = await _scanMdFilesForUrls(project.path, seenUris);
+    final urlResources = await _scanMdFilesForUrls(project.mdFiles, seenUris);
     resources.addAll(urlResources);
-  } catch (_) {}
+  } catch (e) {
+    developer.log('Failed to scan .md files for URLs: $e', name: 'resource_detector');
+  }
 
   return resources;
 }
 
-/// Scans .md files in the project root (flat) and .planning/ (up to 2 levels
-/// deep) for external URLs not already in [seenUris]. Stops after 10 URLs.
+/// Extracts external URLs from the given [mdFiles] that are not already in
+/// [seenUris]. Stops after 10 URLs.
 Future<List<ExternalResource>> _scanMdFilesForUrls(
-  String projectPath,
+  List<MdFileInfo>? mdFiles,
   Set<String> seenUris,
 ) async {
+  if (mdFiles == null || mdFiles.isEmpty) return [];
+
   final urlRegex = RegExp(r'https?://[^\s)>\]]+');
   final skipDomains = {'localhost', '127.0.0.1', 'example.com'};
   final foundUrls = <String, ExternalResource>{};
 
-  Future<void> scanDir(String dirPath, int depth, int maxDepth) async {
-    if (depth > maxDepth || foundUrls.length >= 10) return;
-    final dir = Directory(dirPath);
-    if (!dir.existsSync()) return;
+  for (final mdFile in mdFiles) {
+    if (foundUrls.length >= 10) break;
 
-    await for (final entity in dir.list(followLinks: false)) {
-      if (foundUrls.length >= 10) return;
-      if (entity is Directory && depth < maxDepth) {
-        await scanDir(entity.path, depth + 1, maxDepth);
-      } else if (entity is File && entity.path.endsWith('.md')) {
+    final file = File(mdFile.path);
+    try {
+      final stat = await file.stat();
+      if (stat.size > 100 * 1024) continue; // skip files > 100KB
+
+      final content = await file.readAsString();
+      for (final match in urlRegex.allMatches(content)) {
+        final url = match.group(0)!.trimRight().replaceAll(RegExp(r'[.,;:]+$'), '');
+        if (seenUris.contains(url)) continue;
+        if (foundUrls.containsKey(url)) continue;
+        if (foundUrls.length >= 10) break;
+
+        // Parse domain
+        Uri? parsed;
         try {
-          final stat = await entity.stat();
-          if (stat.size > 100 * 1024) continue; // skip files > 100KB
+          parsed = Uri.parse(url);
+        } catch (e) {
+          developer.log('Skipping unparsable URL "$url": $e', name: 'resource_detector');
+          continue;
+        }
+        final host = parsed.host.toLowerCase();
+        if (host.isEmpty) continue;
 
-          final content = await entity.readAsString();
-          for (final match in urlRegex.allMatches(content)) {
-            final url = match.group(0)!.trimRight().replaceAll(RegExp(r'[.,;:]+$'), '');
-            if (seenUris.contains(url)) continue;
-            if (foundUrls.containsKey(url)) continue;
-            if (foundUrls.length >= 10) break;
+        // Skip noise domains
+        if (skipDomains.any((d) => host == d || host.endsWith('.$d'))) {
+          continue;
+        }
 
-            // Parse domain
-            Uri? parsed;
-            try {
-              parsed = Uri.parse(url);
-            } catch (_) {
-              continue;
-            }
-            final host = parsed.host.toLowerCase();
-            if (host.isEmpty) continue;
-
-            // Skip noise domains
-            if (skipDomains.any((d) => host == d || host.endsWith('.$d'))) {
-              continue;
-            }
-
-            final resource = _classifyUrl(url, host);
-            foundUrls[url] = resource;
-          }
-        } catch (_) {}
+        final resource = _classifyUrl(url, host);
+        foundUrls[url] = resource;
       }
+    } catch (e) {
+      developer.log('Failed to read md file ${mdFile.path}: $e', name: 'resource_detector');
     }
   }
-
-  // Scan root .md files (no recursion) then .planning/ with subdirs
-  await scanDir(projectPath, 0, 0);
-  await scanDir(p.join(projectPath, '.planning'), 0, 2);
 
   return foundUrls.values.toList();
 }

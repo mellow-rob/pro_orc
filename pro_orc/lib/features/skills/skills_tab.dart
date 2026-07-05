@@ -1,25 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:pro_orc/data/models/agent_category.dart';
 import 'package:pro_orc/data/models/claude_tool_model.dart';
-import 'package:pro_orc/features/agents/agent_card.dart';
+import 'package:pro_orc/features/claude_tools/skill_card.dart';
 import 'package:pro_orc/providers/claude_tools_provider.dart';
 import 'package:pro_orc/theme/n3_colors.dart';
 
-/// Agents tab — shows global Claude agents from `~/.claude/agents/` plus
-/// project-local agents from every scanned project's `.claude/agents/`.
+/// Skills tab — shows global Claude skills (`~/.claude/skills/`) plus
+/// project-local skills for every scanned project (`.claude/skills/`).
 ///
-/// Three sections: Allgemeine Agents, GSD Agents, Projekt-Agents.
-/// Search field filters by agent name.
-class AgentsTab extends ConsumerStatefulWidget {
-  const AgentsTab({super.key});
+/// Search field filters by skill name. Accent color: amber.
+class SkillsTab extends ConsumerStatefulWidget {
+  const SkillsTab({super.key});
 
   @override
-  ConsumerState<AgentsTab> createState() => _AgentsTabState();
+  ConsumerState<SkillsTab> createState() => _SkillsTabState();
 }
 
-class _AgentsTabState extends ConsumerState<AgentsTab> {
+class _SkillsTabState extends ConsumerState<SkillsTab> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
 
@@ -42,85 +40,80 @@ class _AgentsTabState extends ConsumerState<AgentsTab> {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).extension<AppColors>()!;
-    final agentsAsync = ref.watch(allAgentsProvider);
+    final skillsAsync = ref.watch(allSkillsProvider);
 
-    return agentsAsync.when(
+    return skillsAsync.when(
       loading: () => Center(
-        child: CircularProgressIndicator(color: colors.cyan),
+        child: CircularProgressIndicator(color: colors.amber),
       ),
       error: (error, _) => Center(
         child: Text(
-          'Fehler beim Laden der Agents',
+          'Fehler beim Laden der Skills',
           style: TextStyle(color: colors.textSec),
         ),
       ),
-      data: (agents) => _buildContent(context, colors, agents),
+      data: (skills) => _buildContent(context, colors, skills),
     );
   }
 
   Widget _buildContent(
     BuildContext context,
     AppColors colors,
-    List<AgentData> agents,
+    List<SkillData> allSkills,
   ) {
     final filtered = _searchQuery.isEmpty
-        ? agents
-        : agents
-            .where((a) => a.name.toLowerCase().contains(_searchQuery))
+        ? allSkills
+        : allSkills
+            .where((s) => s.name.toLowerCase().contains(_searchQuery))
             .toList();
 
-    final projectAgents = filtered.where((a) => a.scope == 'project').toList();
-    final gsdAgents = filtered
-        .where((a) => a.scope != 'project' && a.category == AgentCategory.gsd)
-        .toList();
-    final generalAgents = filtered
-        .where((a) => a.scope != 'project' && a.category != AgentCategory.gsd)
-        .toList();
+    final globalFiltered = filtered.where((s) => s.scope == 'global').toList();
+    final projectFiltered = filtered.where((s) => s.scope == 'project').toList();
+
+    if (allSkills.isEmpty && _searchQuery.isEmpty) {
+      return _buildEmptyState(colors);
+    }
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Search field
           _buildSearchField(colors),
           const SizedBox(height: 24),
 
-          // General Agents section
           _buildSection(
             colors,
-            icon: Icons.smart_toy_outlined,
-            iconColor: colors.cyan,
-            label: 'Allgemeine Agents',
-            count: generalAgents.length,
-            emptyText: 'Keine allgemeinen Agents gefunden',
-            cards: generalAgents.map((a) => AgentCard(agent: a)).toList(),
-          ),
-          const SizedBox(height: 32),
-
-          // GSD Agents section
-          _buildSection(
-            colors,
-            icon: Icons.precision_manufacturing_outlined,
+            icon: Icons.handyman_outlined,
             iconColor: colors.amber,
-            label: 'GSD Agents',
-            count: gsdAgents.length,
-            emptyText: 'Keine GSD Agents gefunden',
-            cards: gsdAgents.map((a) => AgentCard(agent: a)).toList(),
+            label: 'Globale Skills',
+            count: globalFiltered.length,
+            emptyText: 'Keine globalen Skills gefunden',
+            cards: globalFiltered.map((s) => SkillCard(skill: s)).toList(),
           ),
           const SizedBox(height: 32),
 
-          // Project-local Agents section
           _buildSection(
             colors,
             icon: Icons.folder_special_outlined,
             iconColor: colors.violet,
-            label: 'Projekt-Agents',
-            count: projectAgents.length,
-            emptyText: 'Keine projekt-lokalen Agents gefunden',
-            cards: projectAgents.map((a) => AgentCard(agent: a)).toList(),
+            label: 'Projekt-Skills',
+            count: projectFiltered.length,
+            emptyText: 'Keine projekt-lokalen Skills gefunden',
+            cards: projectFiltered.map((s) => SkillCard(skill: s)).toList(),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyState(AppColors colors) {
+    return Center(
+      child: Text(
+        'Keine Skills gefunden.\n'
+        'Lege einen Ordner in ~/.claude/skills/ mit einer SKILL.md an.',
+        textAlign: TextAlign.center,
+        style: TextStyle(color: colors.textSec, fontSize: 14),
       ),
     );
   }
@@ -130,7 +123,7 @@ class _AgentsTabState extends ConsumerState<AgentsTab> {
       controller: _searchController,
       style: TextStyle(color: colors.textPri),
       decoration: InputDecoration(
-        hintText: 'Agents suchen...',
+        hintText: 'Skills suchen...',
         hintStyle: TextStyle(color: colors.textDim),
         prefixIcon: Icon(Icons.search, color: colors.textDim, size: 20),
         suffixIcon: _searchQuery.isNotEmpty
@@ -148,7 +141,7 @@ class _AgentsTabState extends ConsumerState<AgentsTab> {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
-          borderSide: BorderSide(color: colors.cyanLo, width: 1.5),
+          borderSide: BorderSide(color: colors.amberLo, width: 1.5),
         ),
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 16, vertical: 12),

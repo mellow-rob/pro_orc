@@ -25,6 +25,13 @@ void main() {
           equals('-Users-rob-code-my-project'),
         );
       });
+
+      test('replaces dots with dashes (matching Claude behavior)', () {
+        expect(
+          encodeProjectPath('/Users/rob/code/n3ural.a1'),
+          equals('-Users-rob-code-n3ural-a1'),
+        );
+      });
     });
 
     group('readMemoryData', () {
@@ -114,6 +121,28 @@ void main() {
         expect(result.hasMemory, isTrue);
         expect(result.lastConsolidated, isNotNull);
         expect(result.isStale, isTrue);
+      });
+
+      test('finds memory for a project with a dot in its name (fuzzy match)',
+          () async {
+        final claudeHome = await Directory.systemTemp.createTemp('claude_home_');
+        addTearDown(() => claudeHome.delete(recursive: true));
+
+        final projectPath = '/Users/rob/code/n3ural.a1';
+        final encoded = encodeProjectPath(projectPath);
+        final memoryDir = Directory(
+          p.join(claudeHome.path, 'projects', encoded, 'memory'),
+        );
+        await memoryDir.create(recursive: true);
+        await File(p.join(memoryDir.path, 'MEMORY.md'))
+            .writeAsString('# Memory\nDotted project name.');
+
+        final result = await readMemoryData(
+          projectPath,
+          claudeHomeDirOverride: claudeHome.path,
+        );
+
+        expect(result.hasMemory, isTrue);
       });
 
       test('returns MemoryData.empty for nonexistent claudeHome', () async {

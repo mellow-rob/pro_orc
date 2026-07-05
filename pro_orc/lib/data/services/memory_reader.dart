@@ -6,20 +6,26 @@ import 'package:pro_orc/data/models/memory_data.dart';
 
 /// Encodes an absolute project path to Claude's dash-separated format.
 ///
-/// Replaces every `/` and `_` with `-` (matching Claude's actual behavior).
-/// Example: `~/code/my_app` (expanded to `/home/user/code/my_app`) becomes `-home-user-code-my-app`.
+/// Replaces every `/`, `_`, ` `, and `.` with `-` (matching Claude's actual
+/// behavior). Example: `~/code/my_app` (expanded to `/home/user/code/my_app`)
+/// becomes `-home-user-code-my-app`. Dots matter too: `n3ural.a1` encodes to
+/// `n3ural-a1`, otherwise memory dirs for dotted project names are missed.
 String encodeProjectPath(String projectPath) {
-  return projectPath.replaceAll('/', '-').replaceAll('_', '-').replaceAll(' ', '-');
+  return projectPath
+      .replaceAll('/', '-')
+      .replaceAll('_', '-')
+      .replaceAll(' ', '-')
+      .replaceAll('.', '-');
 }
 
 /// Checks if a MEMORY.md exists at the given Claude project directory.
 /// Returns [MemoryData] if found, null otherwise.
-MemoryData? _checkMemoryAt(String projectDir) {
+Future<MemoryData?> _checkMemoryAt(String projectDir) async {
   final memoryPath = p.join(projectDir, 'memory', 'MEMORY.md');
   final memoryFile = File(memoryPath);
-  if (!memoryFile.existsSync()) return null;
+  if (!await memoryFile.exists()) return null;
 
-  final mtime = FileStat.statSync(memoryPath).modified;
+  final mtime = (await memoryFile.stat()).modified;
   final isStale = DateTime.now().difference(mtime) > const Duration(days: 7);
 
   return MemoryData(
@@ -27,6 +33,56 @@ MemoryData? _checkMemoryAt(String projectDir) {
     lastConsolidated: mtime,
     isStale: isStale,
   );
+}
+
+/// Returns the mtime of the MEMORY.md that [readMemoryData] would find for
+/// [projectPath], or null if none exists. Uses the same exact + fuzzy match
+/// strategy as [readMemoryData] but only stats the file (no read), making it
+/// cheap enough to call on every rescan as a cache-invalidation signature —
+/// unlike the project directory's own mtime, this actually changes when
+/// rem-sleep consolidates a new MEMORY.md.
+Future<DateTime?> memoryFileSignature(
+  String projectPath, {
+  String? claudeHomeDirOverride,
+}) async {
+  try {
+    final claudeHome =
+        claudeHomeDirOverride ?? p.join(Platform.environment['HOME']!, '.claude');
+    final projectsDir = p.join(claudeHome, 'projects');
+    final encodedPath = encodeProjectPath(projectPath);
+
+    // Strategy 1: exact encoded path.
+    final exactMemoryFile =
+        File(p.join(projectsDir, encodedPath, 'memory', 'MEMORY.md'));
+    if (await exactMemoryFile.exists()) {
+      return (await exactMemoryFile.stat()).modified;
+    }
+
+    // Strategy 2: fuzzy suffix match, bounded by length (mirrors
+    // readMemoryData's approach for Claude's inconsistent dir naming).
+    final projectsDirEntity = Directory(projectsDir);
+    if (!await projectsDirEntity.exists()) return null;
+
+    final encodedName = encodeProjectPath(p.basename(projectPath));
+    final maxDirLen = encodedPath.length + 10;
+
+    DateTime? latest;
+    await for (final entity in projectsDirEntity.list()) {
+      if (entity is! Directory) continue;
+      final dirName = p.basename(entity.path);
+      if (!dirName.endsWith(encodedName)) continue;
+      if (dirName.length > maxDirLen) continue;
+
+      final memoryFile = File(p.join(entity.path, 'memory', 'MEMORY.md'));
+      if (!await memoryFile.exists()) continue;
+      final mtime = (await memoryFile.stat()).modified;
+      if (latest == null || mtime.isAfter(latest)) latest = mtime;
+    }
+
+    return latest;
+  } catch (_) {
+    return null;
+  }
 }
 
 /// Reads Claude rem-sleep memory consolidation status for a project.
@@ -55,12 +111,12 @@ Future<MemoryData> readMemoryData(
 
     // Strategy 1: Exact encoded path
     final exactDir = p.join(projectsDir, encodedPath);
-    final exactResult = _checkMemoryAt(exactDir);
+    final exactResult = await _checkMemoryAt(exactDir);
     if (exactResult != null) return exactResult;
 
     // Strategy 2: Find dirs ending with the encoded project name
     final projectsDirEntity = Directory(projectsDir);
-    if (!projectsDirEntity.existsSync()) return MemoryData.empty;
+    if (!await projectsDirEntity.exists()) return MemoryData.empty;
 
     final encodedName = encodeProjectPath(p.basename(projectPath));
     final maxDirLen = encodedPath.length + 10;
@@ -68,7 +124,7 @@ Future<MemoryData> readMemoryData(
     MemoryData? bestMatch;
     DateTime? bestMtime;
 
-    for (final entity in projectsDirEntity.listSync()) {
+    await for (final entity in projectsDirEntity.list()) {
       if (entity is! Directory) continue;
       final dirName = p.basename(entity.path);
 
@@ -79,7 +135,7 @@ Future<MemoryData> readMemoryData(
       // parent project that scanned this project as a subdirectory
       if (dirName.length > maxDirLen) continue;
 
-      final result = _checkMemoryAt(entity.path);
+      final result = await _checkMemoryAt(entity.path);
       if (result == null) continue;
 
       // Pick the most recently consolidated memory

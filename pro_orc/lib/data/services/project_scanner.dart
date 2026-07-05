@@ -1,9 +1,12 @@
 import 'dart:convert';
+import 'dart:developer' as developer;
 import 'dart:io';
 
 import 'package:path/path.dart' as p;
 
 import 'package:pro_orc/data/db/app_database.dart';
+import 'package:pro_orc/data/models/git_data.dart';
+import 'package:pro_orc/data/models/memory_data.dart';
 import 'package:pro_orc/data/models/project_model.dart';
 import 'package:pro_orc/data/models/project_type.dart';
 import 'package:pro_orc/data/services/gsd_parser.dart';
@@ -64,9 +67,87 @@ class _FileCache {
       final stat = await FileStat.stat(statePath);
       if (stat.type == FileSystemEntityType.notFound) return null;
       return stat.modified;
-    } catch (_) {
+    } catch (e) {
+      developer.log('Failed to stat $statePath: $e', name: 'project_scanner');
       return null;
     }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Scan result cache (git / memory / used-agents)
+// ---------------------------------------------------------------------------
+
+/// Caches arbitrary per-project scan results keyed by a "signature" mtime.
+///
+/// A single FS event previously caused [ProjectScanner.scanAll] to re-run git,
+/// memory, and agent-usage scans for EVERY project. This cache lets each of
+/// those scans be skipped for projects whose relevant source files have not
+/// changed since the last scan, so one changed project no longer pays for a
+/// rescan of all the others.
+class _ScanResultCache<T> {
+  /// Map from "path:signature" → boxed cached result (boxing distinguishes a
+  /// cached `null` value from a cache miss).
+  final Map<String, _Box<T>> _cache = {};
+
+  String _key(String projectPath, DateTime signature) =>
+      '$projectPath:${signature.microsecondsSinceEpoch}';
+
+  /// Returns the cached result for [projectPath] if [signature] matches the
+  /// signature it was stored under, boxed so a cached `null` is distinguishable
+  /// from a cache miss. Returns null on cache miss.
+  _Box<T>? getBoxed(String projectPath, DateTime? signature) {
+    if (signature == null) return null;
+    return _cache[_key(projectPath, signature)];
+  }
+
+  /// Stores [result] for [projectPath] under [signature].
+  void put(String projectPath, DateTime signature, T result) {
+    _cache[_key(projectPath, signature)] = _Box(result);
+  }
+}
+
+/// Simple box so a cached `null` value is distinguishable from "not cached".
+class _Box<T> {
+  final T value;
+  const _Box(this.value);
+}
+
+/// Computes a combined "signature" mtime for a project's git state.
+///
+/// Uses `.git/HEAD` (changes on checkout/commit) and `.git/refs/heads` — the
+/// directory mtime changes whenever a branch ref is updated (new commit).
+/// Returns null if the project is not a git repo (cache is then always missed,
+/// which is correct: [readGitData] itself handles the non-git case cheaply).
+Future<DateTime?> _gitSignature(String projectPath) async {
+  final headPath = p.join(projectPath, '.git', 'HEAD');
+  try {
+    final stat = await FileStat.stat(headPath);
+    if (stat.type == FileSystemEntityType.notFound) return null;
+
+    var latest = stat.modified;
+    final refsHeadsDir = Directory(p.join(projectPath, '.git', 'refs', 'heads'));
+    if (await refsHeadsDir.exists()) {
+      final refsStat = await refsHeadsDir.stat();
+      if (refsStat.modified.isAfter(latest)) latest = refsStat.modified;
+    }
+    return latest;
+  } catch (e) {
+    developer.log('Failed to compute git signature for $projectPath: $e', name: 'project_scanner');
+    return null;
+  }
+}
+
+/// Computes a signature mtime for a project's `.planning/phases` directory,
+/// used to detect changes relevant to the used-agents scan.
+Future<DateTime?> _phasesSignature(String projectPath) async {
+  final phasesDir = Directory(p.join(projectPath, '.planning', 'phases'));
+  try {
+    if (!await phasesDir.exists()) return null;
+    return (await phasesDir.stat()).modified;
+  } catch (e) {
+    developer.log('Failed to compute phases signature for $projectPath: $e', name: 'project_scanner');
+    return null;
   }
 }
 
@@ -82,8 +163,16 @@ class _FileCache {
 class ProjectScanner {
   final AppDatabase _db;
   final _FileCache _cache = _FileCache();
+  final _ScanResultCache<GitData> _gitCache = _ScanResultCache<GitData>();
+  final _ScanResultCache<MemoryData> _memoryCache = _ScanResultCache<MemoryData>();
+  final _ScanResultCache<List<String>?> _usedAgentsCache = _ScanResultCache<List<String>?>();
 
-  ProjectScanner(this._db);
+  /// Overrides `$HOME/.claude` for memory lookups — used by tests to point
+  /// at a temp directory instead of the real Claude home.
+  final String? _claudeHomeDirOverride;
+
+  ProjectScanner(this._db, {String? claudeHomeDirOverride})
+      : _claudeHomeDirOverride = claudeHomeDirOverride;
 
   /// Scans the configured (or overridden) scan directory and returns a
   /// [List<ProjectModel>] sorted by displayName.
@@ -121,8 +210,9 @@ class ProjectScanner {
         final config = await _db.getConfig();
         gitBinary = config.gitBinaryPath;
         ignorePatterns = _parseIgnoreList(config.ignoreListJson);
-      } catch (_) {
+      } catch (e) {
         // If DB read fails, proceed with empty ignore list
+        developer.log('Failed to read DB config for ignore list: $e', name: 'project_scanner');
       }
     }
 
@@ -148,12 +238,14 @@ class ProjectScanner {
       projectPaths.map((path) => _parseGsdWithCache(path)),
     );
 
-    // --- 4. Read git data for all projects ---
-    final gitResults = await readAllGitData(projectPaths, gitBinary: gitBinary);
+    // --- 4. Read git data for all projects (with cache) ---
+    final gitResults = await Future.wait(
+      projectPaths.map((path) => _readGitWithCache(path, gitBinary)),
+    );
 
-    // --- 4b. Read memory data for all projects ---
+    // --- 4b. Read memory data for all projects (with cache) ---
     final memoryResults = await Future.wait(
-      projectPaths.map((path) => readMemoryData(path)),
+      projectPaths.map((path) => _readMemoryWithCache(path)),
     );
 
     // --- 5. Assemble ProjectModel for each project ---
@@ -178,8 +270,8 @@ class ProjectScanner {
       // Compute stale
       final isStale = await _computeStale(path, git?.lastCommitDate);
 
-      // Extract used agents from .planning/ VERIFICATION.md files
-      final usedAgents = gsd != null ? await _extractUsedAgents(path) : null;
+      // Extract used agents from .planning/ VERIFICATION.md files (with cache)
+      final usedAgents = gsd != null ? await _extractUsedAgentsWithCache(path) : null;
 
       // Scan for .md files
       final mdFiles = await _scanMdFiles(path);
@@ -308,6 +400,65 @@ class ProjectScanner {
     return result;
   }
 
+  /// Reads git data using the cache to avoid spawning a git subprocess for
+  /// projects whose `.git/HEAD`/refs have not changed since the last scan.
+  Future<GitData> _readGitWithCache(String projectPath, String gitBinary) async {
+    final signature = await _gitSignature(projectPath);
+    final cached = _gitCache.getBoxed(projectPath, signature);
+    if (cached != null) return cached.value;
+
+    final result = await readGitData(projectPath, gitBinary: gitBinary);
+    if (signature != null) {
+      _gitCache.put(projectPath, signature, result);
+    }
+    return result;
+  }
+
+  /// Reads memory data using the cache to avoid the fuzzy-match directory
+  /// scan under `~/.claude/projects/` for projects whose memory has not
+  /// changed since the last scan.
+  ///
+  /// Signature is the mtime of the actual MEMORY.md file (via
+  /// [memoryFileSignature]) — NOT the project directory's own mtime. The
+  /// project directory does not change when rem-sleep consolidates a new
+  /// MEMORY.md (that file lives under `~/.claude/projects/<encoded>/memory/`,
+  /// a completely different directory), so using the project dir's mtime as
+  /// the signature meant the cache never invalidated after a real memory
+  /// update — the indicator stayed stale until an unrelated project file
+  /// changed. (Fixed per code review MAJOR finding.)
+  Future<MemoryData> _readMemoryWithCache(String projectPath) async {
+    final signature = await memoryFileSignature(
+      projectPath,
+      claudeHomeDirOverride: _claudeHomeDirOverride,
+    );
+    final cached = _memoryCache.getBoxed(projectPath, signature);
+    if (cached != null) return cached.value;
+
+    final result = await readMemoryData(
+      projectPath,
+      claudeHomeDirOverride: _claudeHomeDirOverride,
+    );
+    if (signature != null) {
+      _memoryCache.put(projectPath, signature, result);
+    }
+    return result;
+  }
+
+  /// Extracts used agents using the cache to avoid re-walking
+  /// `.planning/phases/` recursively for projects whose phases directory has
+  /// not changed since the last scan.
+  Future<List<String>?> _extractUsedAgentsWithCache(String projectPath) async {
+    final signature = await _phasesSignature(projectPath);
+    final cached = _usedAgentsCache.getBoxed(projectPath, signature);
+    if (cached != null) return cached.value;
+
+    final result = await _extractUsedAgents(projectPath);
+    if (signature != null) {
+      _usedAgentsCache.put(projectPath, signature, result);
+    }
+    return result;
+  }
+
   /// Computes whether a project is stale (>30 days since last activity).
   ///
   /// - Git project: stale if [lastCommitDate] is older than 30 days
@@ -328,8 +479,9 @@ class ProjectScanner {
       if (stat.type != FileSystemEntityType.notFound) {
         return now.difference(stat.modified) > threshold;
       }
-    } catch (_) {
+    } catch (e) {
       // Ignore errors — no signal means not stale
+      developer.log('Failed to stat $statePath for staleness check: $e', name: 'project_scanner');
     }
 
     return false;
@@ -362,9 +514,13 @@ class ProjectScanner {
           for (final match in spawnedPattern.allMatches(content)) {
             agents.add(match.group(1)!);
           }
-        } catch (_) {}
+        } catch (e) {
+          developer.log('Failed to read ${entity.path}: $e', name: 'project_scanner');
+        }
       }
-    } catch (_) {}
+    } catch (e) {
+      developer.log('Failed to list $planningDir: $e', name: 'project_scanner');
+    }
 
     if (agents.isEmpty) return null;
     final sorted = agents.toList()..sort();
@@ -411,7 +567,9 @@ class ProjectScanner {
           role: _roleMap[name] ?? _suffixRole(name),
         ));
       }
-    } catch (_) {}
+    } catch (e) {
+      developer.log('Failed to list root .md files in $projectPath: $e', name: 'project_scanner');
+    }
 
     // 2. .planning/ recursive (max depth ~3)
     final planningDir = Directory(p.join(projectPath, '.planning'));
@@ -436,7 +594,9 @@ class ProjectScanner {
             role: _roleMap[name] ?? _suffixRole(name),
           ));
         }
-      } catch (_) {}
+      } catch (e) {
+        developer.log('Failed to list $planningDir: $e', name: 'project_scanner');
+      }
     }
 
     if (results.isEmpty) return null;
@@ -456,8 +616,8 @@ class ProjectScanner {
             .where((p) => p != '.*')
             .toList();
       }
-    } catch (_) {
-      // Malformed JSON — return empty list
+    } catch (e) {
+      developer.log('Malformed ignore list JSON, using empty list: $e', name: 'project_scanner');
     }
     return [];
   }

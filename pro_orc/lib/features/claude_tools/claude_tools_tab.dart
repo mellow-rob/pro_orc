@@ -4,17 +4,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pro_orc/data/models/claude_tool_model.dart';
 import 'package:pro_orc/features/claude_tools/mcp_server_card.dart';
 import 'package:pro_orc/features/claude_tools/plugin_card.dart';
-import 'package:pro_orc/features/claude_tools/skill_card.dart';
 import 'package:pro_orc/features/shell/glass_card.dart';
 import 'package:pro_orc/providers/claude_tools_provider.dart';
 import 'package:pro_orc/providers/projects_provider.dart';
 import 'package:pro_orc/theme/n3_colors.dart';
 
-/// Full Claude Tools tab with search, project filter, three sections, mini cards,
+/// Claude Tools tab with search, project filter, two sections, mini cards,
 /// and live updates.
 ///
-/// Sections: Skills (amber) -> Plugins (emerald) -> MCP-Server (violet).
-/// All three sections always visible, even when filtered to zero items.
+/// Sections: Plugins (emerald) -> MCP-Server (violet). Skills moved to their
+/// own [SkillsTab] (M3), Agents live in [AgentsTab].
+/// All sections always visible, even when filtered to zero items.
 /// File watcher on ~/.claude/ triggers automatic re-scan via claudeToolsProvider.
 class ClaudeToolsTab extends ConsumerStatefulWidget {
   const ClaudeToolsTab({super.key});
@@ -92,17 +92,10 @@ class _ClaudeToolsTabState extends ConsumerState<ClaudeToolsTab> {
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  'Skills, Plugins und MCP-Server erweitern Claude mit neuen Fähigkeiten.',
+                  'Plugins und MCP-Server erweitern Claude mit neuen Fähigkeiten.',
                   style: TextStyle(color: colors.textSec, fontSize: 14),
                 ),
                 const SizedBox(height: 16),
-                _helpRow(
-                  colors,
-                  icon: Icons.handyman,
-                  label: 'Skills',
-                  detail: 'Ordner in ~/.claude/skills/ anlegen (mit SKILL.md)',
-                ),
-                const SizedBox(height: 8),
                 _helpRow(
                   colors,
                   icon: Icons.extension,
@@ -171,18 +164,12 @@ class _ClaudeToolsTabState extends ConsumerState<ClaudeToolsTab> {
     final selectedPath = ref.watch(selectedProjectPathProvider);
     final projectToolsAsync = ref.watch(projectToolsProvider);
 
-    // Merge global + project tools when a project is selected
-    final mergedSkills = _mergeSkills(globalData.skills, projectToolsAsync);
+    // Merge global + project MCP servers when a project is selected
     final mergedMcp = _mergeMcpServers(globalData.mcpServers, projectToolsAsync);
     // Plugins are always global
     final allPlugins = globalData.plugins;
 
     // Apply search filter
-    final filteredSkills = _searchQuery.isEmpty
-        ? mergedSkills
-        : mergedSkills
-            .where((s) => s.name.toLowerCase().contains(_searchQuery))
-            .toList();
     final filteredPlugins = _searchQuery.isEmpty
         ? allPlugins
         : allPlugins
@@ -206,25 +193,6 @@ class _ClaudeToolsTabState extends ConsumerState<ClaudeToolsTab> {
           // Project selector dropdown
           _buildProjectSelector(colors, selectedPath),
           const SizedBox(height: 24),
-
-          // Skills section
-          _buildSection(
-            context,
-            colors,
-            icon: Icons.handyman,
-            label: 'Skills',
-            count: filteredSkills.length,
-            emptyText: 'Keine Skills installiert',
-            cards: filteredSkills
-                .map((s) => _wrapWithScopeBadge(
-                      colors,
-                      SkillCard(skill: s),
-                      s.scope,
-                      selectedPath != null,
-                    ))
-                .toList(),
-          ),
-          const SizedBox(height: 32),
 
           // Plugins section
           _buildSection(
@@ -263,15 +231,6 @@ class _ClaudeToolsTabState extends ConsumerState<ClaudeToolsTab> {
   // ---------------------------------------------------------------------------
   // Merge helpers
   // ---------------------------------------------------------------------------
-
-  List<SkillData> _mergeSkills(
-    List<SkillData> global,
-    AsyncValue<ClaudeToolsData?> projectAsync,
-  ) {
-    final projectData = projectAsync.value;
-    if (projectData == null) return global;
-    return [...global, ...projectData.skills];
-  }
 
   List<McpServerData> _mergeMcpServers(
     List<McpServerData> global,

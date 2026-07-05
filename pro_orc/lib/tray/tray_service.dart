@@ -1,11 +1,18 @@
 import 'package:tray_manager/tray_manager.dart';
 import 'package:window_manager/window_manager.dart';
 
+import 'package:pro_orc/window/activation_policy_service.dart';
+
 class TrayService with TrayListener {
+  TrayService({ActivationPolicyService? activationPolicyService})
+      : _activationPolicyService = activationPolicyService ?? ActivationPolicyService();
+
+  final ActivationPolicyService _activationPolicyService;
+
   Future<void> init() async {
     trayManager.addListener(this);
     await trayManager.setIcon('assets/images/tray_icon.png');
-    await trayManager.setToolTip('Pro Orc — 12 projects, 2 stale');
+    await trayManager.setToolTip('Pro Orc');
     final menu = Menu(
       items: [
         MenuItem(
@@ -49,7 +56,9 @@ class TrayService with TrayListener {
     final isVisible = await windowManager.isVisible();
     if (isVisible) {
       await windowManager.hide();
+      await _activationPolicyService.setAccessory();
     } else {
+      await _activationPolicyService.setRegular();
       await windowManager.show();
       await windowManager.focus();
     }

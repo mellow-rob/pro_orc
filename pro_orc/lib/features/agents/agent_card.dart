@@ -82,6 +82,10 @@ class AgentCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
 
+                // Scope badge (Global / project name)
+                _ScopeBadge(agent: agent, colors: colors),
+                const SizedBox(height: 4),
+
                 // Description
                 if (agent.description != null)
                   Text(
@@ -149,6 +153,39 @@ class AgentCard extends StatelessWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Small pill showing "Global" or the owning project's display name.
+class _ScopeBadge extends StatelessWidget {
+  const _ScopeBadge({required this.agent, required this.colors});
+
+  final AgentData agent;
+  final AppColors colors;
+
+  @override
+  Widget build(BuildContext context) {
+    final isProject = agent.scope == 'project';
+    final label = isProject ? (agent.projectName ?? 'Projekt') : 'Global';
+    final color = isProject ? colors.violet : colors.textDim;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: color,
+          fontSize: 9,
+          fontWeight: FontWeight.w500,
+        ),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
       ),
     );
   }

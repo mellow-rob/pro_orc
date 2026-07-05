@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:developer' as developer;
 
 import 'package:stream_transform/stream_transform.dart';
 import 'package:watcher/watcher.dart';
@@ -36,8 +37,7 @@ class WatcherService {
           }
         },
         onError: (Object error, StackTrace stackTrace) {
-          // ignore: avoid_print
-          print('[WatcherService] Suppressed watcher error: $error');
+          developer.log('Suppressed watcher error: $error', name: 'watcher_service');
         },
         onDone: () {
           // Individual watcher done — don't close controller

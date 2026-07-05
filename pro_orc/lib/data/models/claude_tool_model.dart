@@ -163,6 +163,13 @@ class AgentData {
   /// Category derived from name prefix.
   final AgentCategory category;
 
+  /// Scope: `'global'` for `~/.claude/agents/`, `'project'` for per-project
+  /// `<project>/.claude/agents/`.
+  final String scope;
+
+  /// Display name of the owning project when [scope] is `'project'`, else null.
+  final String? projectName;
+
   const AgentData({
     required this.id,
     required this.name,
@@ -172,6 +179,8 @@ class AgentData {
     required this.tools,
     required this.path,
     required this.category,
+    this.scope = 'global',
+    this.projectName,
   });
 }
 

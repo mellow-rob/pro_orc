@@ -14,6 +14,7 @@ import 'package:pro_orc/providers/projects_provider.dart';
 import 'package:pro_orc/providers/watcher_provider.dart';
 import 'package:pro_orc/theme/n3_colors.dart';
 import 'package:pro_orc/tray/tray_service.dart';
+import 'package:pro_orc/window/activation_policy_service.dart';
 import 'package:pro_orc/window/window_geometry_service.dart';
 import 'package:pro_orc/features/agents/agents_tab.dart';
 import 'package:pro_orc/features/claude_tools/claude_tools_tab.dart';
@@ -22,9 +23,17 @@ import 'package:pro_orc/features/research/research_tab.dart';
 import 'package:pro_orc/features/settings/settings_tab.dart';
 import 'package:pro_orc/features/shell/glow_border_shell.dart';
 import 'package:pro_orc/features/shell/orb_background.dart';
+import 'package:pro_orc/features/skills/skills_tab.dart';
 
 class ShellScreen extends ConsumerStatefulWidget {
-  const ShellScreen({super.key});
+  const ShellScreen({super.key, ActivationPolicyService? activationPolicyService})
+      : activationPolicyService = activationPolicyService ?? const ActivationPolicyService();
+
+  /// Shared instance passed down from main.dart so the whole app talks to
+  /// the native activation-policy MethodChannel through one object. Defaults
+  /// to a fresh instance for callers (e.g. widget tests) that don't wire one
+  /// up explicitly — safe since the service is stateless.
+  final ActivationPolicyService activationPolicyService;
 
   @override
   ConsumerState<ShellScreen> createState() => _ShellScreenState();
@@ -34,13 +43,14 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
     with WindowListener, TrayListener {
   late final TrayService _trayService;
   final WindowGeometryService _geometryService = WindowGeometryService();
+
   int _selectedIndex = 0;
 
   @override
   void initState() {
     super.initState();
     windowManager.addListener(this);
-    _trayService = TrayService();
+    _trayService = TrayService(activationPolicyService: widget.activationPolicyService);
     _trayService.init();
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
@@ -97,6 +107,7 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
   @override
   void onWindowClose() async {
     await windowManager.hide();
+    await widget.activationPolicyService.setAccessory();
   }
 
   @override
@@ -140,6 +151,7 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
                         ResearchTab(),
                         ClaudeToolsTab(),
                         AgentsTab(),
+                        SkillsTab(),
                         SettingsTab(),
                       ],
                     ),
@@ -174,6 +186,7 @@ class _SideNav extends StatelessWidget {
     (icon: LucideIcons.beaker100, label: 'Research'),
     (icon: LucideIcons.brain100, label: 'Tools'),
     (icon: LucideIcons.bot100, label: 'Agents'),
+    (icon: LucideIcons.sparkles100, label: 'Skills'),
   ];
 
   @override
@@ -209,10 +222,10 @@ class _SideNav extends StatelessWidget {
             child: _NavItem(
               icon: LucideIcons.settings100,
               label: 'Settings',
-              selected: selectedIndex == 4,
+              selected: selectedIndex == _items.length,
               accent: colors.cyan,
               dimColor: colors.textDim,
-              onTap: () => onSelect(4),
+              onTap: () => onSelect(_items.length),
             ),
           ),
         ],

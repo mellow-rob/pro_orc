@@ -113,7 +113,8 @@ String? _remoteToGithubUrl(String remoteUrl) {
   }
 
   // HTTPS format: https://github.com/owner/repo.git
-  final httpsMatch = RegExp(r'^https://github\.com/(.+?)(?:\.git)?$').firstMatch(remoteUrl.trim());
+  // Also matches userinfo-prefixed remotes, e.g. https://x-access-token:TOKEN@github.com/owner/repo.git
+  final httpsMatch = RegExp(r'^https://(?:[^@/]+@)?github\.com/(.+?)(?:\.git)?/?$').firstMatch(remoteUrl.trim());
   if (httpsMatch != null) {
     return 'https://github.com/${httpsMatch.group(1)}';
   }
