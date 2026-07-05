@@ -7,9 +7,10 @@ import 'package:pro_orc/features/agents/agent_card.dart';
 import 'package:pro_orc/providers/claude_tools_provider.dart';
 import 'package:pro_orc/theme/n3_colors.dart';
 
-/// Agents tab — shows all global Claude agents from `~/.claude/agents/`.
+/// Agents tab — shows global Claude agents from `~/.claude/agents/` plus
+/// project-local agents from every scanned project's `.claude/agents/`.
 ///
-/// Two sections: GSD Agents (orange icon) and Allgemeine Agents (blue icon).
+/// Three sections: Allgemeine Agents, GSD Agents, Projekt-Agents.
 /// Search field filters by agent name.
 class AgentsTab extends ConsumerStatefulWidget {
   const AgentsTab({super.key});
@@ -41,9 +42,9 @@ class _AgentsTabState extends ConsumerState<AgentsTab> {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).extension<AppColors>()!;
-    final toolsAsync = ref.watch(claudeToolsProvider);
+    final agentsAsync = ref.watch(allAgentsProvider);
 
-    return toolsAsync.when(
+    return agentsAsync.when(
       loading: () => Center(
         child: CircularProgressIndicator(color: colors.cyan),
       ),
@@ -53,7 +54,7 @@ class _AgentsTabState extends ConsumerState<AgentsTab> {
           style: TextStyle(color: colors.textSec),
         ),
       ),
-      data: (data) => _buildContent(context, colors, data.agents),
+      data: (agents) => _buildContent(context, colors, agents),
     );
   }
 
@@ -68,9 +69,13 @@ class _AgentsTabState extends ConsumerState<AgentsTab> {
             .where((a) => a.name.toLowerCase().contains(_searchQuery))
             .toList();
 
-    final gsdAgents = filtered.where((a) => a.category == AgentCategory.gsd).toList();
-    final generalAgents =
-        filtered.where((a) => a.category != AgentCategory.gsd).toList();
+    final projectAgents = filtered.where((a) => a.scope == 'project').toList();
+    final gsdAgents = filtered
+        .where((a) => a.scope != 'project' && a.category == AgentCategory.gsd)
+        .toList();
+    final generalAgents = filtered
+        .where((a) => a.scope != 'project' && a.category != AgentCategory.gsd)
+        .toList();
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
@@ -102,6 +107,18 @@ class _AgentsTabState extends ConsumerState<AgentsTab> {
             count: gsdAgents.length,
             emptyText: 'Keine GSD Agents gefunden',
             cards: gsdAgents.map((a) => AgentCard(agent: a)).toList(),
+          ),
+          const SizedBox(height: 32),
+
+          // Project-local Agents section
+          _buildSection(
+            colors,
+            icon: Icons.folder_special_outlined,
+            iconColor: colors.violet,
+            label: 'Projekt-Agents',
+            count: projectAgents.length,
+            emptyText: 'Keine projekt-lokalen Agents gefunden',
+            cards: projectAgents.map((a) => AgentCard(agent: a)).toList(),
           ),
         ],
       ),
