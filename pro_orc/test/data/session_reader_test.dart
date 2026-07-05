@@ -268,6 +268,83 @@ void main() {
         expect(detail.messageCount, isNull);
         expect(detail.startedAt, isNull);
       });
+
+      test('extracts model, skills, subagents and last-activity text', () async {
+        final tempDir = await Directory.systemTemp.createTemp('session_deep_');
+        addTearDown(() => tempDir.delete(recursive: true));
+
+        final file = File(p.join(tempDir.path, 'sess.jsonl'));
+        await file.writeAsString([
+          '{"type":"user","timestamp":"2026-01-01T10:00:00Z",'
+              '"message":{"content":"Bitte fixe den Bug"}}',
+          '{"type":"assistant","timestamp":"2026-01-01T10:00:05Z",'
+              '"message":{"model":"claude-opus-4-8","content":['
+              '{"type":"text","text":"Ich starte den Fix"},'
+              '{"type":"tool_use","name":"Skill","input":{"skill":"a1-fix"}},'
+              '{"type":"tool_use","name":"Agent",'
+              '"input":{"subagent_type":"a1-walter-web-developer"}}'
+              ']}}',
+          '{"type":"assistant","timestamp":"2026-01-01T10:00:10Z",'
+              '"message":{"model":"claude-opus-4-8","content":['
+              '{"type":"tool_use","name":"Skill","input":{"skill":"a1-fix"}},'
+              '{"type":"tool_use","name":"Task",'
+              '"input":{"subagent_type":"a1-uwe-ux-expert"}},'
+              '{"type":"text","text":"Fertig — alles grün"}'
+              ']}}',
+        ].join('\n'));
+
+        final baseSession = SessionInfo(
+          id: 'sess',
+          path: file.path,
+          lastActivity: DateTime.now(),
+          isActive: true,
+        );
+
+        final detail = await SessionReader().readSessionDetail(baseSession);
+
+        expect(detail.model, 'claude-opus-4-8');
+        // De-duplicated, first-seen order preserved.
+        expect(detail.skills, ['a1-fix']);
+        expect(detail.subagents,
+            ['a1-walter-web-developer', 'a1-uwe-ux-expert']);
+        expect(detail.lastActivityText, 'Fertig — alles grün');
+        expect(detail.messageCount, 3);
+      });
+
+      test('tolerates missing/unknown content shapes without extracting',
+          () async {
+        final tempDir = await Directory.systemTemp.createTemp('session_shape_');
+        addTearDown(() => tempDir.delete(recursive: true));
+
+        final file = File(p.join(tempDir.path, 'sess.jsonl'));
+        await file.writeAsString([
+          // No message field at all.
+          '{"type":"user","timestamp":"2026-01-01T10:00:00Z"}',
+          // message.content is an int — unknown shape, must be ignored.
+          '{"type":"assistant","timestamp":"2026-01-01T10:00:05Z",'
+              '"message":{"content":42}}',
+          // tool_use with a name we do not track.
+          '{"type":"assistant","timestamp":"2026-01-01T10:00:06Z",'
+              '"message":{"content":['
+              '{"type":"tool_use","name":"Bash","input":{"command":"ls"}}'
+              ']}}',
+        ].join('\n'));
+
+        final baseSession = SessionInfo(
+          id: 'sess',
+          path: file.path,
+          lastActivity: DateTime.now(),
+          isActive: false,
+        );
+
+        final detail = await SessionReader().readSessionDetail(baseSession);
+
+        expect(detail.model, isNull);
+        expect(detail.skills, isEmpty);
+        expect(detail.subagents, isEmpty);
+        expect(detail.lastActivityText, isNull);
+        expect(detail.messageCount, 3);
+      });
     });
   });
 }
