@@ -31,9 +31,9 @@
 
 ## Wave 2 — Plugin-Skills
 
-- [ ] `ClaudeToolsScanner`: Plugin-Skills-Scan gemäß AD-3, `SkillData.scope = plugin`,
-      Plugin-Name aus Pfad. SkillsTab: Sektion „Plugin-Skills" + Badge.
-- [ ] Tests: Temp-Fixture mit Plugin-Verzeichnisstruktur, Tiefenlimit, fehlendes Verzeichnis.
+- [x] `ClaudeToolsScanner`: Plugin-Skills-Scan gemäß AD-3, `SkillData.scope = plugin`,
+      Plugin-Name aus Pfad. SkillsTab: Sektion „Plugin-Skills" + Badge (Plugin-Name).
+- [x] Tests: Temp-Fixture mit Plugin-Verzeichnisstruktur, Tiefenlimit, fehlendes Verzeichnis.
 
 ## Wave 3 — Token-/Kosten-Schätzung
 

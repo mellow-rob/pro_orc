@@ -33,16 +33,29 @@ class SkillCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Name
-              Text(
-                skill.name,
-                style: TextStyle(
-                  color: colors.amber,
-                  fontWeight: FontWeight.w500,
-                  fontSize: 13,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+              // Name + optional Plugin-Badge
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      skill.name,
+                      style: TextStyle(
+                        color: colors.amber,
+                        fontWeight: FontWeight.w500,
+                        fontSize: 13,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  if (skill.scope == 'plugin') ...[
+                    const SizedBox(width: 6),
+                    _ScopeBadge(
+                      label: skill.pluginName ?? 'Plugin',
+                      colors: colors,
+                    ),
+                  ],
+                ],
               ),
               const SizedBox(height: 4),
 
@@ -107,6 +120,35 @@ class SkillCard extends StatelessWidget {
           ),
         ),
       ),
+      ),
+    );
+  }
+}
+
+/// Small pill labelling a plugin-bundled skill with its owning plugin's name.
+class _ScopeBadge extends StatelessWidget {
+  const _ScopeBadge({required this.label, required this.colors});
+
+  final String label;
+  final AppColors colors;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: colors.violet.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: colors.violet,
+          fontSize: 10,
+          fontWeight: FontWeight.w500,
+        ),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
       ),
     );
   }

@@ -31,8 +31,14 @@ class SkillData {
   /// Absolute path to the skill directory.
   final String path;
 
-  /// Scope: `'global'` for `~/.claude/skills/`, `'project'` for per-project.
+  /// Scope: `'global'` for `~/.claude/skills/`, `'project'` for per-project,
+  /// `'plugin'` for skills bundled inside an installed plugin
+  /// (`~/.claude/plugins/**/skills/*/SKILL.md`).
   final String scope;
+
+  /// Owning plugin's name (the directory that contains the top-level `skills/`
+  /// folder), populated only when [scope] is `'plugin'`. Null otherwise.
+  final String? pluginName;
 
   const SkillData({
     required this.id,
@@ -41,6 +47,7 @@ class SkillData {
     this.homepage,
     required this.path,
     this.scope = 'global',
+    this.pluginName,
   });
 }
 
