@@ -196,7 +196,8 @@ class AutomationReader {
   /// not inherit a login PATH). Returns null when there is no crontab.
   static Future<String?> _defaultReadCrontab() async {
     try {
-      final result = await Process.run('crontab', ['-l'], runInShell: true);
+      final result = await Process.run('crontab', ['-l'], runInShell: true)
+          .timeout(const Duration(seconds: 5));
       if (result.exitCode != 0) return null; // "no crontab for user"
       final stdout = result.stdout;
       return stdout is String ? stdout : stdout.toString();
