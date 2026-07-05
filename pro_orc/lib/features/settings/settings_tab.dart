@@ -10,6 +10,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:pro_orc/features/onboarding/onboarding_wizard.dart';
 import 'package:pro_orc/features/shell/glass_card.dart';
 import 'package:pro_orc/providers/database_provider.dart';
+import 'package:pro_orc/providers/learning_provider.dart';
 import 'package:pro_orc/providers/projects_provider.dart';
 import 'package:pro_orc/providers/theme_mode_provider.dart';
 import 'package:pro_orc/providers/watcher_provider.dart';
@@ -28,11 +29,13 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
   List<String> _scanDirs = [];
   List<String> _ignorePatterns = [];
   String _gitBinaryPath = 'git';
+  String _vaultDir = '';
   bool _launchAtLogin = false;
   bool _loading = true;
 
   final _gitController = TextEditingController();
   final _ignoreAddController = TextEditingController();
+  final _vaultController = TextEditingController();
 
   @override
   void initState() {
@@ -44,6 +47,7 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
   void dispose() {
     _gitController.dispose();
     _ignoreAddController.dispose();
+    _vaultController.dispose();
     super.dispose();
   }
 
@@ -71,6 +75,8 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
         _ignorePatterns = patterns;
         _gitBinaryPath = config.gitBinaryPath;
         _gitController.text = config.gitBinaryPath;
+        _vaultDir = config.vaultDir;
+        _vaultController.text = config.vaultDir;
         _launchAtLogin = launchEnabled;
         _loading = false;
       });
@@ -130,6 +136,17 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
       await db.updateConfig(gitBinaryPath: value);
       ref.invalidate(projectsProvider);
     }
+  }
+
+  // --- Vault-Pfad ---
+
+  Future<void> _saveVaultDir() async {
+    final value = _vaultController.text.trim();
+    if (value == _vaultDir) return;
+    setState(() => _vaultDir = value);
+    final db = ref.read(appDatabaseProvider);
+    await db.setVaultDir(value);
+    ref.invalidate(learningProvider);
   }
 
   // --- Launch at Login ---
@@ -338,6 +355,44 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
                 const SizedBox(width: 8),
                 TextButton(
                   onPressed: _saveGitBinary,
+                  child: Text(
+                    'Speichern',
+                    style: TextStyle(color: colors.cyan, fontSize: 13),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 20),
+
+          // --- Vault-Pfad ---
+          _buildSection(
+            colors: colors,
+            icon: LucideIcons.notebook,
+            title: 'Obsidian-Vault',
+            subtitle: 'Pfad zum Vault für die Learning-Ansicht '
+                '(Standard: ~/N3URAL-Vault)',
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _vaultController,
+                    style: TextStyle(
+                      color: colors.textPri,
+                      fontSize: 13,
+                      fontFamily: 'SF Mono',
+                    ),
+                    decoration: colors.glassInputDecoration(
+                      hintText: '~/N3URAL-Vault',
+                      isDense: true,
+                    ),
+                    onSubmitted: (_) => _saveVaultDir(),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                TextButton(
+                  onPressed: _saveVaultDir,
                   child: Text(
                     'Speichern',
                     style: TextStyle(color: colors.cyan, fontSize: 13),

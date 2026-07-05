@@ -15,7 +15,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? e]) : super(e ?? _connect());
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -25,6 +25,9 @@ class AppDatabase extends _$AppDatabase {
       }
       if (from < 3) {
         await m.addColumn(appConfigTable, appConfigTable.themeMode);
+      }
+      if (from < 4) {
+        await m.addColumn(appConfigTable, appConfigTable.vaultDir);
       }
     },
   );
@@ -105,6 +108,7 @@ class AppDatabase extends _$AppDatabase {
     String? ignoreListJson,
     String? gitBinaryPath,
     String? themeMode,
+    String? vaultDir,
   }) async {
     await (update(appConfigTable)..where((t) => t.id.equals(1))).write(
       AppConfigTableCompanion(
@@ -116,8 +120,25 @@ class AppDatabase extends _$AppDatabase {
             ? Value(gitBinaryPath)
             : const Value.absent(),
         themeMode: themeMode != null ? Value(themeMode) : const Value.absent(),
+        vaultDir: vaultDir != null ? Value(vaultDir) : const Value.absent(),
       ),
     );
+  }
+
+  /// Returns the configured Obsidian vault path, or null when unset (empty).
+  /// Null lets the [LearningReader] fall back to its `$HOME/N3URAL-Vault`
+  /// default rather than baking a per-machine HOME into the DB.
+  Future<String?> getVaultDir() async {
+    final config = await getConfig();
+    final trimmed = config.vaultDir.trim();
+    return trimmed.isEmpty ? null : trimmed;
+  }
+
+  /// Persists the Obsidian vault path. Pass null or an empty/whitespace string
+  /// to clear the override (reader then uses its default).
+  Future<void> setVaultDir(String? path) async {
+    await getConfig(); // ensure id=1 row exists
+    await updateConfig(vaultDir: path?.trim() ?? '');
   }
 
   /// Returns the persisted theme mode preference: 'light', 'dark', or
