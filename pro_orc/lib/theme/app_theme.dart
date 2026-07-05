@@ -13,11 +13,21 @@ ThemeData buildAppTheme() => _buildTheme(AppColors.dark, Brightness.dark);
 /// surfaces. Registers [AppColors.light] as a ThemeExtension.
 ThemeData buildAppLightTheme() => _buildTheme(AppColors.light, Brightness.light);
 
+/// Reading font for the whole app: Avenir Next ships with macOS, is warmer
+/// and calmer than the default SF UI, and stays crisp at dashboard sizes.
+/// (v3 refresh — requested alongside the dimmed light palette.)
+const String _kFontFamily = 'Avenir Next';
+
 ThemeData _buildTheme(AppColors colors, Brightness brightness) {
   final base = brightness == Brightness.dark ? ThemeData.dark() : ThemeData.light();
 
   return base.copyWith(
     scaffoldBackgroundColor: colors.bgBase,
+    textTheme: base.textTheme.apply(
+      fontFamily: _kFontFamily,
+      bodyColor: colors.textPri,
+      displayColor: colors.textPri,
+    ),
     colorScheme: ColorScheme(
       brightness: brightness,
       surface: colors.bgSurf,

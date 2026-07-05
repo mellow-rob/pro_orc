@@ -123,46 +123,48 @@ class AppColors extends ThemeExtension<AppColors> {
   /// versus their dark-mode counterparts so they still meet WCAG AA (4.5:1)
   /// contrast against light backgrounds.
   static const AppColors light = AppColors(
-    // Background layers — warm off-white, not stark white
-    bgBase: Color(0xFFF3F1EE),
-    bgSurf: Color(0xFFEDEBE7),
-    bgElev: Color(0xFFE6E3DE),
-    bgCard: Color(0xFFFCFBF9),
+    // Background layers — muted warm stone/parchment, deliberately dimmed
+    // (v3 refresh: the earlier near-white surfaces read as glaring; these sit
+    // closer to paper under warm light than to a lit screen)
+    bgBase: Color(0xFFDBD6CD),
+    bgSurf: Color(0xFFD2CDC3),
+    bgElev: Color(0xFFC9C3B8),
+    bgCard: Color(0xFFE6E2D9),
 
-    // Cyan (PRIMARY) — darkened for contrast on light surfaces
-    // (cyan itself tuned to 006B74 for WCAG AA >= 4.5:1 against bgBase)
-    cyanHi: Color(0xFF00A9B8),
-    cyan: Color(0xFF006B74),
-    cyanLo: Color(0xFF00666F),
-    cyanOrb: Color(0xFF4DD0E1),
+    // Cyan (PRIMARY) — darkened for contrast on the dimmed surfaces
+    // (tuned for WCAG AA >= 4.5:1 against bgBase)
+    cyanHi: Color(0xFF007A85),
+    cyan: Color(0xFF00565E),
+    cyanLo: Color(0xFF004A51),
+    cyanOrb: Color(0xFF6FBFC9),
 
     // Fuchsia (SECONDARY) — darkened for contrast on light surfaces
-    fuchHi: Color(0xFFB5179E),
-    fuch: Color(0xFF9C1592),
-    fuchLo: Color(0xFF7D0F75),
-    fuchOrb: Color(0xFFE066DE),
+    fuchHi: Color(0xFFA3148E),
+    fuch: Color(0xFF821278),
+    fuchLo: Color(0xFF680C61),
+    fuchOrb: Color(0xFFC98BC6),
 
-    // Text — dark ink tones, not pure black
-    // (textDim tuned to 666C73 for WCAG AA >= 4.5:1 against bgCard/bgBase)
-    textPri: Color(0xFF1E2328),
-    textSec: Color(0xFF4B5259),
-    textDim: Color(0xFF666C73),
-    textDis: Color(0xFFA3A8AD),
+    // Text — warm ink on parchment, not cold grey on white
+    // (textDim tuned for WCAG AA >= 4.5:1 against bgCard/bgBase)
+    textPri: Color(0xFF2A251E),
+    textSec: Color(0xFF504A40),
+    textDim: Color(0xFF5C564C),
+    textDis: Color(0xFF948D80),
 
-    // Amber (Skills accent)
-    amberHi: Color(0xFFB8860B),
-    amber: Color(0xFF9A6E00),
-    amberLo: Color(0xFF7A5700),
+    // Amber (Skills accent) — deepened for the dimmed surfaces
+    amberHi: Color(0xFF8F6100),
+    amber: Color(0xFF775200),
+    amberLo: Color(0xFF5E4100),
 
     // Emerald (Plugins accent)
-    emeraldHi: Color(0xFF0E9F6E),
-    emerald: Color(0xFF00875B),
-    emeraldLo: Color(0xFF006C48),
+    emeraldHi: Color(0xFF0B8258),
+    emerald: Color(0xFF006F4B),
+    emeraldLo: Color(0xFF00583C),
 
     // Violet (MCP accent)
-    violetHi: Color(0xFF7C4FDB),
-    violet: Color(0xFF6A3AC7),
-    violetLo: Color(0xFF52299E),
+    violetHi: Color(0xFF6A3FC7),
+    violet: Color(0xFF5A2FAF),
+    violetLo: Color(0xFF462387),
   );
 
   @override
