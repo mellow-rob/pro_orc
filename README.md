@@ -15,7 +15,7 @@
 A native macOS menubar app that auto-discovers your projects, shows planning progress, git activity, and Claude Code tools — all in a glassmorphism dark UI.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-cyan.svg)](LICENSE)
-[![Platform: macOS](https://img.shields.io/badge/Platform-macOS-blue.svg)](https://github.com/mellow-rob/pro_orc/releases)
+[![Platform: macOS](https://img.shields.io/badge/Platform-macOS-blue.svg)](https://github.com/n3urala1-rob/a1-pro-orc/releases)
 [![Built with Flutter](https://img.shields.io/badge/Built%20with-Flutter-02569B.svg)](https://flutter.dev)
 [![Tests: 134 passing](https://img.shields.io/badge/Tests-134%20passing-brightgreen.svg)](pro_orc/test)
 
@@ -56,20 +56,20 @@ Pro Orc is designed for founders, consultants, and developers who use Claude Cod
 ### Homebrew (recommended)
 
 ```bash
-brew tap mellow-rob/tap
+brew tap n3urala1-rob/tap
 brew install --cask pro-orc
 ```
 
 ### GitHub Release
 
-Download the latest DMG from [Releases](https://github.com/mellow-rob/pro_orc/releases), open it, and drag **pro_orc.app** to Applications.
+Download the latest DMG from [Releases](https://github.com/n3urala1-rob/a1-pro-orc/releases), open it, and drag **pro_orc.app** to Applications.
 
 > **Note:** Pro Orc is ad-hoc signed (no Apple Developer certificate). On first launch, right-click the app and select "Open", or run `xattr -cr /Applications/pro_orc.app` in Terminal.
 
 ### From Source
 
 ```bash
-git clone https://github.com/mellow-rob/pro_orc.git
+git clone https://github.com/n3urala1-rob/a1-pro-orc.git
 cd pro_orc/pro_orc
 flutter build macos --release
 # App bundle at build/macos/Build/Products/Release/pro_orc.app
@@ -139,4 +139,4 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 ## License
 
-[MIT](LICENSE) — Copyright 2026 mellow-rob
+[MIT](LICENSE) — Copyright 2026 n3urala1-rob
