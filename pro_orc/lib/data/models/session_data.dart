@@ -1,3 +1,18 @@
+/// Formats a token count compactly for display: `950`, `12.3k`, `1.2M`.
+/// Uses a dot as the decimal separator (matches the app's other manual number
+/// formatting). Negative inputs are clamped to 0.
+String formatTokenCount(int tokens) {
+  if (tokens <= 0) return '0';
+  if (tokens < 1000) return '$tokens';
+  if (tokens < 1000000) {
+    final k = tokens / 1000.0;
+    // One decimal below 100k, none above (12.3k, 250k).
+    return k < 100 ? '${k.toStringAsFixed(1)}k' : '${k.round()}k';
+  }
+  final m = tokens / 1000000.0;
+  return '${m.toStringAsFixed(1)}M';
+}
+
 /// Metadata for a single Claude Code session file
 /// (`~/.claude/projects/<encoded>/<session-id>.jsonl`).
 ///
@@ -47,6 +62,20 @@ class SessionInfo {
   /// textual content was found.
   final String? lastActivityText;
 
+  /// Estimated total input tokens summed from assistant `usage.input_tokens`
+  /// (M7 AD-4). Null when detail was not parsed or the log carried no usage
+  /// fields. This is an ESTIMATE — the UI labels it "ca.".
+  final int? inputTokens;
+
+  /// Estimated total output tokens summed from assistant
+  /// `usage.output_tokens`. Null when detail was not parsed or absent.
+  final int? outputTokens;
+
+  /// Estimated total cache-related input tokens summed from
+  /// `usage.cache_creation_input_tokens` + `usage.cache_read_input_tokens`.
+  /// Null when detail was not parsed or absent.
+  final int? cacheTokens;
+
   const SessionInfo({
     required this.id,
     required this.path,
@@ -58,7 +87,19 @@ class SessionInfo {
     this.skills = const [],
     this.subagents = const [],
     this.lastActivityText,
+    this.inputTokens,
+    this.outputTokens,
+    this.cacheTokens,
   });
+
+  /// True if any token estimate is present (detail was parsed and the log
+  /// carried at least one `usage` block).
+  bool get hasTokenEstimate =>
+      inputTokens != null || outputTokens != null || cacheTokens != null;
+
+  /// Total estimated tokens (input + output + cache), treating null as zero.
+  int get totalTokens =>
+      (inputTokens ?? 0) + (outputTokens ?? 0) + (cacheTokens ?? 0);
 
   /// Returns a copy with detail fields filled in. All parameters are additive:
   /// omitted arguments preserve the existing value.
@@ -69,6 +110,9 @@ class SessionInfo {
     List<String>? skills,
     List<String>? subagents,
     String? lastActivityText,
+    int? inputTokens,
+    int? outputTokens,
+    int? cacheTokens,
   }) {
     return SessionInfo(
       id: id,
@@ -81,6 +125,9 @@ class SessionInfo {
       skills: skills ?? this.skills,
       subagents: subagents ?? this.subagents,
       lastActivityText: lastActivityText ?? this.lastActivityText,
+      inputTokens: inputTokens ?? this.inputTokens,
+      outputTokens: outputTokens ?? this.outputTokens,
+      cacheTokens: cacheTokens ?? this.cacheTokens,
     );
   }
 
@@ -110,4 +157,13 @@ class ProjectSessionData {
 
   /// The most recent 5 sessions (already sorted descending).
   List<SessionInfo> get recentFive => sessions.take(5).toList();
+
+  /// Sum of estimated total tokens across [sessions] that have been detail-
+  /// parsed and carry a usage estimate (M7 AD-4). Returns null when no session
+  /// has an estimate yet (so the UI can hide the summary rather than show 0).
+  int? get estimatedTotalTokens {
+    final withEstimate = sessions.where((s) => s.hasTokenEstimate);
+    if (withEstimate.isEmpty) return null;
+    return withEstimate.fold<int>(0, (sum, s) => sum + s.totalTokens);
+  }
 }

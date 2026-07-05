@@ -37,12 +37,13 @@
 
 ## Wave 3 — Token-/Kosten-Schätzung
 
-- [ ] `session_reader.readSessionDetail()`: usage-Felder aufsummieren (input/output/cache
-      tokens, model), defensiv (Felder fehlen oft). `SessionDetail` additiv erweitern.
-- [ ] UI: im aufgeklappten Session-Detail „~N Tokens (in/out)" + Modell; im ProjectDetailPanel
-      Summe über die angezeigten Sessions. Kennzeichnung „ca." (AD-4). KEINE Euro-Beträge
-      (Preise ändern sich — nur Tokens).
-- [ ] Tests: Fixture-JSONL mit/ohne usage-Felder, gemischte Modelle.
+- [x] `session_reader.readSessionDetail()`: usage-Felder aufsummieren (input/output/cache
+      tokens, model), defensiv (Felder fehlen oft). `SessionInfo` additiv erweitert
+      (inputTokens/outputTokens/cacheTokens + hasTokenEstimate/totalTokens).
+- [x] UI: im aufgeklappten Session-Detail „ca. N Tokens (in/out)" + Modell; im
+      ProjectDetailPanel Summe über die angezeigten Sessions (projectTokenEstimateProvider).
+      Kennzeichnung „ca."/„Schätzung" (AD-4). KEINE Euro-Beträge — nur Tokens.
+- [x] Tests: Fixture-JSONL mit/ohne usage-Felder, partielle/string-Felder, formatTokenCount.
 
 ## Verifikation
 

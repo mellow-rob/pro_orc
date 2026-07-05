@@ -127,6 +127,14 @@ class SessionReader {
       final subagents = <String>{};
       String? lastActivityText;
 
+      // Token usage estimate (AD-4) — summed across all assistant `usage`
+      // blocks. `sawUsage` tracks whether the log carried usage at all, so a
+      // log with none reports null tokens (not a misleading 0).
+      var inputTokens = 0;
+      var outputTokens = 0;
+      var cacheTokens = 0;
+      var sawUsage = false;
+
       final lineStream = file
           .openRead()
           .transform(utf8.decoder)
@@ -150,6 +158,17 @@ class SessionReader {
             // Model is recorded on assistant lines under `message.model`.
             final m = message['model'];
             if (m is String && m.isNotEmpty) model = m;
+
+            // Token usage estimate (AD-4). Present only on assistant lines,
+            // and only when the log recorded it — read defensively.
+            final usage = message['usage'];
+            if (usage is Map<String, dynamic>) {
+              sawUsage = true;
+              inputTokens += _asInt(usage['input_tokens']);
+              outputTokens += _asInt(usage['output_tokens']);
+              cacheTokens += _asInt(usage['cache_creation_input_tokens']);
+              cacheTokens += _asInt(usage['cache_read_input_tokens']);
+            }
 
             _extractFromContent(
               message['content'],
@@ -180,6 +199,9 @@ class SessionReader {
         skills: skills.toList(),
         subagents: subagents.toList(),
         lastActivityText: lastActivityText,
+        inputTokens: sawUsage ? inputTokens : null,
+        outputTokens: sawUsage ? outputTokens : null,
+        cacheTokens: sawUsage ? cacheTokens : null,
       );
     } catch (e) {
       developer.log('Failed to read session detail for ${session.path}: $e', name: 'session_reader');
@@ -227,6 +249,20 @@ class SessionReader {
         }
       }
     }
+  }
+
+  /// Coerces a JSON usage value to a non-negative int, tolerating ints,
+  /// doubles, numeric strings, and nulls (all unknown shapes → 0). Keeps the
+  /// token summation defensive per AD-4 (usage fields are often missing or
+  /// vary in type across log versions).
+  int _asInt(Object? value) {
+    if (value is int) return value < 0 ? 0 : value;
+    if (value is double) return value < 0 ? 0 : value.toInt();
+    if (value is String) {
+      final parsed = int.tryParse(value);
+      return (parsed == null || parsed < 0) ? 0 : parsed;
+    }
+    return 0;
   }
 
   /// Trims and truncates a text snippet for the last-activity preview.
