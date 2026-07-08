@@ -15,6 +15,7 @@ import 'package:pro_orc/data/services/quick_actions_service.dart';
 import 'package:pro_orc/features/shared/collaboration_mini_graph.dart';
 import 'package:pro_orc/features/shared/quick_actions.dart';
 import 'package:pro_orc/features/shared/rename_project_dialog.dart';
+import 'package:pro_orc/features/shared/roadmap/roadmap_tab.dart';
 import 'package:pro_orc/features/shared/skill_launcher_dialog.dart';
 import 'package:pro_orc/features/shell/glass_card.dart';
 import 'package:pro_orc/providers/claude_tools_provider.dart';
@@ -55,13 +56,27 @@ Future<void> showProjectDetail(BuildContext context, ProjectModel project) async
 /// Modal detail panel for a project, showing all available project data.
 ///
 /// Accent color follows project type: cyan for code, fuchsia for research.
-class ProjectDetailPanel extends ConsumerWidget {
+///
+/// Has two tabs (FR-001): "Übersicht" (today's content, unchanged) and
+/// "Roadmap" (new, Wave 3 — read-only three-tier fallback view).
+class ProjectDetailPanel extends ConsumerStatefulWidget {
   const ProjectDetailPanel({super.key, required this.project});
 
   final ProjectModel project;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ProjectDetailPanel> createState() => _ProjectDetailPanelState();
+}
+
+enum _DetailTab { uebersicht, roadmap }
+
+class _ProjectDetailPanelState extends ConsumerState<ProjectDetailPanel> {
+  _DetailTab _tab = _DetailTab.uebersicht;
+
+  ProjectModel get project => widget.project;
+
+  @override
+  Widget build(BuildContext context) {
     final colors = Theme.of(context).extension<AppColors>()!;
     final screenSize = MediaQuery.of(context).size;
     final accent = project.projectType == ProjectType.research ? colors.fuch : colors.cyan;
@@ -85,18 +100,50 @@ class ProjectDetailPanel extends ConsumerWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   _buildHeader(context, colors, accent),
+                  _buildTabSwitch(colors, accent),
                   // Scrollable content
-                  Flexible(
-                    child: SingleChildScrollView(
+                  if (_tab == _DetailTab.uebersicht)
+                    Flexible(
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+                        child: _buildBody(context, ref, colors, accent),
+                      ),
+                    )
+                  else
+                    Padding(
                       padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-                      child: _buildBody(context, ref, colors, accent),
+                      child: RoadmapTab(project: project, accent: accent),
                     ),
-                  ),
                 ],
               ),
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildTabSwitch(AppColors colors, Color accent) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(0, 0, 0, 12),
+      child: Row(
+        children: [
+          _TabButton(
+            label: 'Übersicht',
+            selected: _tab == _DetailTab.uebersicht,
+            colors: colors,
+            accent: accent,
+            onTap: () => setState(() => _tab = _DetailTab.uebersicht),
+          ),
+          const SizedBox(width: 8),
+          _TabButton(
+            label: 'Roadmap',
+            selected: _tab == _DetailTab.roadmap,
+            colors: colors,
+            accent: accent,
+            onTap: () => setState(() => _tab = _DetailTab.roadmap),
+          ),
+        ],
       ),
     );
   }
@@ -594,6 +641,52 @@ class ProjectDetailPanel extends ConsumerWidget {
   String _formatDate(DateTime? date) {
     if (date == null) return '—';
     return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+  }
+}
+
+/// Segmented-control-style tab button used by [ProjectDetailPanel]'s
+/// "Übersicht"/"Roadmap" switch (FR-001).
+class _TabButton extends StatelessWidget {
+  const _TabButton({
+    required this.label,
+    required this.selected,
+    required this.colors,
+    required this.accent,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final AppColors colors;
+  final Color accent;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+          decoration: BoxDecoration(
+            color: selected ? accent.withValues(alpha: 0.12) : Colors.transparent,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: selected ? accent.withValues(alpha: 0.4) : colors.bgElev,
+            ),
+          ),
+          child: Text(
+            label,
+            style: TextStyle(
+              color: selected ? accent : colors.textDim,
+              fontSize: 12,
+              fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
 
