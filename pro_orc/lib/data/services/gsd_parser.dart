@@ -483,6 +483,12 @@ Future<GsdParseResult> _parseNonGsdProject(String projectPath) async {
 
 /// Normalizes a raw status string to a [GsdStatus] enum value.
 /// Returns null for unrecognized status strings.
+///
+/// Public wrapper around the status vocabulary so other features (e.g. the
+/// Roadmap tab, FR-003) can reuse the exact same normalization instead of
+/// reimplementing it — no new status words anywhere in the app.
+GsdStatus? deriveGsdStatus(String raw) => _deriveStatus(raw);
+
 GsdStatus? _deriveStatus(String raw) {
   final lower = raw.toLowerCase();
   if (lower.contains('research')) return GsdStatus.research;
