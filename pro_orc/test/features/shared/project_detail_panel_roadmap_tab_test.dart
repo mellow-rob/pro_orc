@@ -68,9 +68,7 @@ void main() {
         ],
         child: MaterialApp(
           theme: ThemeData.dark().copyWith(extensions: const [AppColors.dark]),
-          home: Scaffold(
-            body: ProjectDetailPanel(project: project),
-          ),
+          home: Scaffold(body: ProjectDetailPanel(project: project)),
         ),
       ),
     );
@@ -84,8 +82,9 @@ void main() {
     expect(find.text('Roadmap'), findsOneWidget);
   });
 
-  testWidgets('Übersicht tab shows existing content by default (unchanged)',
-      (tester) async {
+  testWidgets('Übersicht tab shows existing content by default (unchanged)', (
+    tester,
+  ) async {
     await pumpPanel(tester);
 
     expect(find.text('A test project description.'), findsOneWidget);
@@ -103,8 +102,9 @@ void main() {
     expect(find.text('A test project description.'), findsNothing);
   });
 
-  testWidgets('switching back to Übersicht restores existing content',
-      (tester) async {
+  testWidgets('switching back to Übersicht restores existing content', (
+    tester,
+  ) async {
     await pumpPanel(tester);
 
     await tester.tap(find.text('Roadmap'));
@@ -113,6 +113,27 @@ void main() {
     await _pumpIgnoringOverflow(tester);
 
     expect(find.text('A test project description.'), findsOneWidget);
+  });
+
+  // Regression test for the bug where clicking a phase in the Roadmap tree
+  // did nothing — the detail pane stayed on the "Phase auswaehlen..."
+  // placeholder no matter what was clicked. Full ProjectDetailPanel context
+  // (not just RoadmapTab in isolation) is exercised here since that's where
+  // the bug was reported.
+  testWidgets('clicking a phase in the Roadmap tree shows its spec list in the '
+      'detail pane', (tester) async {
+    await pumpPanel(tester);
+
+    await tester.tap(find.text('Roadmap'));
+    await _pumpIgnoringOverflow(tester);
+
+    expect(find.text('Phase auswaehlen, um Details zu sehen'), findsOneWidget);
+
+    await tester.tap(find.text('Phase 1'));
+    await _pumpIgnoringOverflow(tester);
+
+    expect(find.text('Phase auswaehlen, um Details zu sehen'), findsNothing);
+    expect(find.text('Keine Specs fuer diese Phase vorhanden'), findsOneWidget);
   });
 }
 

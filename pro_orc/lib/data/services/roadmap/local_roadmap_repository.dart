@@ -29,30 +29,67 @@ class LocalRoadmapRepository implements RoadmapRepository {
     );
   }
 
-  /// Adapts [A1Data]'s milestone-table shape into [RoadmapData]. `A1Data`
-  /// has no per-phase spec references and no milestone→phase nesting (it's a
-  /// flat milestone list + a flat phase list), so each phase becomes its own
-  /// single-phase "milestone" entry — the phase's own name doubles as the
-  /// milestone label since the local tier has no coarser grouping today.
+  /// Adapts [A1Data]'s milestone-table shape into [RoadmapData]. `A1Data` has
+  /// no native milestone→phase nesting (it's a flat milestone list + a flat
+  /// phase list), so this adapter reconstructs the nesting by matching each
+  /// phase's leading token (e.g. `M6` in `M6-learning-loop`) against the same
+  /// leading token in a milestone's name (e.g. `M6` in `M6 — Selbstlernendes
+  /// OS`). A phase that matches no milestone becomes its own single-phase
+  /// milestone entry (name doubles as label) rather than being dropped or
+  /// duplicated under multiple parents.
   RoadmapData _toRoadmapData(A1Data a1Data) {
     if (a1Data.isEmpty) return RoadmapData.empty;
 
-    final milestones = <RoadmapMilestone>[
-      for (final m in a1Data.milestones)
-        RoadmapMilestone(name: m.name, status: m.status, phases: const []),
-      for (final ph in a1Data.phases)
-        RoadmapMilestone(
-          name: ph.name,
-          status: ph.isActive ? 'in_progress' : 'done',
-          phases: [
-            RoadmapPhase(
-              name: ph.name,
-              status: ph.isActive ? 'in_progress' : 'done',
-            ),
-          ],
-        ),
-    ];
+    final unmatchedPhases = <A1Phase>[];
+    final phasesByMilestoneToken = <String, List<A1Phase>>{};
+    for (final ph in a1Data.phases) {
+      final token = _leadingToken(ph.name);
+      if (token == null) {
+        unmatchedPhases.add(ph);
+        continue;
+      }
+      phasesByMilestoneToken.putIfAbsent(token, () => []).add(ph);
+    }
+
+    final milestones = <RoadmapMilestone>[];
+    for (final m in a1Data.milestones) {
+      final token = _leadingToken(m.name);
+      final matched = token == null
+          ? const <A1Phase>[]
+          : phasesByMilestoneToken.remove(token) ?? const <A1Phase>[];
+      milestones.add(RoadmapMilestone(
+        name: m.name,
+        status: m.status,
+        phases: [for (final ph in matched) _toRoadmapPhase(ph)],
+      ));
+    }
+
+    // Phases whose leading token matched no milestone (including ones left
+    // over in the map, e.g. duplicate tokens) become standalone entries.
+    final leftover = phasesByMilestoneToken.values.expand((v) => v);
+    for (final ph in [...unmatchedPhases, ...leftover]) {
+      milestones.add(RoadmapMilestone(
+        name: ph.name,
+        status: ph.isActive ? 'in_progress' : 'done',
+        phases: [_toRoadmapPhase(ph)],
+      ));
+    }
 
     return RoadmapData(milestones: milestones);
+  }
+
+  RoadmapPhase _toRoadmapPhase(A1Phase ph) => RoadmapPhase(
+        name: ph.name,
+        status: ph.isActive ? 'in_progress' : 'done',
+      );
+
+  /// Extracts the leading alphanumeric token used to match phases to
+  /// milestones, e.g. `M6` from both `M6-learning-loop` and
+  /// `M6 — Selbstlernendes OS`. Returns null when the name has no such token.
+  static final _leadingTokenPattern = RegExp(r'^([A-Za-z0-9]+)');
+
+  String? _leadingToken(String name) {
+    final match = _leadingTokenPattern.firstMatch(name.trim());
+    return match?.group(1);
   }
 }

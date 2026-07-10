@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:path/path.dart' as p;
-import 'package:pro_orc/data/models/a1_data.dart';
 import 'package:pro_orc/data/models/project_model.dart';
 import 'package:pro_orc/data/models/project_type.dart';
 import 'package:pro_orc/data/models/collaboration_graph.dart';
@@ -20,49 +19,44 @@ import 'package:pro_orc/features/shared/skill_launcher_dialog.dart';
 import 'package:pro_orc/features/shell/glass_card.dart';
 import 'package:pro_orc/providers/claude_tools_provider.dart';
 import 'package:pro_orc/providers/database_provider.dart';
+import 'package:pro_orc/providers/project_detail_provider.dart';
 import 'package:pro_orc/providers/session_provider.dart';
 import 'package:pro_orc/theme/n3_colors.dart';
 
-/// Opens a [ProjectDetailPanel] as a modal dialog with slide-up + fade animation.
+/// Opens the project detail view embedded inside the app shell's content
+/// area (replaces the previous full-screen `Navigator.push` route — the
+/// shell's side navigation and background now stay visible while a detail
+/// view is open).
 ///
 /// Call this from any card's onTap callback:
 /// ```dart
 /// onTap: () => showProjectDetail(context, project),
 /// ```
-Future<void> showProjectDetail(BuildContext context, ProjectModel project) async {
-  await showGeneralDialog(
-    context: context,
-    barrierDismissible: false,
-    barrierLabel: 'Close',
-    barrierColor: Colors.black54,
-    transitionDuration: const Duration(milliseconds: 300),
-    transitionBuilder: (context, animation, secondaryAnimation, child) {
-      return SlideTransition(
-        position: Tween<Offset>(
-          begin: const Offset(0, 0.05),
-          end: Offset.zero,
-        ).animate(CurvedAnimation(
-          parent: animation,
-          curve: Curves.easeOutCubic,
-        )),
-        child: FadeTransition(opacity: animation, child: child),
-      );
-    },
-    pageBuilder: (context, animation, secondaryAnimation) =>
-        ProjectDetailPanel(project: project),
-  );
+void showProjectDetail(BuildContext context, ProjectModel project) {
+  ProviderScope.containerOf(
+    context,
+  ).read(openProjectDetailProvider.notifier).open(project);
 }
 
-/// Modal detail panel for a project, showing all available project data.
+/// Detail view for a project, showing all available project data.
 ///
 /// Accent color follows project type: cyan for code, fuchsia for research.
 ///
 /// Has two tabs (FR-001): "Übersicht" (today's content, unchanged) and
-/// "Roadmap" (new, Wave 3 — read-only three-tier fallback view).
+/// "Roadmap" (read-only three-tier fallback view). Embedded directly inside
+/// [ShellScreen]'s content area (see `openProjectDetailProvider`) instead of
+/// being pushed as its own route, so it no longer owns a [Scaffold] — the
+/// shell provides the surrounding chrome. [onBack] is invoked instead of
+/// `Navigator.pop` when the user wants to return to the previous tab.
 class ProjectDetailPanel extends ConsumerStatefulWidget {
-  const ProjectDetailPanel({super.key, required this.project});
+  const ProjectDetailPanel({super.key, required this.project, this.onBack});
 
   final ProjectModel project;
+
+  /// Called when the user taps the back arrow. If omitted, falls back to
+  /// clearing [openProjectDetailProvider] directly so existing call sites
+  /// (e.g. tests that pump [ProjectDetailPanel] standalone) keep working.
+  final VoidCallback? onBack;
 
   @override
   ConsumerState<ProjectDetailPanel> createState() => _ProjectDetailPanelState();
@@ -78,45 +72,36 @@ class _ProjectDetailPanelState extends ConsumerState<ProjectDetailPanel> {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).extension<AppColors>()!;
-    final screenSize = MediaQuery.of(context).size;
-    final accent = project.projectType == ProjectType.research ? colors.fuch : colors.cyan;
+    final accent = project.projectType == ProjectType.research
+        ? colors.fuch
+        : colors.cyan;
 
-    return Center(
-      child: Material(
-        type: MaterialType.transparency,
-        child: DefaultTextStyle(
-          style: TextStyle(
-            color: colors.textPri,
-            fontSize: 14,
-            decoration: TextDecoration.none,
-          ),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(
-              maxWidth: 700,
-              maxHeight: screenSize.height * 0.85,
-            ),
-            child: GlassCard(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  _buildHeader(context, colors, accent),
-                  _buildTabSwitch(colors, accent),
-                  // Scrollable content
-                  if (_tab == _DetailTab.uebersicht)
-                    Flexible(
-                      child: SingleChildScrollView(
+    return DefaultTextStyle(
+      style: TextStyle(
+        color: colors.textPri,
+        fontSize: 14,
+        decoration: TextDecoration.none,
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+        child: GlassCard(
+          child: Column(
+            children: [
+              _buildHeader(context, colors, accent),
+              _buildTabSwitch(colors, accent),
+              // Content fills the remaining space given by the shell.
+              Expanded(
+                child: _tab == _DetailTab.uebersicht
+                    ? SingleChildScrollView(
                         padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
                         child: _buildBody(context, ref, colors, accent),
+                      )
+                    : Padding(
+                        padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+                        child: RoadmapTab(project: project, accent: accent),
                       ),
-                    )
-                  else
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-                      child: RoadmapTab(project: project, accent: accent),
-                    ),
-                ],
               ),
-            ),
+            ],
           ),
         ),
       ),
@@ -153,6 +138,25 @@ class _ProjectDetailPanelState extends ConsumerState<ProjectDetailPanel> {
       padding: const EdgeInsets.fromLTRB(0, 16, 12, 16),
       child: Row(
         children: [
+          // Back navigation — closes the embedded detail view and returns
+          // to whichever tab was active before it opened (see onBack).
+          SizedBox(
+            width: 36,
+            height: 36,
+            child: IconButton(
+              padding: EdgeInsets.zero,
+              iconSize: 18,
+              icon: Icon(
+                LucideIcons.arrowLeft100,
+                color: colors.textDim,
+                size: 18,
+              ),
+              tooltip: 'Zurueck',
+              onPressed: widget.onBack ??
+                  () => ref.read(openProjectDetailProvider.notifier).close(),
+            ),
+          ),
+          const SizedBox(width: 4),
           // Accent left border strip
           Container(
             width: 2,
@@ -201,8 +205,11 @@ class _ProjectDetailPanelState extends ConsumerState<ProjectDetailPanel> {
                   child: IconButton(
                     padding: EdgeInsets.zero,
                     iconSize: 14,
-                    icon: Icon(LucideIcons.pencil100,
-                        color: colors.textDim, size: 14),
+                    icon: Icon(
+                      LucideIcons.pencil100,
+                      color: colors.textDim,
+                      size: 14,
+                    ),
                     tooltip: 'Umbenennen',
                     onPressed: () => showDialog<bool>(
                       context: context,
@@ -212,17 +219,6 @@ class _ProjectDetailPanelState extends ConsumerState<ProjectDetailPanel> {
                   ),
                 ),
               ],
-            ),
-          ),
-          SizedBox(
-            width: 36,
-            height: 36,
-            child: IconButton(
-              padding: EdgeInsets.zero,
-              iconSize: 18,
-              icon: Icon(LucideIcons.x100, color: colors.textDim, size: 16),
-              tooltip: 'Schliessen',
-              onPressed: () => Navigator.of(context).pop(),
             ),
           ),
         ],
@@ -259,10 +255,6 @@ class _ProjectDetailPanelState extends ConsumerState<ProjectDetailPanel> {
             child: _buildFilesSection(colors, accent),
           ),
 
-        // --- a1 Roadmap (Milestones + Phasen-Fortschritt) ---
-        if (project.a1 != null && !project.a1!.isEmpty)
-          _buildA1Section(colors, accent, project.a1!),
-
         // --- Agents ---
         if (project.usedAgents != null && project.usedAgents!.isNotEmpty)
           _buildAgentsSection(context, ref, colors, accent),
@@ -287,7 +279,11 @@ class _ProjectDetailPanelState extends ConsumerState<ProjectDetailPanel> {
                     padding: const EdgeInsets.only(bottom: 10),
                     child: Row(
                       children: [
-                        Icon(LucideIcons.gitCommitHorizontal100, color: colors.textDim, size: 14),
+                        Icon(
+                          LucideIcons.gitCommitHorizontal100,
+                          color: colors.textDim,
+                          size: 14,
+                        ),
                         const SizedBox(width: 8),
                         Text(
                           git.lastCommitHash!,
@@ -330,140 +326,12 @@ class _ProjectDetailPanelState extends ConsumerState<ProjectDetailPanel> {
     );
   }
 
-  Widget _buildProgressBar(AppColors colors, Color accent, int progress) {
-    final clamped = progress.clamp(0, 100);
-    return Row(
-      children: [
-        Expanded(
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(2),
-            child: Container(
-              height: 4,
-              color: colors.bgSurf,
-              child: FractionallySizedBox(
-                alignment: Alignment.centerLeft,
-                widthFactor: clamped / 100.0,
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: accent,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(width: 10),
-        Text(
-          '$clamped%',
-          style: TextStyle(
-            color: accent,
-            fontSize: 12,
-            fontWeight: FontWeight.w400,
-          ),
-        ),
-      ],
-    );
-  }
-
-  /// a1 roadmap/phase status section: milestones with a status badge, and each
-  /// phase that has checkboxes rendered with a progress bar.
-  Widget _buildA1Section(AppColors colors, Color accent, A1Data a1) {
-    final phasesWithTasks =
-        a1.phases.where((ph) => ph.totalTasks > 0).toList();
-
-    return _SectionCard(
-      colors: colors,
-      accent: accent,
-      title: 'A1 ROADMAP',
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          for (int i = 0; i < a1.milestones.length; i++) ...[
-            _buildA1MilestoneRow(colors, accent, a1.milestones[i]),
-            if (i < a1.milestones.length - 1)
-              Divider(height: 1, color: colors.bgElev.withValues(alpha: 0.8)),
-          ],
-          if (phasesWithTasks.isNotEmpty) ...[
-            if (a1.milestones.isNotEmpty) const SizedBox(height: 12),
-            for (final phase in phasesWithTasks) ...[
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 6),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            phase.name,
-                            style: TextStyle(
-                              color: colors.textPri,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
-                        Text(
-                          '${phase.checkedTasks}/${phase.totalTasks}',
-                          style: TextStyle(color: colors.textDim, fontSize: 12),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 6),
-                    _buildProgressBar(colors, accent, phase.progress ?? 0),
-                  ],
-                ),
-              ),
-            ],
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _buildA1MilestoneRow(
-      AppColors colors, Color accent, A1Milestone milestone) {
-    final (icon, iconColor) = milestone.isDone
-        ? (LucideIcons.circleCheck100, const Color(0xFF22C55E))
-        : milestone.isActive
-            ? (LucideIcons.circlePlay100, accent)
-            : (LucideIcons.circle100, colors.textDim);
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.only(top: 1),
-            child: Icon(icon, color: iconColor, size: 15),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  milestone.name,
-                  style: TextStyle(color: colors.textPri, fontSize: 13),
-                ),
-                if (milestone.status.isNotEmpty) ...[
-                  const SizedBox(height: 2),
-                  Text(
-                    milestone.status,
-                    style: TextStyle(color: colors.textDim, fontSize: 11),
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAgentsSection(BuildContext context, WidgetRef ref, AppColors colors, Color accent) {
+  Widget _buildAgentsSection(
+    BuildContext context,
+    WidgetRef ref,
+    AppColors colors,
+    Color accent,
+  ) {
     final toolsAsync = ref.read(claudeToolsProvider);
     final allAgents = toolsAsync.value?.agents ?? [];
 
@@ -475,9 +343,7 @@ class _ProjectDetailPanelState extends ConsumerState<ProjectDetailPanel> {
         spacing: 6,
         runSpacing: 6,
         children: project.usedAgents!.map((name) {
-          final agentData = allAgents
-              .where((a) => a.name == name)
-              .firstOrNull;
+          final agentData = allAgents.where((a) => a.name == name).firstOrNull;
           final chipColor = agentData != null
               ? agentAccentColor(agentData.color, colors)
               : colors.textSec;
@@ -550,7 +416,10 @@ class _ProjectDetailPanelState extends ConsumerState<ProjectDetailPanel> {
                   accent: accent,
                 ),
                 if (i < data.recentFive.length - 1)
-                  Divider(height: 1, color: colors.bgElev.withValues(alpha: 0.8)),
+                  Divider(
+                    height: 1,
+                    color: colors.bgElev.withValues(alpha: 0.8),
+                  ),
               ],
             ],
           ),
@@ -559,7 +428,11 @@ class _ProjectDetailPanelState extends ConsumerState<ProjectDetailPanel> {
     );
   }
 
-  Widget _buildCollaborationGraphSection(WidgetRef ref, AppColors colors, Color accent) {
+  Widget _buildCollaborationGraphSection(
+    WidgetRef ref,
+    AppColors colors,
+    Color accent,
+  ) {
     final toolsAsync = ref.watch(projectToolsByPathProvider(project.path));
 
     return toolsAsync.when(
@@ -629,11 +502,10 @@ class _ProjectDetailPanelState extends ConsumerState<ProjectDetailPanel> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.start,
       children: actions
-          .map((a) => _QuickActionButton(
-                action: a,
-                accent: accent,
-                colors: colors,
-              ))
+          .map(
+            (a) =>
+                _QuickActionButton(action: a, accent: accent, colors: colors),
+          )
           .toList(),
     );
   }
@@ -670,7 +542,9 @@ class _TabButton extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
           decoration: BoxDecoration(
-            color: selected ? accent.withValues(alpha: 0.12) : Colors.transparent,
+            color: selected
+                ? accent.withValues(alpha: 0.12)
+                : Colors.transparent,
             borderRadius: BorderRadius.circular(8),
             border: Border.all(
               color: selected ? accent.withValues(alpha: 0.4) : colors.bgElev,
@@ -759,11 +633,8 @@ class _DescriptionSection extends StatefulWidget {
 class _DescriptionSectionState extends State<_DescriptionSection> {
   bool _expanded = false;
 
-  TextStyle get _textStyle => TextStyle(
-        color: widget.colors.textSec,
-        fontSize: 14,
-        height: 1.6,
-      );
+  TextStyle get _textStyle =>
+      TextStyle(color: widget.colors.textSec, fontSize: 14, height: 1.6);
 
   bool _needsExpansion(double maxWidth) {
     final painter = TextPainter(
@@ -790,10 +661,7 @@ class _DescriptionSectionState extends State<_DescriptionSection> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               if (!needsToggle || _expanded)
-                SelectableText(
-                  widget.description,
-                  style: _textStyle,
-                )
+                SelectableText(widget.description, style: _textStyle)
               else
                 Text(
                   widget.description,
@@ -1138,7 +1006,8 @@ class _MdFileRowState extends State<_MdFileRow> {
         onExit: (_) => setState(() => _hovered = false),
         cursor: SystemMouseCursors.click,
         child: GestureDetector(
-          onTap: () => Process.run('open', [widget.file.path], runInShell: true),
+          onTap: () =>
+              Process.run('open', [widget.file.path], runInShell: true),
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 3),
             child: Row(
@@ -1247,8 +1116,9 @@ class _SessionRowState extends ConsumerState<_SessionRow> {
                     style: TextStyle(
                       color: session.isActive ? colors.emerald : colors.textDim,
                       fontSize: 11,
-                      fontWeight:
-                          session.isActive ? FontWeight.w600 : FontWeight.w400,
+                      fontWeight: session.isActive
+                          ? FontWeight.w600
+                          : FontWeight.w400,
                     ),
                   ),
                   const SizedBox(width: 6),
@@ -1376,12 +1246,14 @@ class _SessionDetailBody extends StatelessWidget {
       rows.add(_metaRow('Nachrichten', '${detail.messageCount}'));
     }
     if (detail.hasTokenEstimate) {
-      rows.add(_metaRow(
-        'Tokens (ca.)',
-        'ca. ${formatTokenCount(detail.totalTokens)} '
-            '(${formatTokenCount(detail.inputTokens ?? 0)} in / '
-            '${formatTokenCount(detail.outputTokens ?? 0)} out)',
-      ));
+      rows.add(
+        _metaRow(
+          'Tokens (ca.)',
+          'ca. ${formatTokenCount(detail.totalTokens)} '
+              '(${formatTokenCount(detail.inputTokens ?? 0)} in / '
+              '${formatTokenCount(detail.outputTokens ?? 0)} out)',
+        ),
+      );
     }
     if (detail.skills.isNotEmpty) {
       rows.add(_chipRow('Skills', detail.skills, LucideIcons.sparkles100));
@@ -1450,8 +1322,10 @@ class _SessionDetailBody extends StatelessWidget {
             children: [
               for (final item in items)
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 3,
+                  ),
                   decoration: BoxDecoration(
                     color: accent.withValues(alpha: 0.06),
                     borderRadius: BorderRadius.circular(6),
@@ -1465,10 +1339,7 @@ class _SessionDetailBody extends StatelessWidget {
                     children: [
                       Icon(icon, color: accent, size: 11),
                       const SizedBox(width: 5),
-                      Text(
-                        item,
-                        style: TextStyle(color: accent, fontSize: 11),
-                      ),
+                      Text(item, style: TextStyle(color: accent, fontSize: 11)),
                     ],
                   ),
                 ),
@@ -1479,4 +1350,3 @@ class _SessionDetailBody extends StatelessWidget {
     );
   }
 }
-

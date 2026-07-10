@@ -59,8 +59,35 @@ class _MilestoneNode extends StatelessWidget {
   final ValueChanged<RoadmapPhase>? onPhaseSelected;
   final RoadmapPhase? selectedPhase;
 
+  /// True when this milestone has exactly one phase whose name duplicates
+  /// the milestone's own name — the local a1 tier's single-phase adapter
+  /// shape (see `LocalRoadmapRepository`). Showing both a milestone row and
+  /// an identical phase row underneath is pure visual duplication, so this
+  /// case collapses to a single clickable row instead.
+  bool get _isSinglePhaseDuplicate =>
+      milestone.phases.length == 1 && milestone.phases.single.name == milestone.name;
+
   @override
   Widget build(BuildContext context) {
+    if (_isSinglePhaseDuplicate) {
+      final phase = milestone.phases.single;
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        child: _PhaseNode(
+          phase: phase,
+          colors: colors,
+          accent: accent,
+          selected: identical(phase, selectedPhase),
+          onTap: onPhaseSelected == null ? null : () => onPhaseSelected!(phase),
+          nameStyle: TextStyle(
+            color: colors.textPri,
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      );
+    }
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Column(
@@ -112,6 +139,7 @@ class _PhaseNode extends StatelessWidget {
     required this.accent,
     required this.selected,
     required this.onTap,
+    this.nameStyle,
   });
 
   final RoadmapPhase phase;
@@ -119,6 +147,11 @@ class _PhaseNode extends StatelessWidget {
   final Color accent;
   final bool selected;
   final VoidCallback? onTap;
+
+  /// Overrides the default (dim, small) name style — used when a milestone
+  /// with a single duplicate-named phase collapses into this row alone, so
+  /// it should read like a milestone row, not an indented child row.
+  final TextStyle? nameStyle;
 
   @override
   Widget build(BuildContext context) {
@@ -135,7 +168,8 @@ class _PhaseNode extends StatelessWidget {
           children: [
             Text(
               phase.name,
-              style: TextStyle(color: colors.textSec, fontSize: 11),
+              style: nameStyle ??
+                  TextStyle(color: colors.textSec, fontSize: 11),
               overflow: TextOverflow.ellipsis,
             ),
             const SizedBox(height: 3),

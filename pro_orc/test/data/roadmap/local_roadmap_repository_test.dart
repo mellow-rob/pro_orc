@@ -14,7 +14,8 @@ Future<Directory> _createTempProject() async {
 
 void main() {
   group('LocalRoadmapRepository', () {
-    test('adapts A1Data milestones + phases into RoadmapData', () async {
+    test('nests a matching phase under its milestone, no duplicate entry',
+        () async {
       final project = await _createTempProject();
       addTearDown(() => project.delete(recursive: true));
 
@@ -38,8 +39,34 @@ void main() {
       expect(result.source, RoadmapSource.local);
       expect(result.failure, isNull);
       expect(result.data.isEmpty, isFalse);
-      expect(result.data.milestones.map((m) => m.name), contains('M1 — Setup'));
-      expect(result.data.milestones.map((m) => m.name), contains('M1-setup'));
+      // Exactly one milestone-level entry (no duplicate "M1-setup" sibling).
+      expect(result.data.milestones, hasLength(1));
+      final milestone = result.data.milestones.single;
+      expect(milestone.name, 'M1 — Setup');
+      expect(milestone.phases.map((ph) => ph.name), ['M1-setup']);
+    });
+
+    test('phase with no matching milestone becomes its own standalone entry',
+        () async {
+      final project = await _createTempProject();
+      addTearDown(() => project.delete(recursive: true));
+
+      // No roadmap.md at all — only an orphan phase directory.
+      final phaseDir = Directory(
+        p.join(project.path, '.a1', 'phases', 'M9-orphan'),
+      );
+      await phaseDir.create(recursive: true);
+      await File(
+        p.join(phaseDir.path, 'PLAN.md'),
+      ).writeAsString('- [x] a\n');
+
+      final repo = LocalRoadmapRepository();
+      final result = await repo.resolve('orphan-slug', project.path);
+
+      expect(result.data.milestones, hasLength(1));
+      final milestone = result.data.milestones.single;
+      expect(milestone.name, 'M9-orphan');
+      expect(milestone.phases.map((ph) => ph.name), ['M9-orphan']);
     });
 
     test('returns empty RoadmapData when project has no .a1 dir', () async {

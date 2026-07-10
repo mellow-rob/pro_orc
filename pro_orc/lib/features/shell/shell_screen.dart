@@ -10,6 +10,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import 'package:pro_orc/features/onboarding/onboarding_wizard.dart';
 import 'package:pro_orc/providers/database_provider.dart';
+import 'package:pro_orc/providers/project_detail_provider.dart';
 import 'package:pro_orc/providers/projects_provider.dart';
 import 'package:pro_orc/providers/watcher_provider.dart';
 import 'package:pro_orc/theme/n3_colors.dart';
@@ -23,6 +24,7 @@ import 'package:pro_orc/features/harness/harness_tab.dart';
 import 'package:pro_orc/features/learning/learning_tab.dart';
 import 'package:pro_orc/features/research/research_tab.dart';
 import 'package:pro_orc/features/settings/settings_tab.dart';
+import 'package:pro_orc/features/shared/project_detail_panel.dart';
 import 'package:pro_orc/features/shell/glow_border_shell.dart';
 import 'package:pro_orc/features/shell/orb_background.dart';
 import 'package:pro_orc/features/skills/skills_tab.dart';
@@ -47,6 +49,11 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
   final WindowGeometryService _geometryService = WindowGeometryService();
 
   int _selectedIndex = 0;
+
+  /// Tab index active when a project detail view was opened, so the back
+  /// button / closing the detail view returns to that tab instead of
+  /// hard-jumping to index 0.
+  int _tabIndexBeforeDetail = 0;
 
   @override
   void initState() {
@@ -122,6 +129,16 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
     _geometryService.save();
   }
 
+  /// Tab selection handler used by [_SideNav]. Switching tabs while a
+  /// project detail view is open closes that view (returns to the normal
+  /// `IndexedStack`) and switches tab in one step.
+  void _onSelectTab(int index) {
+    setState(() {
+      _selectedIndex = index;
+      ref.read(openProjectDetailProvider.notifier).close();
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     // Keep projectsProvider alive for the reactive watcher chain.
@@ -129,6 +146,15 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
     ref.watch(projectsProvider);
 
     final colors = Theme.of(context).extension<AppColors>()!;
+    final openProject = ref.watch(openProjectDetailProvider);
+
+    if (openProject != null) {
+      // Remember which tab was active so "back" returns there instead of
+      // hard-jumping to index 0. Recorded here (not in the setter) because
+      // the provider can also be set from card onTap callbacks in the tabs
+      // themselves, outside of this widget's control.
+      _tabIndexBeforeDetail = _selectedIndex;
+    }
 
     return GlowBorderShell(
       child: Stack(
@@ -142,23 +168,36 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
                 children: [
                   _SideNav(
                     selectedIndex: _selectedIndex,
-                    onSelect: (i) => setState(() => _selectedIndex = i),
+                    onSelect: _onSelectTab,
                     colors: colors,
                   ),
                   Expanded(
-                    child: IndexedStack(
-                      index: _selectedIndex,
-                      children: const [
-                        CodeTab(),
-                        ResearchTab(),
-                        ClaudeToolsTab(),
-                        AgentsTab(),
-                        SkillsTab(),
-                        HarnessTab(),
-                        LearningTab(),
-                        SettingsTab(),
-                      ],
-                    ),
+                    child: openProject != null
+                        ? ProjectDetailPanel(
+                            key: ValueKey(openProject.folderId),
+                            project: openProject,
+                            onBack: () {
+                              ref
+                                  .read(openProjectDetailProvider.notifier)
+                                  .close();
+                              setState(
+                                () => _selectedIndex = _tabIndexBeforeDetail,
+                              );
+                            },
+                          )
+                        : IndexedStack(
+                            index: _selectedIndex,
+                            children: const [
+                              CodeTab(),
+                              ResearchTab(),
+                              ClaudeToolsTab(),
+                              AgentsTab(),
+                              SkillsTab(),
+                              HarnessTab(),
+                              LearningTab(),
+                              SettingsTab(),
+                            ],
+                          ),
                   ),
                 ],
               ),

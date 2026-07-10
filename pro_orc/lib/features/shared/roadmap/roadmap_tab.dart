@@ -29,30 +29,30 @@ class RoadmapTab extends ConsumerWidget {
     final colors = Theme.of(context).extension<AppColors>()!;
     final resultAsync = ref.watch(roadmapProvider(project));
 
-    return SizedBox(
-      height: 420,
-      child: resultAsync.when(
-        loading: () => Center(
-          child: CircularProgressIndicator(color: accent, strokeWidth: 2),
-        ),
-        // Services never throw, but the provider chain still surfaces
-        // errors as an AsyncError if something upstream misbehaves — treat
-        // that identically to "no data" rather than showing a raw error
-        // (FR-007).
-        error: (_, _) => _EmptyRoadmapState(colors: colors),
-        data: (result) {
-          if (result.data.isEmpty) {
-            return _EmptyRoadmapState(colors: colors);
-          }
-          return _RoadmapSplitView(
-            data: result.data,
-            source: result.source,
-            colors: colors,
-            accent: accent,
-            currentPhase: null,
-          );
-        },
+    // Fills all height given by the caller (ProjectDetailPanel wraps this in
+    // an Expanded) instead of a fixed height — the full-screen detail view
+    // gives the split-view much more vertical room than the old modal did.
+    return resultAsync.when(
+      loading: () => Center(
+        child: CircularProgressIndicator(color: accent, strokeWidth: 2),
       ),
+      // Services never throw, but the provider chain still surfaces
+      // errors as an AsyncError if something upstream misbehaves — treat
+      // that identically to "no data" rather than showing a raw error
+      // (FR-007).
+      error: (_, _) => _EmptyRoadmapState(colors: colors),
+      data: (result) {
+        if (result.data.isEmpty) {
+          return _EmptyRoadmapState(colors: colors);
+        }
+        return _RoadmapSplitView(
+          data: result.data,
+          source: result.source,
+          colors: colors,
+          accent: accent,
+          currentPhase: null,
+        );
+      },
     );
   }
 }
