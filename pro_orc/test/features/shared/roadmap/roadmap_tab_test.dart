@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:pro_orc/data/models/gsd_data.dart';
 import 'package:pro_orc/data/models/project_model.dart';
 import 'package:pro_orc/data/models/project_type.dart';
 import 'package:pro_orc/data/models/roadmap_data.dart';
@@ -56,8 +55,9 @@ void main() {
   );
 
   group('RoadmapTab — FR-001/FR-003 tree + badges', () {
-    testWidgets('renders milestone and phase names with status badges',
-        (tester) async {
+    testWidgets('renders milestone and phase names with status badges', (
+      tester,
+    ) async {
       await pumpTab(
         tester,
         result: const RoadmapResult(
@@ -70,15 +70,17 @@ void main() {
       expect(find.text('Phase 1: Setup'), findsOneWidget);
       expect(find.text('Phase 2: Build'), findsOneWidget);
 
-      // Status vocabulary reused verbatim from GsdParser._deriveStatus via
-      // deriveGsdStatus — 'done' -> 'Complete', 'in_progress' -> 'In Progress'.
+      // Status vocabulary reused verbatim via deriveDisplayStatus —
+      // 'done' -> 'Complete', 'in_progress' -> 'In Progress'.
       expect(find.text('Complete'), findsWidgets);
       expect(find.text('In Progress'), findsOneWidget);
     });
   });
 
   group('RoadmapTab — FR-016 split-view ratio, no resize handle', () {
-    testWidgets('tree/detail panes use a fixed 35/65 flex ratio', (tester) async {
+    testWidgets('tree/detail panes use a fixed 35/65 flex ratio', (
+      tester,
+    ) async {
       await pumpTab(
         tester,
         result: const RoadmapResult(
@@ -114,8 +116,9 @@ void main() {
   });
 
   group('RoadmapTab — FR-010a offline-fallback badge', () {
-    testWidgets('shows Offline-Fallback badge when source is vault',
-        (tester) async {
+    testWidgets('shows Offline-Fallback badge when source is vault', (
+      tester,
+    ) async {
       await pumpTab(
         tester,
         result: const RoadmapResult(
@@ -154,8 +157,9 @@ void main() {
   });
 
   group('RoadmapTab — FR-007/FR-008 empty state', () {
-    testWidgets('shows exact empty-state text when no data resolves at all',
-        (tester) async {
+    testWidgets('shows exact empty-state text when no data resolves at all', (
+      tester,
+    ) async {
       await pumpTab(
         tester,
         result: const RoadmapResult(
@@ -171,45 +175,49 @@ void main() {
     });
 
     testWidgets(
-        'shows the same empty state for a project whose slug matches nothing '
-        '(slug mismatch treated identically to no data)', (tester) async {
-      // A mismatched slug resolves through the same fallback chain and
-      // yields RoadmapData.empty per FR-008 — verified here by directly
-      // feeding that outcome (the repository-level slug-mismatch behavior
-      // is covered by the Wave 1/2 repository tests).
-      final mismatchedProject = project.copyWithFolderId('MISMATCHED-Slug');
+      'shows the same empty state for a project whose slug matches nothing '
+      '(slug mismatch treated identically to no data)',
+      (tester) async {
+        // A mismatched slug resolves through the same fallback chain and
+        // yields RoadmapData.empty per FR-008 — verified here by directly
+        // feeding that outcome (the repository-level slug-mismatch behavior
+        // is covered by the Wave 1/2 repository tests).
+        final mismatchedProject = project.copyWithFolderId('MISMATCHED-Slug');
 
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            roadmapProvider(mismatchedProject).overrideWith(
-              (ref) async => const RoadmapResult(
-                data: RoadmapData.empty,
-                source: RoadmapSource.vault,
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              roadmapProvider(mismatchedProject).overrideWith(
+                (ref) async => const RoadmapResult(
+                  data: RoadmapData.empty,
+                  source: RoadmapSource.vault,
+                ),
               ),
-            ),
-          ],
-          child: MaterialApp(
-            theme:
-                ThemeData.dark().copyWith(extensions: const [AppColors.dark]),
-            home: Scaffold(
-              body: RoadmapTab(
-                project: mismatchedProject,
-                accent: AppColors.dark.cyan,
+            ],
+            child: MaterialApp(
+              theme: ThemeData.dark().copyWith(
+                extensions: const [AppColors.dark],
+              ),
+              home: Scaffold(
+                body: RoadmapTab(
+                  project: mismatchedProject,
+                  accent: AppColors.dark.cyan,
+                ),
               ),
             ),
           ),
-        ),
-      );
-      await tester.pumpAndSettle();
+        );
+        await tester.pumpAndSettle();
 
-      expect(find.text('Keine Roadmap-Daten vorhanden'), findsOneWidget);
-    });
+        expect(find.text('Keine Roadmap-Daten vorhanden'), findsOneWidget);
+      },
+    );
   });
 
   group('RoadmapTab — FR-012/FR-013 read-only audit', () {
-    testWidgets('no write-affordance widgets anywhere in the tab',
-        (tester) async {
+    testWidgets('no write-affordance widgets anywhere in the tab', (
+      tester,
+    ) async {
       await pumpTab(
         tester,
         result: const RoadmapResult(
@@ -278,8 +286,9 @@ void main() {
       ],
     );
 
-    testWidgets('tapping a phase with many specs shows a spec list',
-        (tester) async {
+    testWidgets('tapping a phase with many specs shows a spec list', (
+      tester,
+    ) async {
       await pumpTab(
         tester,
         result: const RoadmapResult(
@@ -295,8 +304,9 @@ void main() {
       expect(find.text('Spec B'), findsOneWidget);
     });
 
-    testWidgets('tapping a phase with exactly one spec still shows a list',
-        (tester) async {
+    testWidgets('tapping a phase with exactly one spec still shows a list', (
+      tester,
+    ) async {
       await pumpTab(
         tester,
         result: const RoadmapResult(
@@ -325,8 +335,10 @@ void main() {
       await tester.tap(find.text('Phase 1: Setup'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Keine Specs fuer diese Phase vorhanden'),
-          findsOneWidget);
+      expect(
+        find.text('Keine Specs fuer diese Phase vorhanden'),
+        findsOneWidget,
+      );
     });
 
     testWidgets('tapping a spec renders its full content', (tester) async {
@@ -371,86 +383,56 @@ void main() {
     });
 
     testWidgets(
-        'a malformed/missing spec file shows a fallback message, no crash',
-        (tester) async {
-      const dataWithMissingSpec = RoadmapData(
-        milestones: [
-          RoadmapMilestone(
-            name: 'M1 — Fundament',
-            status: 'done',
-            phases: [
-              RoadmapPhase(
-                name: 'Phase 1: Setup',
-                status: 'done',
-                specs: [
-                  RoadmapSpecRef(
-                    title: 'Broken Spec',
-                    path: '/nonexistent/path/broken.md',
-                  ),
-                ],
-              ),
-            ],
+      'a malformed/missing spec file shows a fallback message, no crash',
+      (tester) async {
+        const dataWithMissingSpec = RoadmapData(
+          milestones: [
+            RoadmapMilestone(
+              name: 'M1 — Fundament',
+              status: 'done',
+              phases: [
+                RoadmapPhase(
+                  name: 'Phase 1: Setup',
+                  status: 'done',
+                  specs: [
+                    RoadmapSpecRef(
+                      title: 'Broken Spec',
+                      path: '/nonexistent/path/broken.md',
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ],
+        );
+
+        await pumpTab(
+          tester,
+          result: const RoadmapResult(
+            data: dataWithMissingSpec,
+            source: RoadmapSource.local,
           ),
-        ],
-      );
+        );
 
-      await pumpTab(
-        tester,
-        result: const RoadmapResult(
-          data: dataWithMissingSpec,
-          source: RoadmapSource.local,
-        ),
-      );
+        await tester.tap(find.text('Phase 1: Setup'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Broken Spec'));
+        await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Phase 1: Setup'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Broken Spec'));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Spec konnte nicht angezeigt werden'), findsOneWidget);
-      expect(tester.takeException(), isNull);
-    });
+        expect(find.text('Spec konnte nicht angezeigt werden'), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      },
+    );
   });
 
   group('RoadmapTab — FR-011 "What\'s next" indicator', () {
-    testWidgets('shows the current phase when parsable', (tester) async {
-      final gsdProject = ProjectModel(
-        folderId: project.folderId,
-        displayName: project.displayName,
-        path: project.path,
-        projectType: project.projectType,
-        gsd: const GsdData(currentPhase: '3 of 5 (API Layer)'),
-      );
-
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            roadmapProvider(gsdProject).overrideWith(
-              (ref) async => const RoadmapResult(
-                data: populatedData,
-                source: RoadmapSource.local,
-              ),
-            ),
-          ],
-          child: MaterialApp(
-            theme:
-                ThemeData.dark().copyWith(extensions: const [AppColors.dark]),
-            home: Scaffold(
-              body: RoadmapTab(project: gsdProject, accent: AppColors.dark.cyan),
-            ),
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      expect(
-        find.textContaining('3 of 5 (API Layer)'),
-        findsOneWidget,
-      );
-    });
-
-    testWidgets('hides gracefully when no current phase is parsable',
-        (tester) async {
+    // Note: RoadmapTab no longer has a source for "current phase" (the GSD
+    // legacy system that used to supply it was removed) — it always passes
+    // `currentPhase: null` to WhatsNextIndicator, so only the graceful-hide
+    // behavior is exercised here.
+    testWidgets('hides gracefully when no current phase is parsable', (
+      tester,
+    ) async {
       await pumpTab(
         tester,
         result: const RoadmapResult(
@@ -469,9 +451,9 @@ void main() {
 /// Vault/Brain-facing slug) to simulate a slug-mismatch scenario.
 extension _ProjectModelTestX on ProjectModel {
   ProjectModel copyWithFolderId(String folderId) => ProjectModel(
-        folderId: folderId,
-        displayName: displayName,
-        path: path,
-        projectType: projectType,
-      );
+    folderId: folderId,
+    displayName: displayName,
+    path: path,
+    projectType: projectType,
+  );
 }

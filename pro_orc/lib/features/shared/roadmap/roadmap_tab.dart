@@ -49,7 +49,7 @@ class RoadmapTab extends ConsumerWidget {
             source: result.source,
             colors: colors,
             accent: accent,
-            currentPhase: project.gsd?.currentPhase,
+            currentPhase: null,
           );
         },
       ),
@@ -127,10 +127,7 @@ class _RoadmapSplitViewState extends State<_RoadmapSplitView> {
                   onPhaseSelected: _selectPhase,
                 ),
               ),
-              Container(
-                width: 1,
-                color: colors.bgElev.withValues(alpha: 0.8),
-              ),
+              Container(width: 1, color: colors.bgElev.withValues(alpha: 0.8)),
               // Detail pane: ~65% width. Phase -> spec-list -> full-spec
               // navigation (Wave 4).
               Expanded(

@@ -4,10 +4,10 @@ import 'package:pro_orc/theme/n3_colors.dart';
 /// Compact "What's next" indicator for the Roadmap tab's detail hero
 /// (FR-011).
 ///
-/// Reuses `GsdData.currentPhase` (parsed by the existing `GsdParser` — `N of
-/// N` / phase-heading extraction) verbatim; no new parser is introduced.
-/// Renders nothing when the current phase can't be parsed, matching the
-/// project's "hide gracefully, never show a raw error" convention.
+/// Renders nothing when no current phase is supplied, matching the
+/// project's "hide gracefully, never show a raw error" convention. The
+/// GSD legacy system that used to supply `currentPhase` has been removed;
+/// callers currently always pass `null`, so this indicator never renders.
 class WhatsNextIndicator extends StatelessWidget {
   const WhatsNextIndicator({
     super.key,

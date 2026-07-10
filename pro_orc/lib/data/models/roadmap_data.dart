@@ -44,13 +44,13 @@ class RoadmapSpecRef {
 /// One phase within a milestone.
 ///
 /// `status` intentionally reuses the existing status vocabulary produced by
-/// `GsdParser._deriveStatus` (done/building/planning/paused/…) — this model
+/// `deriveDisplayStatus` (done/building/planning/paused/…) — this model
 /// does not introduce a new vocabulary (FR-003).
 class RoadmapPhase {
   /// Phase name, e.g. `M6-learning-loop` or `Phase 3: UI Shell`.
   final String name;
 
-  /// Normalized status string (see `GsdParser._deriveStatus` for the
+  /// Normalized status string (see `deriveDisplayStatus` for the
   /// vocabulary). Never null — tiers must supply `'unknown'` or similar if
   /// they cannot classify.
   final String status;
