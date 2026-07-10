@@ -4,7 +4,6 @@ import 'dart:io';
 
 import 'package:path/path.dart' as p;
 
-import 'package:pro_orc/data/models/agent_category.dart';
 import 'package:pro_orc/data/models/claude_tool_model.dart';
 
 /// Pure Dart service that discovers Skills, Plugins, and MCP servers from
@@ -628,7 +627,6 @@ class ClaudeToolsScanner {
             .toList();
 
         final name = frontmatter['name'] ?? id;
-        final category = name.startsWith('gsd-') ? AgentCategory.gsd : AgentCategory.general;
 
         result.add(AgentData(
           id: id,
@@ -638,7 +636,6 @@ class ClaudeToolsScanner {
           model: frontmatter['model'],
           tools: tools,
           path: entity.path,
-          category: category,
           scope: scope,
           projectName: projectName,
         ));

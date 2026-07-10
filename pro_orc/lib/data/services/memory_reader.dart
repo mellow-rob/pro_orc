@@ -89,7 +89,7 @@ Future<DateTime?> memoryFileSignature(
 ///
 /// Claude creates project directories with inconsistent naming:
 /// - Sometimes `$HOME/code/my_app` → `-home-user-code-my-app`
-/// - Sometimes with suffixes like `-gsd`
+/// - Sometimes with extra suffixes appended
 /// - Sometimes from parent directories (shorter prefix)
 ///
 /// Strategy:

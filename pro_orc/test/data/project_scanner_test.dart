@@ -6,7 +6,6 @@ import 'package:path/path.dart' as p;
 import 'package:test/test.dart';
 
 import 'package:pro_orc/data/db/app_database.dart';
-import 'package:pro_orc/data/models/gsd_status.dart';
 import 'package:pro_orc/data/models/project_type.dart';
 import 'package:pro_orc/data/services/project_scanner.dart';
 
@@ -14,10 +13,10 @@ import 'package:pro_orc/data/services/project_scanner.dart';
 // Test helpers
 // ---------------------------------------------------------------------------
 
-/// Creates a temporary directory containing a basic GSD project structure.
-Future<Directory> createGsdProject(Directory parent, String name, {
-  String? status,
-  String? phase,
+/// Creates a temporary directory containing a `.planning/` project structure
+/// (PROJECT.md with H1 + description) — still a recognized project marker
+/// even though its contents are no longer parsed into a structured model.
+Future<Directory> createPlanningProject(Directory parent, String name, {
   bool withGit = false,
 }) async {
   final dir = Directory(p.join(parent.path, name));
@@ -25,14 +24,6 @@ Future<Directory> createGsdProject(Directory parent, String name, {
 
   final planningDir = Directory(p.join(dir.path, '.planning'));
   await planningDir.create();
-
-  // Write STATE.md
-  final stateContent = '''# Project State
-
-**Status:** ${status ?? 'building'}
-**Phase:** ${phase ?? '1 of 3'}
-''';
-  await File(p.join(planningDir.path, 'STATE.md')).writeAsString(stateContent);
 
   // Write PROJECT.md
   final projectContent = '''# $name
@@ -55,7 +46,7 @@ Test project description for $name.
   return dir;
 }
 
-/// Creates a plain (non-GSD) project directory with a git repo
+/// Creates a plain project directory with a git repo
 /// so the scanner's `_isProjectDir` recognises it.
 Future<Directory> createPlainProject(Directory parent, String name) async {
   final dir = Directory(p.join(parent.path, name));
@@ -204,45 +195,33 @@ void main() {
     });
 
     // -----------------------------------------------------------------------
-    // GSD data assembly
+    // Project metadata (displayName/description) assembly
     // -----------------------------------------------------------------------
 
-    group('GSD data assembly', () {
-      test('non-GSD project gets null gsd field', () async {
-        await createPlainProject(scanRoot, 'plain-project');
-
-        final results = await scanner.scanAll(scanDirOverride: scanRoot.path);
-        expect(results.length, equals(1));
-        expect(results.first.gsd, isNull);
-        expect(results.first.hasParseError, isFalse);
-      });
-
-      test('GSD project has gsd field populated', () async {
-        await createGsdProject(scanRoot, 'gsd-project', status: 'building', phase: '2 of 5');
-
-        final results = await scanner.scanAll(scanDirOverride: scanRoot.path);
-        expect(results.length, equals(1));
-        final proj = results.first;
-        expect(proj.gsd, isNotNull);
-        expect(proj.gsd!.isEmpty, isFalse);
-      });
-
-      test('displayName comes from PROJECT.md H1 for GSD project', () async {
-        await createGsdProject(scanRoot, 'my-project');
+    group('project metadata assembly', () {
+      test('displayName comes from PROJECT.md H1', () async {
+        await createPlanningProject(scanRoot, 'my-project');
 
         final results = await scanner.scanAll(scanDirOverride: scanRoot.path);
         expect(results.first.displayName, equals('my-project'));
       });
 
-      test('displayName falls back to folder name for non-GSD project', () async {
+      test('displayName falls back to folder name when no PROJECT.md/CLAUDE.md', () async {
         await createPlainProject(scanRoot, 'folder-name');
 
         final results = await scanner.scanAll(scanDirOverride: scanRoot.path);
         expect(results.first.displayName, equals('folder-name'));
       });
 
+      test('description comes from PROJECT.md Core Value section', () async {
+        await createPlanningProject(scanRoot, 'my-project');
+
+        final results = await scanner.scanAll(scanDirOverride: scanRoot.path);
+        expect(results.first.description, contains('Test project description'));
+      });
+
       test('DB displayName override beats PROJECT.md H1', () async {
-        await createGsdProject(scanRoot, 'my-project');
+        await createPlanningProject(scanRoot, 'my-project');
         await db.setProjectDisplayName('my-project', 'Custom Name');
 
         final results = await scanner.scanAll(scanDirOverride: scanRoot.path);
@@ -250,7 +229,7 @@ void main() {
       });
 
       test('clearing DB displayName falls back to PROJECT.md H1', () async {
-        await createGsdProject(scanRoot, 'my-project');
+        await createPlanningProject(scanRoot, 'my-project');
         await db.setProjectDisplayName('my-project', 'Custom Name');
         await db.setProjectDisplayName('my-project', null);
 
@@ -259,7 +238,7 @@ void main() {
       });
 
       test('whitespace-only DB displayName is treated as cleared', () async {
-        await createGsdProject(scanRoot, 'my-project');
+        await createPlanningProject(scanRoot, 'my-project');
         await db.setProjectDisplayName('my-project', '   ');
 
         final results = await scanner.scanAll(scanDirOverride: scanRoot.path);
@@ -287,15 +266,15 @@ void main() {
 
     group('git data assembly', () {
       test('non-git project gets null git field', () async {
-        // Create a GSD project without git (has .planning/ but no .git/)
-        await createGsdProject(scanRoot, 'no-git-project');
+        // Create a project without git (has .planning/ but no .git/)
+        await createPlanningProject(scanRoot, 'no-git-project');
 
         final results = await scanner.scanAll(scanDirOverride: scanRoot.path);
         expect(results.first.git, isNull);
       });
 
       test('git project gets git field populated', () async {
-        await createGsdProject(scanRoot, 'git-project', withGit: true);
+        await createPlanningProject(scanRoot, 'git-project', withGit: true);
 
         final results = await scanner.scanAll(scanDirOverride: scanRoot.path);
         expect(results.first.git, isNotNull);
@@ -363,21 +342,14 @@ void main() {
 
     group('stale detection', () {
       test('non-stale git project: recent commit returns isStale=false', () async {
-        await createGsdProject(scanRoot, 'fresh-git-project', withGit: true);
+        await createPlanningProject(scanRoot, 'fresh-git-project', withGit: true);
 
         final results = await scanner.scanAll(scanDirOverride: scanRoot.path);
         expect(results.first.isStale, isFalse);
       });
 
-      test('non-git, non-GSD project with no signal is not stale', () async {
+      test('non-git project with no signal is not stale', () async {
         await createPlainProject(scanRoot, 'no-signal-project');
-
-        final results = await scanner.scanAll(scanDirOverride: scanRoot.path);
-        expect(results.first.isStale, isFalse);
-      });
-
-      test('GSD project without git: recent STATE.md is not stale', () async {
-        await createGsdProject(scanRoot, 'gsd-no-git');
 
         final results = await scanner.scanAll(scanDirOverride: scanRoot.path);
         expect(results.first.isStale, isFalse);
@@ -389,9 +361,9 @@ void main() {
     // -----------------------------------------------------------------------
 
     group('mixed project types', () {
-      test('scan dir with mix of GSD, git, and plain projects', () async {
-        await createGsdProject(scanRoot, 'full-project', withGit: true);
-        await createGsdProject(scanRoot, 'gsd-only');
+      test('scan dir with mix of .planning/, git, and plain projects', () async {
+        await createPlanningProject(scanRoot, 'full-project', withGit: true);
+        await createPlanningProject(scanRoot, 'planning-only');
         await createPlainProject(scanRoot, 'plain-project');
 
         final results = await scanner.scanAll(scanDirOverride: scanRoot.path);
@@ -399,16 +371,13 @@ void main() {
 
         final byId = {for (final r in results) r.folderId: r};
 
-        // full-project: has GSD and git
-        expect(byId['full-project']!.gsd, isNotNull);
+        // full-project: has .planning/ and git
         expect(byId['full-project']!.git, isNotNull);
 
-        // gsd-only: has GSD but no git
-        expect(byId['gsd-only']!.gsd, isNotNull);
-        expect(byId['gsd-only']!.git, isNull);
+        // planning-only: has .planning/ but no git
+        expect(byId['planning-only']!.git, isNull);
 
-        // plain-project: no GSD, has git (createPlainProject inits git)
-        expect(byId['plain-project']!.gsd, isNull);
+        // plain-project: no .planning/, has git (createPlainProject inits git)
         expect(byId['plain-project']!.git, isNotNull);
       });
     });
@@ -419,7 +388,7 @@ void main() {
 
     group('memory data integration', () {
       test('scanned project has memory == null when no MEMORY.md exists', () async {
-        await createGsdProject(scanRoot, 'no-memory-project');
+        await createPlanningProject(scanRoot, 'no-memory-project');
 
         final results = await scanner.scanAll(scanDirOverride: scanRoot.path);
         expect(results.length, equals(1));
@@ -427,7 +396,7 @@ void main() {
       });
 
       test('ProjectModel.memory field is accessible for UI layer', () async {
-        await createGsdProject(scanRoot, 'memory-check-project');
+        await createPlanningProject(scanRoot, 'memory-check-project');
 
         final results = await scanner.scanAll(scanDirOverride: scanRoot.path);
         final project = results.first;
@@ -474,7 +443,7 @@ void main() {
 
       test('rescan after MEMORY.md is updated returns the new consolidation time',
           () async {
-        final projectDir = await createGsdProject(scanRoot, 'memory-cache-project');
+        final projectDir = await createPlanningProject(scanRoot, 'memory-cache-project');
         final encoded = encode(projectDir.path);
         final memoryDir = Directory(
           p.join(claudeHome.path, 'projects', encoded, 'memory'),
@@ -521,7 +490,7 @@ void main() {
 
     group('_FileCache (repeated scanAll calls)', () {
       test('second scanAll() returns same results as first', () async {
-        await createGsdProject(scanRoot, 'cached-project');
+        await createPlanningProject(scanRoot, 'cached-project');
         await createPlainProject(scanRoot, 'plain-project');
 
         final results1 = await scanner.scanAll(scanDirOverride: scanRoot.path);
@@ -534,20 +503,19 @@ void main() {
         }
       });
 
-      test('scan after file content changes picks up new data', () async {
-        final projDir = await createGsdProject(scanRoot, 'updating-project',
-            status: 'planning');
+      test('scan after PROJECT.md content changes picks up new data', () async {
+        final projDir = await createPlanningProject(scanRoot, 'updating-project');
 
         final results1 = await scanner.scanAll(scanDirOverride: scanRoot.path);
-        expect(results1.first.gsd!.status, equals(GsdStatus.planning));
+        expect(results1.first.displayName, equals('updating-project'));
 
-        // Modify STATE.md with a small delay to change mtime
+        // Modify PROJECT.md with a small delay to change mtime
         await Future.delayed(const Duration(milliseconds: 50));
-        await File(p.join(projDir.path, '.planning', 'STATE.md'))
-            .writeAsString('# Project State\n\n**Status:** done\n');
+        await File(p.join(projDir.path, '.planning', 'PROJECT.md'))
+            .writeAsString('# Renamed Project\n\n## Core Value\n\nNew description.\n');
 
         final results2 = await scanner.scanAll(scanDirOverride: scanRoot.path);
-        expect(results2.first.gsd!.status, equals(GsdStatus.done));
+        expect(results2.first.displayName, equals('Renamed Project'));
       });
     });
 
@@ -557,8 +525,8 @@ void main() {
 
     group('rescan caching (git/memory/used-agents)', () {
       test('unrelated project is unaffected when only one project changes', () async {
-        await createGsdProject(scanRoot, 'project-a', withGit: true);
-        await createGsdProject(scanRoot, 'project-b', withGit: true);
+        await createPlanningProject(scanRoot, 'project-a', withGit: true);
+        await createPlanningProject(scanRoot, 'project-b', withGit: true);
 
         final results1 = await scanner.scanAll(scanDirOverride: scanRoot.path);
         final byId1 = {for (final r in results1) r.folderId: r};
@@ -589,7 +557,7 @@ void main() {
 
       test('repeated scanAll() with no changes returns stable git data from cache',
           () async {
-        await createGsdProject(scanRoot, 'stable-project', withGit: true);
+        await createPlanningProject(scanRoot, 'stable-project', withGit: true);
 
         final results1 = await scanner.scanAll(scanDirOverride: scanRoot.path);
         final results2 = await scanner.scanAll(scanDirOverride: scanRoot.path);

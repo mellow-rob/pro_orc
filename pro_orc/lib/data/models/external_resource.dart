@@ -1,8 +1,5 @@
 /// Enum representing the type of external resource linked to a project.
 enum ExternalResourceType {
-  /// Notion page or database
-  notion,
-
   /// GitHub repository
   github,
 
@@ -24,7 +21,7 @@ class ExternalResource {
   /// The category of this resource.
   final ExternalResourceType type;
 
-  /// Human-readable German label, e.g. "Notion-Seite", "GitHub-Repository".
+  /// Human-readable German label, e.g. "GitHub-Repository", "Figma-Design".
   final String label;
 
   /// The URL or absolute filesystem path to the resource.

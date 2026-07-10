@@ -34,12 +34,6 @@ List<QuickAction> buildProjectQuickActions(
         tooltip: 'GitHub',
         onPressed: () => qa.openUrl(project.git!.githubUrl!),
       ),
-    if (project.gsd?.notionUrl != null)
-      QuickAction(
-        icon: LucideIcons.fileText100,
-        tooltip: 'Notion',
-        onPressed: () => qa.openUrl(project.gsd!.notionUrl!),
-      ),
     if (project.memory != null)
       QuickAction(
         icon: LucideIcons.moonStar100,

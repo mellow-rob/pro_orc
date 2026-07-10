@@ -94,8 +94,6 @@ class _DeleteProjectDialogState extends ConsumerState<DeleteProjectDialog> {
 
   IconData _iconForType(ExternalResourceType type) {
     switch (type) {
-      case ExternalResourceType.notion:
-        return Icons.article_outlined;
       case ExternalResourceType.github:
         return Icons.code;
       case ExternalResourceType.figma:

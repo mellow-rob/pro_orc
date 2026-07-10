@@ -8,7 +8,7 @@ class GraphNode {
   final GraphNodeKind kind;
 
   /// True for agents/skills that live in the project's own `.claude/`
-  /// directory, as opposed to a globally-defined GSD agent referenced by
+  /// directory, as opposed to a globally-defined agent referenced by
   /// name only (from `ProjectModel.usedAgents`).
   final bool isLocal;
 
@@ -29,7 +29,7 @@ class GraphEdge {
 }
 
 /// Prepared node/edge data for a project-focused collaboration mini-graph:
-/// the project itself, its local agents, its local skills, and the GSD
+/// the project itself, its local agents, its local skills, and the
 /// agents it references by name (`ProjectModel.usedAgents`).
 class CollaborationGraphData {
   final GraphNode projectNode;
@@ -47,7 +47,7 @@ class CollaborationGraphData {
   bool get isEmpty => agentNodes.isEmpty && skillNodes.isEmpty;
 
   /// Builds graph data for [projectId]/[projectName] from its local agent
-  /// names, local skill names, and the GSD agent names it references
+  /// names, local skill names, and the agent names it references
   /// (`usedAgents`). Local names always win over a same-named used-agent
   /// entry to avoid duplicate nodes.
   factory CollaborationGraphData.build({

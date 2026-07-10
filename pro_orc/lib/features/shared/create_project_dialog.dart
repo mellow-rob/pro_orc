@@ -42,14 +42,12 @@ class _CreateProjectDialogState extends ConsumerState<CreateProjectDialog>
 
   // Code tab toggles
   bool _gitInit = true;
-  bool _gsdSkeleton = true;
   bool _claudeMd = true;
   bool _terminal = true;
   bool _codeRemSleep = false;
   GitignoreTemplate _gitignoreTemplate = GitignoreTemplate.none;
 
   // Research tab toggles
-  bool _notion = true;
   bool _researchTerminal = true;
   bool _researchRemSleep = true;
 
@@ -121,13 +119,11 @@ class _CreateProjectDialogState extends ConsumerState<CreateProjectDialog>
       setState(() {
         if (_tabController.index == 0) {
           _gitInit = true;
-          _gsdSkeleton = true;
           _claudeMd = true;
           _terminal = true;
           _codeRemSleep = false;
           _gitignoreTemplate = GitignoreTemplate.none;
         } else {
-          _notion = true;
           _researchTerminal = true;
           _researchRemSleep = true;
         }
@@ -197,7 +193,6 @@ class _CreateProjectDialogState extends ConsumerState<CreateProjectDialog>
       displayName: _nameController.text.trim(),
       projectType: isCode ? ProjectType.code : ProjectType.research,
       gitInit: isCode ? _gitInit : false,
-      gsdSkeleton: isCode ? _gsdSkeleton : false,
       claudeMd: isCode ? _claudeMd : false,
       gitignoreTemplate: isCode ? _gitignoreTemplate : GitignoreTemplate.none,
     );
@@ -231,8 +226,6 @@ class _CreateProjectDialogState extends ConsumerState<CreateProjectDialog>
         'result': result,
         'wantsTerminal': wantsTerminal,
         'wantsRemSleep': wantsRemSleep,
-        'wantsNotion': !isCode && _notion,
-        'displayName': _nameController.text.trim(),
       });
     } else {
       // Creation failed — show error, reset loading
@@ -420,13 +413,6 @@ class _CreateProjectDialogState extends ConsumerState<CreateProjectDialog>
         _buildToggle(
           colors: colors,
           accent: accent,
-          title: 'GSD Skeleton anlegen',
-          value: _gsdSkeleton,
-          onChanged: (v) => setState(() => _gsdSkeleton = v),
-        ),
-        _buildToggle(
-          colors: colors,
-          accent: accent,
           title: 'CLAUDE.md erstellen',
           value: _claudeMd,
           onChanged: (v) => setState(() => _claudeMd = v),
@@ -464,13 +450,6 @@ class _CreateProjectDialogState extends ConsumerState<CreateProjectDialog>
     final researchToggles = Column(
       key: const ValueKey('research-toggles'),
       children: [
-        _buildToggle(
-          colors: colors,
-          accent: accent,
-          title: 'Notion-Seite erstellen',
-          value: _notion,
-          onChanged: (v) => setState(() => _notion = v),
-        ),
         _buildToggle(
           colors: colors,
           accent: accent,

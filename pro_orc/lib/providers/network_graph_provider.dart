@@ -9,7 +9,7 @@ import 'package:pro_orc/providers/projects_provider.dart';
 ///
 /// For every scanned project it combines the project's local `.claude/`
 /// agents/skills (via [projectToolsByPathProvider], which caches per-project
-/// scans — M3) with the GSD agent names it references (`usedAgents`), then
+/// scans — M3) with the agent names it references (`usedAgents`), then
 /// hands the per-project inputs to [MultiCollaborationGraphData.buildAll],
 /// which deduplicates shared agents/skills into single bridging nodes (M7
 /// AD-2).

@@ -101,7 +101,7 @@ void main() {
     });
 
     test('detects hasPlanning when .planning/ exists', () async {
-      final projectDir = Directory(p.join(tempDir.path, 'gsd-project'));
+      final projectDir = Directory(p.join(tempDir.path, 'planning-project'));
       await projectDir.create();
       await Directory(p.join(projectDir.path, '.planning')).create();
 
@@ -199,54 +199,6 @@ void main() {
 
     tearDown(() async {
       await tempDir.delete(recursive: true);
-    });
-
-    test('creates .planning/ skeleton when gsdSkeleton=true and missing',
-        () async {
-      final projectDir = Directory(p.join(tempDir.path, 'new-project'));
-      await projectDir.create();
-
-      final result = await scaffoldProject(
-        projectPath: projectDir.path,
-        displayName: 'New Project',
-        gsdSkeleton: true,
-      );
-
-      expect(result.created, isNotEmpty);
-      expect(
-        Directory(p.join(projectDir.path, '.planning')).existsSync(),
-        isTrue,
-      );
-      expect(
-        File(p.join(projectDir.path, '.planning', 'PROJECT.md')).existsSync(),
-        isTrue,
-      );
-      expect(
-        File(p.join(projectDir.path, '.planning', 'STATE.md')).existsSync(),
-        isTrue,
-      );
-    });
-
-    test('skips .planning/ when already exists', () async {
-      final projectDir = Directory(p.join(tempDir.path, 'existing-gsd'));
-      await projectDir.create();
-      final planningDir = Directory(p.join(projectDir.path, '.planning'));
-      await planningDir.create();
-      await File(p.join(planningDir.path, 'STATE.md'))
-          .writeAsString('existing');
-
-      final result = await scaffoldProject(
-        projectPath: projectDir.path,
-        displayName: 'Existing',
-        gsdSkeleton: true,
-      );
-
-      // Should not have created .planning files
-      expect(result.created.where((f) => f.contains('.planning')), isEmpty);
-      // Original content preserved
-      final content =
-          await File(p.join(planningDir.path, 'STATE.md')).readAsString();
-      expect(content, 'existing');
     });
 
     test('creates CLAUDE.md when claudeMd=true and missing', () async {
@@ -366,7 +318,6 @@ void main() {
         projectPath: projectDir.path,
         displayName: 'Auto Commit',
         claudeMd: true,
-        gsdSkeleton: true,
       );
 
       // Verify commit was made
@@ -379,7 +330,6 @@ void main() {
       final projectDir = Directory(p.join(tempDir.path, 'no-commit'));
       await projectDir.create();
       // Pre-create everything
-      await Directory(p.join(projectDir.path, '.planning')).create();
       await File(p.join(projectDir.path, 'CLAUDE.md')).writeAsString('x');
       // Init git
       await Process.run('git', ['init'],
@@ -397,7 +347,6 @@ void main() {
         projectPath: projectDir.path,
         displayName: 'No Commit',
         claudeMd: true,
-        gsdSkeleton: true,
       );
 
       // Should still only have one commit

@@ -1,14 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
-import 'package:pro_orc/data/models/gsd_status.dart';
 import 'package:pro_orc/data/models/project_model.dart';
 import 'package:pro_orc/data/models/project_type.dart';
 import 'package:pro_orc/features/shared/memory_indicator.dart';
 import 'package:pro_orc/features/shared/project_context_menu.dart';
 import 'package:pro_orc/features/shared/quick_actions.dart';
 import 'package:pro_orc/features/shared/session_live_indicator.dart';
-import 'package:pro_orc/features/shared/status_badge.dart';
 import 'package:pro_orc/features/shell/glass_card.dart';
 import 'package:pro_orc/providers/database_provider.dart';
 import 'package:pro_orc/providers/hidden_projects_provider.dart';
@@ -17,8 +15,8 @@ import 'package:pro_orc/theme/n3_colors.dart';
 
 /// Card widget for a single code project.
 ///
-/// Renders: name + version, status badge, progress bar, next step,
-/// description, and quick action buttons (Terminal, Finder, GitHub, Notion).
+/// Renders: name, optional a1 progress block, description, memory indicator,
+/// and quick action buttons (Terminal, Finder, GitHub).
 ///
 /// Hover adds a subtle cyan glow. Right-click shows Ausblenden/Einblenden
 /// context menu (locked decision). Eye icon in title row does the same toggle.
@@ -100,23 +98,14 @@ class _CodeProjectCardState extends ConsumerState<CodeProjectCard> {
         _buildTitleRow(colors, isHidden),
         const SizedBox(height: 10),
 
-        // --- GSD progress block (3 lines: status+%, bar, phases+plans) ---
-        // Falls back to a1 phase progress when a project has no GSD .planning/.
-        if (widget.project.gsd != null)
-          _buildGsdBlock(colors)
-        else if (_a1Progress != null)
-          _buildA1Block(colors, _a1Progress!)
-        else
-          _buildGsdBlock(colors),
-
-        // --- Next step (conditional) ---
-        if (widget.project.gsd?.nextStep != null) ...[
+        // --- a1 progress block (only shown when the project has .a1/ phases) ---
+        if (_a1Progress != null) ...[
+          _buildA1Block(colors, _a1Progress!),
           const SizedBox(height: 10),
-          _buildNextStep(colors, widget.project.gsd!.nextStep!),
         ],
 
-        // --- Memory indicator (below next step) ---
-        const SizedBox(height: 14),
+        // --- Memory indicator ---
+        const SizedBox(height: 4),
         MemoryIndicator(
           memory: widget.project.memory,
           colors: colors,
@@ -139,7 +128,6 @@ class _CodeProjectCardState extends ConsumerState<CodeProjectCard> {
   }
 
   Widget _buildTitleRow(AppColors colors, bool isHidden) {
-    final version = widget.project.gsd?.version;
     final sessionsAsync = ref.watch(projectSessionsProvider(widget.project.path));
     final hasActiveSession = sessionsAsync.value?.hasActiveSession ?? false;
 
@@ -165,13 +153,6 @@ class _CodeProjectCardState extends ConsumerState<CodeProjectCard> {
                 const SizedBox(width: 6),
                 SessionLiveIndicator(colors: colors),
               ],
-              if (version != null) ...[
-                const SizedBox(width: 6),
-                Text(
-                  version,
-                  style: TextStyle(color: colors.textSec, fontSize: 11),
-                ),
-              ],
             ],
           ),
         ),
@@ -196,82 +177,11 @@ class _CodeProjectCardState extends ConsumerState<CodeProjectCard> {
     );
   }
 
-  Widget _buildGsdBlock(AppColors colors) {
-    final gsd = widget.project.gsd;
-    final progress = gsd?.phaseProgress;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Line 1: Status badge (left) + percent (right)
-        Row(
-          children: [
-            GsdStatusBadge(status: gsd?.status),
-            if (widget.project.hasParseError) ...[
-              const SizedBox(width: 8),
-              Tooltip(
-                message: 'Parse error',
-                child: Icon(LucideIcons.triangleAlert100, color: const Color(0xFFF59E0B), size: 13),
-              ),
-            ],
-            const Spacer(),
-            if (progress != null)
-              Text(
-                '${progress.clamp(0, 100)}%',
-                style: TextStyle(color: colors.textSec, fontSize: 11),
-              ),
-          ],
-        ),
-
-        // Line 2: Progress bar
-        if (progress != null) ...[
-          const SizedBox(height: 8),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(4),
-            child: Container(
-              height: 4,
-              color: colors.bgElev,
-              child: FractionallySizedBox(
-                alignment: Alignment.centerLeft,
-                widthFactor: progress.clamp(0, 100) / 100.0,
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: colors.cyan,
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
-
-        // Line 3: Phases (left) + Plans (right) — hidden when complete
-        if (gsd?.status != GsdStatus.done && gsd?.status != GsdStatus.archived) ...[
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Text(
-                'Phase ${gsd?.phasesCompleted ?? '–'}/${gsd?.phasesTotal ?? '–'}',
-                style: TextStyle(color: colors.textSec, fontSize: 11),
-              ),
-              const Spacer(),
-              Text(
-                'Plans ${gsd?.plansCompleted ?? '–'}/${gsd?.plansTotal ?? '–'}',
-                style: TextStyle(color: colors.textSec, fontSize: 11),
-              ),
-            ],
-          ),
-        ],
-      ],
-    );
-  }
-
   /// Aggregate a1 phase progress (0-100), or null when the project has no
-  /// measurable a1 phases. Used as the card fallback when there is no GSD.
+  /// measurable a1 phases.
   int? get _a1Progress => widget.project.a1?.overallProgress;
 
-  /// Compact a1 progress block shown in place of the GSD block for projects
-  /// that plan with `.a1/` instead of `.planning/`.
+  /// Compact a1 progress block shown for projects that plan with `.a1/`.
   Widget _buildA1Block(AppColors colors, int progress) {
     final a1 = widget.project.a1!;
     final active = a1.activePhase;
@@ -356,25 +266,4 @@ class _CodeProjectCardState extends ConsumerState<CodeProjectCard> {
       ),
     );
   }
-
-  Widget _buildNextStep(AppColors colors, String nextStep) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Next: ',
-          style: TextStyle(color: colors.textDim, fontSize: 12),
-        ),
-        Expanded(
-          child: Text(
-            nextStep,
-            style: TextStyle(color: colors.textPri, fontSize: 12),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ),
-      ],
-    );
-  }
-
 }

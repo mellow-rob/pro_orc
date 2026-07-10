@@ -38,7 +38,6 @@ class _ImportProjectDialogState extends ConsumerState<ImportProjectDialog> {
   late ProjectType _selectedType;
 
   // Scaffold toggles (only meaningful when the corresponding file is missing)
-  bool _gsdSkeleton = true;
   bool _claudeMd = true;
   bool _gitInit = true;
   GitignoreTemplate _gitignoreTemplate = GitignoreTemplate.none;
@@ -57,13 +56,7 @@ class _ImportProjectDialogState extends ConsumerState<ImportProjectDialog> {
   }
 
   void _applyTypeDefaults(ProjectType type) {
-    if (type == ProjectType.research) {
-      _gsdSkeleton = false;
-      _gitInit = false;
-    } else {
-      _gsdSkeleton = true;
-      _gitInit = true;
-    }
+    _gitInit = type != ProjectType.research;
   }
 
   Color _accent(AppColors colors) =>
@@ -89,7 +82,6 @@ class _ImportProjectDialogState extends ConsumerState<ImportProjectDialog> {
       final result = await scaffoldProject(
         projectPath: widget.analysis.path,
         displayName: widget.analysis.folderName,
-        gsdSkeleton: !widget.analysis.hasPlanning && _gsdSkeleton,
         claudeMd: !widget.analysis.hasClaudeMd && _claudeMd,
         gitignoreTemplate:
             !widget.analysis.hasGitignore ? _gitignoreTemplate : GitignoreTemplate.none,
@@ -276,15 +268,6 @@ class _ImportProjectDialogState extends ConsumerState<ImportProjectDialog> {
           ),
         ),
         const SizedBox(height: 8),
-        // GSD Skeleton
-        _buildScaffoldRow(
-          colors: colors,
-          accent: accent,
-          title: 'GSD Skeleton (.planning/)',
-          exists: analysis.hasPlanning,
-          value: _gsdSkeleton,
-          onChanged: (v) => setState(() => _gsdSkeleton = v),
-        ),
         // CLAUDE.md
         _buildScaffoldRow(
           colors: colors,

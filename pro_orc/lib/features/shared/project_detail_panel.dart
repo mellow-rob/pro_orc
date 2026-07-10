@@ -5,8 +5,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:path/path.dart' as p;
 import 'package:pro_orc/data/models/a1_data.dart';
-import 'package:pro_orc/data/models/phase_info.dart';
-import 'package:pro_orc/data/models/phase_status.dart';
 import 'package:pro_orc/data/models/project_model.dart';
 import 'package:pro_orc/data/models/project_type.dart';
 import 'package:pro_orc/data/models/collaboration_graph.dart';
@@ -18,7 +16,6 @@ import 'package:pro_orc/features/shared/collaboration_mini_graph.dart';
 import 'package:pro_orc/features/shared/quick_actions.dart';
 import 'package:pro_orc/features/shared/rename_project_dialog.dart';
 import 'package:pro_orc/features/shared/skill_launcher_dialog.dart';
-import 'package:pro_orc/features/shared/status_badge.dart';
 import 'package:pro_orc/features/shell/glass_card.dart';
 import 'package:pro_orc/providers/claude_tools_provider.dart';
 import 'package:pro_orc/providers/database_provider.dart';
@@ -55,7 +52,7 @@ Future<void> showProjectDetail(BuildContext context, ProjectModel project) async
   );
 }
 
-/// Modal detail panel for a project, showing all available GSD data.
+/// Modal detail panel for a project, showing all available project data.
 ///
 /// Accent color follows project type: cyan for code, fuchsia for research.
 class ProjectDetailPanel extends ConsumerWidget {
@@ -105,9 +102,6 @@ class ProjectDetailPanel extends ConsumerWidget {
   }
 
   Widget _buildHeader(BuildContext context, AppColors colors, Color accent) {
-    final gsd = project.gsd;
-    final version = gsd?.version;
-
     return Container(
       padding: const EdgeInsets.fromLTRB(0, 16, 12, 16),
       child: Row(
@@ -170,24 +164,6 @@ class ProjectDetailPanel extends ConsumerWidget {
                     ),
                   ),
                 ),
-                if (version != null) ...[
-                  const SizedBox(width: 10),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: accent.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Text(
-                      version,
-                      style: TextStyle(
-                        color: accent,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
-                ],
               ],
             ),
           ),
@@ -213,40 +189,12 @@ class ProjectDetailPanel extends ConsumerWidget {
     AppColors colors,
     Color accent,
   ) {
-    final gsd = project.gsd;
     final git = project.git;
     final qa = ref.read(quickActionsProvider);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // --- Hero: Status + Progress ---
-        if (gsd != null && !gsd.isEmpty) ...[
-          _buildHeroSection(colors, accent, gsd),
-          const SizedBox(height: 20),
-        ],
-
-        // --- Naechster Schritt ---
-        if (gsd?.nextStep != null)
-          _SectionCard(
-            colors: colors,
-            accent: accent,
-            title: 'NAECHSTER SCHRITT',
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Icon(LucideIcons.arrowRight100, color: accent, size: 14),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: SelectableText(
-                    gsd!.nextStep!,
-                    style: TextStyle(color: colors.textPri, fontSize: 14),
-                  ),
-                ),
-              ],
-            ),
-          ),
-
         // --- Beschreibung ---
         if (project.description != null)
           _DescriptionSection(
@@ -264,26 +212,6 @@ class ProjectDetailPanel extends ConsumerWidget {
             child: _buildFilesSection(colors, accent),
           ),
 
-        // --- Phasen (Roadmap) ---
-        if (gsd?.phases != null && gsd!.phases!.isNotEmpty)
-          _SectionCard(
-            colors: colors,
-            accent: accent,
-            title: 'PHASEN',
-            child: Column(
-              children: [
-                for (int i = 0; i < gsd.phases!.length; i++) ...[
-                  _buildPhaseRow(colors, accent, gsd.phases![i]),
-                  if (i < gsd.phases!.length - 1)
-                    Divider(
-                      height: 1,
-                      color: colors.bgElev.withValues(alpha: 0.8),
-                    ),
-                ],
-              ],
-            ),
-          ),
-
         // --- a1 Roadmap (Milestones + Phasen-Fortschritt) ---
         if (project.a1 != null && !project.a1!.isEmpty)
           _buildA1Section(colors, accent, project.a1!),
@@ -298,16 +226,8 @@ class ProjectDetailPanel extends ConsumerWidget {
         // --- Sessions ---
         _buildSessionsSection(ref, colors, accent),
 
-        // --- Decisions (collapsed by default) ---
-        if (gsd?.decisions != null && gsd!.decisions!.isNotEmpty)
-          _DecisionsSection(
-            colors: colors,
-            accent: accent,
-            decisions: gsd.decisions!,
-          ),
-
         // --- Git & Links ---
-        if (git != null || (gsd != null && gsd.notionUrl != null))
+        if (git != null)
           _SectionCard(
             colors: colors,
             accent: accent,
@@ -315,7 +235,7 @@ class ProjectDetailPanel extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (git?.lastCommitHash != null)
+                if (git.lastCommitHash != null)
                   Padding(
                     padding: const EdgeInsets.only(bottom: 10),
                     child: Row(
@@ -323,7 +243,7 @@ class ProjectDetailPanel extends ConsumerWidget {
                         Icon(LucideIcons.gitCommitHorizontal100, color: colors.textDim, size: 14),
                         const SizedBox(width: 8),
                         Text(
-                          git!.lastCommitHash!,
+                          git.lastCommitHash!,
                           style: TextStyle(
                             color: colors.textSec,
                             fontSize: 13,
@@ -342,21 +262,13 @@ class ProjectDetailPanel extends ConsumerWidget {
                   spacing: 8,
                   runSpacing: 8,
                   children: [
-                    if (git?.githubUrl != null)
+                    if (git.githubUrl != null)
                       _LinkChip(
                         icon: LucideIcons.externalLink100,
                         label: 'GitHub',
                         accent: accent,
                         colors: colors,
-                        onTap: () => qa.openUrl(git!.githubUrl!),
-                      ),
-                    if (gsd?.notionUrl != null)
-                      _LinkChip(
-                        icon: LucideIcons.fileText100,
-                        label: 'Notion',
-                        accent: accent,
-                        colors: colors,
-                        onTap: () => qa.openUrl(gsd!.notionUrl!),
+                        onTap: () => qa.openUrl(git.githubUrl!),
                       ),
                   ],
                 ),
@@ -368,59 +280,6 @@ class ProjectDetailPanel extends ConsumerWidget {
         const SizedBox(height: 8),
         _buildQuickActions(context, colors, accent, qa),
       ],
-    );
-  }
-
-  Widget _buildHeroSection(AppColors colors, Color accent, dynamic gsd) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: colors.bgElev.withValues(alpha: 0.6),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Status badge + phase text
-          Row(
-            children: [
-              GsdStatusBadge(status: gsd.status),
-              if (gsd.currentPhase != null) ...[
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    'Phase ${gsd.currentPhase}',
-                    style: TextStyle(color: colors.textSec, fontSize: 13),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
-              // Plans counter
-              if (gsd.plansCompleted != null && gsd.plansTotal != null)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: accent.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Text(
-                    '${gsd.plansCompleted}/${gsd.plansTotal} Plans',
-                    style: TextStyle(
-                      color: accent,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-            ],
-          ),
-          // Progress bar
-          if (gsd.phaseProgress != null) ...[
-            const SizedBox(height: 14),
-            _buildProgressBar(colors, accent, gsd.phaseProgress!),
-          ],
-        ],
-      ),
     );
   }
 
@@ -461,8 +320,7 @@ class ProjectDetailPanel extends ConsumerWidget {
   }
 
   /// a1 roadmap/phase status section: milestones with a status badge, and each
-  /// phase that has checkboxes rendered with a progress bar. Mirrors the GSD
-  /// "PHASEN" section since a1 is the successor planning format.
+  /// phase that has checkboxes rendered with a progress bar.
   Widget _buildA1Section(AppColors colors, Color accent, A1Data a1) {
     final phasesWithTasks =
         a1.phases.where((ph) => ph.totalTasks > 0).toList();
@@ -553,54 +411,6 @@ class ProjectDetailPanel extends ConsumerWidget {
               ],
             ),
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPhaseRow(AppColors colors, Color accent, PhaseInfo phase) {
-    final (icon, iconColor) = switch (phase.status) {
-      PhaseStatus.complete => (LucideIcons.circleCheck100, const Color(0xFF22C55E)),
-      PhaseStatus.inProgress => (LucideIcons.circlePlay100, accent),
-      PhaseStatus.notStarted => (LucideIcons.circle100, colors.textDim),
-    };
-
-    final isCurrent = phase.status == PhaseStatus.inProgress;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
-      decoration: isCurrent
-          ? BoxDecoration(
-              color: accent.withValues(alpha: 0.06),
-              borderRadius: BorderRadius.circular(6),
-            )
-          : null,
-      child: Row(
-        children: [
-          Icon(icon, color: iconColor, size: 15),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              'Phase ${phase.number}: ${phase.name}',
-              style: TextStyle(
-                color: isCurrent ? colors.textPri : colors.textSec,
-                fontSize: 13,
-                fontWeight: isCurrent ? FontWeight.w500 : FontWeight.w300,
-              ),
-            ),
-          ),
-          if (phase.plansTotal > 0)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              decoration: BoxDecoration(
-                color: colors.bgElev,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                '${phase.plansCompleted}/${phase.plansTotal}',
-                style: TextStyle(color: colors.textDim, fontSize: 11),
-              ),
-            ),
         ],
       ),
     );
@@ -829,118 +639,6 @@ class _SectionCard extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             child,
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// Expandable decisions section — collapsed by default.
-class _DecisionsSection extends StatefulWidget {
-  const _DecisionsSection({
-    required this.colors,
-    required this.accent,
-    required this.decisions,
-  });
-
-  final AppColors colors;
-  final Color accent;
-  final List<String> decisions;
-
-  @override
-  State<_DecisionsSection> createState() => _DecisionsSectionState();
-}
-
-class _DecisionsSectionState extends State<_DecisionsSection> {
-  bool _expanded = false;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: Container(
-        width: double.infinity,
-        decoration: BoxDecoration(
-          color: widget.colors.bgSurf.withValues(alpha: 0.5),
-          borderRadius: BorderRadius.circular(12),
-          border: Border(
-            top: BorderSide(
-              color: widget.accent.withValues(alpha: 0.2),
-              width: 0.5,
-            ),
-          ),
-        ),
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            GestureDetector(
-              onTap: () => setState(() => _expanded = !_expanded),
-              child: Row(
-                children: [
-                  Text(
-                    'DECISIONS',
-                    style: TextStyle(
-                      color: widget.accent.withValues(alpha: 0.6),
-                      fontSize: 10,
-                      fontWeight: FontWeight.w400,
-                      letterSpacing: 1.5,
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                  Text(
-                    '(${widget.decisions.length})',
-                    style: TextStyle(
-                      color: widget.colors.textDim,
-                      fontSize: 11,
-                    ),
-                  ),
-                  const Spacer(),
-                  Icon(
-                    _expanded
-                        ? LucideIcons.chevronUp100
-                        : LucideIcons.chevronDown100,
-                    color: widget.colors.textDim,
-                    size: 14,
-                  ),
-                ],
-              ),
-            ),
-            if (_expanded) ...[
-              const SizedBox(height: 10),
-              ...widget.decisions.map(
-                (d) => Padding(
-                  padding: const EdgeInsets.only(bottom: 6),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.only(top: 6),
-                        child: Container(
-                          width: 4,
-                          height: 4,
-                          decoration: BoxDecoration(
-                            color: widget.colors.textDim,
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          d,
-                          style: TextStyle(
-                            color: widget.colors.textSec,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
           ],
         ),
       ),

@@ -43,7 +43,7 @@ class QuickActionsService {
     await Process.run('open', ['-a', 'Terminal'], runInShell: true);
   }
 
-  /// Opens a URL (GitHub or Notion) in the system default browser.
+  /// Opens a URL (e.g. GitHub) in the system default browser.
   /// Silently fails if URL cannot be launched (consistent with service error pattern).
   Future<void> openUrl(String url) async {
     final uri = Uri.tryParse(url);

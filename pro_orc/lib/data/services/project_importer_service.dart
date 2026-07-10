@@ -164,7 +164,7 @@ class ScaffoldResult {
   });
 }
 
-/// Scaffolds an existing project folder with optional GSD, CLAUDE.md,
+/// Scaffolds an existing project folder with optional CLAUDE.md,
 /// .gitignore, and git init.
 ///
 /// Each step checks existence before writing — never overwrites existing files.
@@ -176,41 +176,12 @@ class ScaffoldResult {
 Future<ScaffoldResult> scaffoldProject({
   required String projectPath,
   required String displayName,
-  bool gsdSkeleton = false,
   bool claudeMd = false,
   GitignoreTemplate gitignoreTemplate = GitignoreTemplate.none,
   bool gitInit = false,
 }) async {
   final created = <String>[];
   final warnings = <String>[];
-
-  // --- GSD Skeleton ---
-  if (gsdSkeleton) {
-    final planningDir = Directory(p.join(projectPath, '.planning'));
-    if (!planningDir.existsSync()) {
-      try {
-        await planningDir.create(recursive: true);
-
-        await File(p.join(planningDir.path, 'PROJECT.md'))
-            .writeAsString(gsdProjectMd(displayName));
-        created.add('.planning/PROJECT.md');
-
-        await File(p.join(planningDir.path, 'STATE.md'))
-            .writeAsString(gsdStateMd());
-        created.add('.planning/STATE.md');
-
-        await File(p.join(planningDir.path, 'ROADMAP.md'))
-            .writeAsString(gsdRoadmapMd(displayName));
-        created.add('.planning/ROADMAP.md');
-
-        await File(p.join(planningDir.path, 'REQUIREMENTS.md'))
-            .writeAsString(gsdRequirementsMd(displayName));
-        created.add('.planning/REQUIREMENTS.md');
-      } catch (e) {
-        warnings.add('GSD Skeleton konnte nicht erstellt werden: $e');
-      }
-    }
-  }
 
   // --- CLAUDE.md ---
   if (claudeMd) {
@@ -300,82 +271,6 @@ Future<ProcessResult> _runWithTimeout(
 // ---------------------------------------------------------------------------
 // File content templates (public for reuse by project_creator_service)
 // ---------------------------------------------------------------------------
-
-String gsdProjectMd(String displayName) => '''
-# $displayName
-
-## Beschreibung
-
-[Projektbeschreibung hier einfuegen]
-
-## Status
-
-Neues Projekt, noch nicht gestartet.
-
-## Ziele
-
-[Projektziele hier definieren]
-''';
-
-String gsdStateMd() => '''
-# Project State
-
-## Current Position
-
-Phase: -
-Status: Nicht gestartet
-
-## Accumulated Context
-
-### Decisions
-
-[Entscheidungen werden hier dokumentiert]
-
-### Blockers/Concerns
-
-[Keine]
-
-## Session Continuity
-
-Last session: -
-Stopped at: Projekt erstellt
-''';
-
-String gsdRoadmapMd(String displayName) => '''
-# Roadmap: $displayName
-
-## Phases
-
-[Phasen hier definieren]
-
----
-
-## Milestone Overview
-
-| Milestone | Description | Status |
-|-----------|-------------|--------|
-| v1.0      | MVP         | planned |
-''';
-
-String gsdRequirementsMd(String displayName) => '''
-# Requirements: $displayName
-
-## Functional Requirements
-
-| ID   | Requirement | Priority | Status  |
-|------|-------------|----------|---------|
-| F-01 | [Erste Anforderung] | high | open |
-
-## Non-Functional Requirements
-
-| ID   | Requirement | Priority | Status  |
-|------|-------------|----------|---------|
-| N-01 | [Erste nicht-funktionale Anforderung] | medium | open |
-
-## Out of Scope
-
-[Was explizit nicht Teil dieses Projekts ist]
-''';
 
 String claudeMdContent(String displayName) => '''
 # CLAUDE.md

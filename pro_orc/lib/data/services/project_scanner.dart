@@ -11,10 +11,10 @@ import 'package:pro_orc/data/models/memory_data.dart';
 import 'package:pro_orc/data/models/project_model.dart';
 import 'package:pro_orc/data/models/project_type.dart';
 import 'package:pro_orc/data/services/a1_reader.dart';
-import 'package:pro_orc/data/services/gsd_parser.dart';
 import 'package:pro_orc/data/services/git_reader.dart';
 import 'package:pro_orc/data/services/memory_reader.dart';
 import 'package:pro_orc/data/services/project_importer_service.dart';
+import 'package:pro_orc/data/services/project_metadata_reader.dart';
 
 // ---------------------------------------------------------------------------
 // Errors
@@ -38,41 +38,52 @@ class ScanDirectoryNotFoundError implements Exception {
 // File cache
 // ---------------------------------------------------------------------------
 
-/// Caches GSD parse results keyed by project path + STATE.md mtime.
+/// Caches project metadata (displayName/description) keyed by project path +
+/// PROJECT.md/CLAUDE.md mtime.
 ///
 /// On repeated [ProjectScanner.scanAll] calls, projects whose files have not
-/// changed (same mtime on STATE.md) are returned from cache without re-parsing.
+/// changed are returned from cache without re-parsing.
 class _FileCache {
-  /// Map from "path:mtime" → cached [GsdParseResult].
-  final Map<String, GsdParseResult> _cache = {};
+  /// Map from "path:mtime" → cached [ProjectMetadata].
+  final Map<String, ProjectMetadata> _cache = {};
 
-  /// Returns the cache key for a project path and its STATE.md mtime.
+  /// Returns the cache key for a project path and its signature mtime.
   String _key(String projectPath, DateTime mtime) =>
       '$projectPath:${mtime.microsecondsSinceEpoch}';
 
-  /// Returns the cached result for [projectPath] if its STATE.md mtime matches.
+  /// Returns the cached result for [projectPath] if its signature matches.
   /// Returns null if not cached or if mtime has changed.
-  GsdParseResult? get(String projectPath, DateTime? mtime) {
+  ProjectMetadata? get(String projectPath, DateTime? mtime) {
     if (mtime == null) return null;
     return _cache[_key(projectPath, mtime)];
   }
 
-  /// Stores a parse result for [projectPath] with the given STATE.md mtime.
-  void put(String projectPath, DateTime mtime, GsdParseResult result) {
+  /// Stores a parse result for [projectPath] with the given signature mtime.
+  void put(String projectPath, DateTime mtime, ProjectMetadata result) {
     _cache[_key(projectPath, mtime)] = result;
   }
 
-  /// Returns the current mtime of STATE.md in [projectPath], or null if absent.
-  Future<DateTime?> stateMtime(String projectPath) async {
-    final statePath = p.join(projectPath, '.planning', 'STATE.md');
-    try {
-      final stat = await FileStat.stat(statePath);
-      if (stat.type == FileSystemEntityType.notFound) return null;
-      return stat.modified;
-    } catch (e) {
-      developer.log('Failed to stat $statePath: $e', name: 'project_scanner');
-      return null;
+  /// Returns the latest mtime of .planning/PROJECT.md, PROJECT.md, or
+  /// CLAUDE.md in [projectPath], or null if none exist.
+  Future<DateTime?> metadataMtime(String projectPath) async {
+    DateTime? latest;
+    for (final name in const [
+      '.planning/PROJECT.md',
+      'PROJECT.md',
+      'CLAUDE.md',
+    ]) {
+      final filePath = p.join(projectPath, name);
+      try {
+        final stat = await FileStat.stat(filePath);
+        if (stat.type == FileSystemEntityType.notFound) continue;
+        if (latest == null || stat.modified.isAfter(latest)) {
+          latest = stat.modified;
+        }
+      } catch (e) {
+        developer.log('Failed to stat $filePath: $e', name: 'project_scanner');
+      }
     }
+    return latest;
   }
 }
 
@@ -192,7 +203,7 @@ Future<DateTime?> _a1Signature(String projectPath) async {
 
 /// Top-level orchestration service for the Phase 7 data layer.
 ///
-/// [scanAll] scans a flat directory, parses GSD data, reads git metadata,
+/// [scanAll] scans a flat directory, reads project metadata + git metadata,
 /// resolves project types from the DB, and returns a complete list of
 /// [ProjectModel] objects sorted by [ProjectModel.displayName].
 class ProjectScanner {
@@ -270,9 +281,9 @@ class ProjectScanner {
       return [];
     }
 
-    // --- 3. Parse GSD data for all projects (with cache) ---
-    final gsdResults = await Future.wait(
-      projectPaths.map((path) => _parseGsdWithCache(path)),
+    // --- 3. Read project metadata (displayName/description) for all projects (with cache) ---
+    final metadataResults = await Future.wait(
+      projectPaths.map((path) => _readMetadataWithCache(path)),
     );
 
     // --- 4. Read git data for all projects (with cache) ---
@@ -296,7 +307,7 @@ class ProjectScanner {
     for (int i = 0; i < projectPaths.length; i++) {
       final path = projectPaths[i];
       final folderId = p.basename(path);
-      final gsdResult = gsdResults[i];
+      final metadata = metadataResults[i];
       final gitData = gitResults[i];
       final memoryData = memoryResults[i];
       final a1Data = a1Results[i];
@@ -306,36 +317,33 @@ class ProjectScanner {
       final projectType = ProjectType.fromString(settings?.projectType) ??
           await _inferType(path);
 
-      // Nullify empty GSD/git data
-      final gsd = (gsdResult.gsd.isEmpty) ? null : gsdResult.gsd;
+      // Nullify empty git data
       final git = (gitData.isEmpty) ? null : gitData;
 
       // Compute stale
       final isStale = await _computeStale(path, git?.lastCommitDate);
 
       // Extract used agents from .planning/ VERIFICATION.md files (with cache)
-      final usedAgents = gsd != null ? await _extractUsedAgentsWithCache(path) : null;
+      final usedAgents = await _extractUsedAgentsWithCache(path);
 
       // Scan for .md files
       final mdFiles = await _scanMdFiles(path);
 
-      // Resolve displayName: DB override > PROJECT.md H1 > folderId
+      // Resolve displayName: DB override > PROJECT.md/CLAUDE.md H1 > folderId
       final overrideName = settings?.displayName?.trim();
       final resolvedName = (overrideName != null && overrideName.isNotEmpty)
           ? overrideName
-          : (gsdResult.displayName ?? folderId);
+          : (metadata.displayName ?? folderId);
 
       models.add(ProjectModel(
         folderId: folderId,
         displayName: resolvedName,
         path: path,
         projectType: projectType,
-        description: gsdResult.description,
-        gsd: gsd,
+        description: metadata.description,
         a1: a1Data.isEmpty ? null : a1Data,
         git: git,
         memory: memoryData.hasMemory ? memoryData : null,
-        hasParseError: gsdResult.hasParseError,
         isStale: isStale,
         usedAgents: usedAgents,
         mdFiles: mdFiles,
@@ -431,13 +439,14 @@ class ProjectScanner {
     return false;
   }
 
-  /// Parses GSD data using the cache to avoid re-parsing unchanged files.
-  Future<GsdParseResult> _parseGsdWithCache(String projectPath) async {
-    final mtime = await _cache.stateMtime(projectPath);
+  /// Reads project metadata (displayName/description) using the cache to
+  /// avoid re-parsing unchanged files.
+  Future<ProjectMetadata> _readMetadataWithCache(String projectPath) async {
+    final mtime = await _cache.metadataMtime(projectPath);
     final cached = _cache.get(projectPath, mtime);
     if (cached != null) return cached;
 
-    final result = await parseGsdData(projectPath);
+    final result = await readProjectMetadata(projectPath);
     if (mtime != null) {
       _cache.put(projectPath, mtime, result);
     }
@@ -520,7 +529,8 @@ class ProjectScanner {
   /// Computes whether a project is stale (>30 days since last activity).
   ///
   /// - Git project: stale if [lastCommitDate] is older than 30 days
-  /// - Non-git GSD project: stale if STATE.md mtime is older than 30 days
+  /// - Non-git project with `.planning/STATE.md`: stale if its mtime is
+  ///   older than 30 days
   /// - No signal: not stale (benefit of the doubt)
   Future<bool> _computeStale(String projectPath, DateTime? lastCommitDate) async {
     const threshold = Duration(days: 30);
@@ -585,7 +595,7 @@ class ProjectScanner {
     return sorted;
   }
 
-  /// Role labels for known .md files in Claude Code / GSD workflows.
+  /// Role labels for known .md files in Claude Code project workflows.
   static const _roleMap = <String, String>{
     'CLAUDE.md': 'Projekt-Instruktionen',
     'README.md': 'Dokumentation',

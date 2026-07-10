@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
-import 'package:pro_orc/data/models/agent_category.dart';
 import 'package:pro_orc/data/models/claude_tool_model.dart';
 import 'package:pro_orc/features/agents/agent_card.dart';
 import 'package:pro_orc/features/network/network_screen.dart';
@@ -12,7 +11,7 @@ import 'package:pro_orc/theme/n3_colors.dart';
 /// Agents tab — shows global Claude agents from `~/.claude/agents/` plus
 /// project-local agents from every scanned project's `.claude/agents/`.
 ///
-/// Three sections: Allgemeine Agents, GSD Agents, Projekt-Agents.
+/// Two sections: Allgemeine Agents, Projekt-Agents.
 /// Search field filters by agent name.
 class AgentsTab extends ConsumerStatefulWidget {
   const AgentsTab({super.key});
@@ -72,12 +71,7 @@ class _AgentsTabState extends ConsumerState<AgentsTab> {
             .toList();
 
     final projectAgents = filtered.where((a) => a.scope == 'project').toList();
-    final gsdAgents = filtered
-        .where((a) => a.scope != 'project' && a.category == AgentCategory.gsd)
-        .toList();
-    final generalAgents = filtered
-        .where((a) => a.scope != 'project' && a.category != AgentCategory.gsd)
-        .toList();
+    final generalAgents = filtered.where((a) => a.scope != 'project').toList();
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
@@ -103,18 +97,6 @@ class _AgentsTabState extends ConsumerState<AgentsTab> {
             count: generalAgents.length,
             emptyText: 'Keine allgemeinen Agents gefunden',
             cards: generalAgents.map((a) => AgentCard(agent: a)).toList(),
-          ),
-          const SizedBox(height: 32),
-
-          // GSD Agents section
-          _buildSection(
-            colors,
-            icon: Icons.precision_manufacturing_outlined,
-            iconColor: colors.amber,
-            label: 'GSD Agents',
-            count: gsdAgents.length,
-            emptyText: 'Keine GSD Agents gefunden',
-            cards: gsdAgents.map((a) => AgentCard(agent: a)).toList(),
           ),
           const SizedBox(height: 32),
 

@@ -1,5 +1,4 @@
 import 'package:pro_orc/data/models/a1_data.dart';
-import 'package:pro_orc/data/models/gsd_data.dart';
 import 'package:pro_orc/data/models/git_data.dart';
 import 'package:pro_orc/data/models/memory_data.dart';
 import 'package:pro_orc/data/models/project_type.dart';
@@ -25,10 +24,8 @@ class ProjectModel {
   final String path; // absolute path
   final ProjectType? projectType; // null = unclassified
   final String? description; // from PROJECT.md or CLAUDE.md
-  final GsdData? gsd; // null if no .planning/
   final A1Data? a1; // null if no .a1/ (a1 roadmap/phase status, M6)
   final GitData? git; // null if not a git repo
-  final bool hasParseError; // true = show warning icon on card
   final bool isStale; // >30 days since last activity
   final List<String>? usedAgents; // agent names found in .planning/ files
   final MemoryData? memory; // null if no Claude memory consolidation
@@ -40,11 +37,9 @@ class ProjectModel {
     required this.path,
     this.projectType,
     this.description,
-    this.gsd,
     this.a1,
     this.git,
     this.memory,
-    this.hasParseError = false,
     this.isStale = false,
     this.usedAgents,
     this.mdFiles,

@@ -26,11 +26,10 @@ class ProjectCreationResult {
 ///
 /// Steps (in order):
 /// 1. Create project directory (fails entire operation if this fails)
-/// 2. GSD Skeleton: .planning/{PROJECT,STATE,ROADMAP,REQUIREMENTS}.md
-/// 3. CLAUDE.md starter template
-/// 4. .gitignore from template (flutter / nodejs / python)
-/// 5. Research README.md (if projectType == 'research' and no GSD skeleton)
-/// 6. git init + initial commit (warnings on failure, never fails overall)
+/// 2. CLAUDE.md starter template
+/// 3. .gitignore from template (flutter / nodejs / python)
+/// 4. Research README.md (if projectType == 'research')
+/// 5. git init + initial commit (warnings on failure, never fails overall)
 ///
 /// All [Process.run] calls use [runInShell: true] because macOS GUI apps
 /// do not inherit Homebrew PATH.
@@ -40,7 +39,6 @@ Future<ProjectCreationResult> createProject({
   required String displayName, // Original user input
   required ProjectType projectType,
   bool gitInit = false,
-  bool gsdSkeleton = false,
   bool claudeMd = false,
   GitignoreTemplate gitignoreTemplate = GitignoreTemplate.none,
 }) async {
@@ -67,11 +65,10 @@ Future<ProjectCreationResult> createProject({
     );
   }
 
-  // --- 2-5. Scaffold files (GSD, CLAUDE.md, .gitignore) ---
+  // --- 2-3. Scaffold files (CLAUDE.md, .gitignore) ---
   final scaffoldResult = await scaffoldProject(
     projectPath: projectPath,
     displayName: displayName,
-    gsdSkeleton: gsdSkeleton,
     claudeMd: claudeMd,
     gitignoreTemplate: gitignoreTemplate,
     // git init is handled by scaffoldProject too, but we also need
@@ -79,8 +76,8 @@ Future<ProjectCreationResult> createProject({
   );
   warnings.addAll(scaffoldResult.warnings);
 
-  // --- 5b. Research README.md (create-specific, not in scaffoldProject) ---
-  if (projectType == ProjectType.research && !gsdSkeleton) {
+  // --- 4. Research README.md (create-specific, not in scaffoldProject) ---
+  if (projectType == ProjectType.research) {
     try {
       await File(path.join(projectPath, 'README.md')).writeAsString(
         '# $displayName\n\n[Projektbeschreibung hier einfuegen]\n',
@@ -90,7 +87,7 @@ Future<ProjectCreationResult> createProject({
     }
   }
 
-  // --- 6. git init + initial commit ---
+  // --- 5. git init + initial commit ---
   if (gitInit) {
     final gitWarning = await _gitInitAndCommit(projectPath, displayName);
     if (gitWarning != null) {
@@ -167,5 +164,4 @@ Future<ProcessResult> _runWithTimeout(
 }
 
 // File content templates moved to project_importer_service.dart
-// (gsdProjectMd, gsdStateMd, gsdRoadmapMd, gsdRequirementsMd,
-//  claudeMdContent, gitignoreContent)
+// (claudeMdContent, gitignoreContent)

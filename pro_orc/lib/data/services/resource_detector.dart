@@ -10,7 +10,6 @@ import 'package:pro_orc/data/services/memory_reader.dart';
 /// Detects all external resources linked to [project].
 ///
 /// Covers:
-/// - CLN-01: Notion page (from GsdData.notionUrl)
 /// - CLN-02: GitHub repository (from GitData.githubUrl)
 /// - CLN-03: Figma and other external URLs (scanned from .md files)
 /// - CLN-04: Claude Memory directory (~/.claude/projects/...)
@@ -22,22 +21,6 @@ Future<List<ExternalResource>> detectExternalResources(
 ) async {
   final resources = <ExternalResource>[];
   final seenUris = <String>{};
-
-  // CLN-01: Notion
-  try {
-    final notionUrl = project.gsd?.notionUrl;
-    if (notionUrl != null && notionUrl.isNotEmpty) {
-      resources.add(ExternalResource(
-        type: ExternalResourceType.notion,
-        label: 'Notion-Seite',
-        uri: notionUrl,
-        hint: 'Notion-Seite manuell im Browser loeschen',
-      ));
-      seenUris.add(notionUrl);
-    }
-  } catch (e) {
-    developer.log('Failed to detect Notion resource: $e', name: 'resource_detector');
-  }
 
   // CLN-02: GitHub
   try {

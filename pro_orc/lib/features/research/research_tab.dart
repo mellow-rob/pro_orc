@@ -323,18 +323,10 @@ class _ResearchTabState extends ConsumerState<ResearchTab> {
       // Force rescan so new project appears in tab
       ref.invalidate(projectsProvider);
 
-      // Execute post-creation actions — Notion takes priority (opens Claude in Terminal)
+      // Execute post-creation actions
       final actions = QuickActionsService();
-      final wantsNotion = result['wantsNotion'] as bool? ?? false;
-      final displayName = result['displayName'] as String? ?? '';
 
-      if (wantsNotion && displayName.isNotEmpty) {
-        final prompt = 'Erstelle eine Notion-Seite mit dem Titel "$displayName" '
-            'und schreibe die URL als <!-- notion: URL --> in die PROJECT.md '
-            'Datei in diesem Verzeichnis. Falls PROJECT.md nicht existiert, '
-            'erstelle die Datei zuerst.';
-        await actions.openClaudeWithPrompt(creationResult.projectPath, prompt);
-      } else if (wantsRemSleep) {
+      if (wantsRemSleep) {
         await actions.openRemSleep(creationResult.projectPath);
       } else if (wantsTerminal) {
         await actions.openInTerminal(creationResult.projectPath);
