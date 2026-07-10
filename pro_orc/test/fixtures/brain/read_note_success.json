@@ -1,0 +1,12 @@
+{
+  "jsonrpc": "2.0",
+  "id": 3,
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "## M1 — Setup\n- Phase 1: Bootstrap\n- Phase 2: CI\n\n## M2 — Roadmap Dashboard\n- Phase 1: Spec\n- Phase 2: Implementation\n"
+      }
+    ]
+  }
+}
