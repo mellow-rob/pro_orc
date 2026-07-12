@@ -82,6 +82,33 @@ class $AppConfigTableTable extends AppConfigTable
     requiredDuringInsert: false,
     defaultValue: const Constant(''),
   );
+  static const VerificationMeta _viewModeMeta = const VerificationMeta(
+    'viewMode',
+  );
+  @override
+  late final GeneratedColumn<String> viewMode = GeneratedColumn<String>(
+    'view_mode',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('grid'),
+  );
+  static const VerificationMeta _projectOrganizationSeedAppliedMeta =
+      const VerificationMeta('projectOrganizationSeedApplied');
+  @override
+  late final GeneratedColumn<bool> projectOrganizationSeedApplied =
+      GeneratedColumn<bool>(
+        'project_organization_seed_applied',
+        aliasedName,
+        false,
+        type: DriftSqlType.bool,
+        requiredDuringInsert: false,
+        defaultConstraints: GeneratedColumn.constraintIsAlways(
+          'CHECK ("project_organization_seed_applied" IN (0, 1))',
+        ),
+        defaultValue: const Constant(false),
+      );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -90,6 +117,8 @@ class $AppConfigTableTable extends AppConfigTable
     gitBinaryPath,
     themeMode,
     vaultDir,
+    viewMode,
+    projectOrganizationSeedApplied,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -142,6 +171,21 @@ class $AppConfigTableTable extends AppConfigTable
         vaultDir.isAcceptableOrUnknown(data['vault_dir']!, _vaultDirMeta),
       );
     }
+    if (data.containsKey('view_mode')) {
+      context.handle(
+        _viewModeMeta,
+        viewMode.isAcceptableOrUnknown(data['view_mode']!, _viewModeMeta),
+      );
+    }
+    if (data.containsKey('project_organization_seed_applied')) {
+      context.handle(
+        _projectOrganizationSeedAppliedMeta,
+        projectOrganizationSeedApplied.isAcceptableOrUnknown(
+          data['project_organization_seed_applied']!,
+          _projectOrganizationSeedAppliedMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -175,6 +219,14 @@ class $AppConfigTableTable extends AppConfigTable
         DriftSqlType.string,
         data['${effectivePrefix}vault_dir'],
       )!,
+      viewMode: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}view_mode'],
+      )!,
+      projectOrganizationSeedApplied: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}project_organization_seed_applied'],
+      )!,
     );
   }
 
@@ -200,6 +252,15 @@ class AppConfigTableData extends DataClass
   /// resolved by the reader — kept empty by default so per-machine HOME is not
   /// baked into the DB.
   final String vaultDir;
+
+  /// Global grid/list view-mode preference for the Projekte tab: 'grid' or
+  /// 'list'. Default 'grid' preserves the current look for existing users.
+  final String viewMode;
+
+  /// One-time idempotency flag for the Project-Organization example-group
+  /// seed (Wave 5). Independent of `ensureSystemGroups` — the Archiv system
+  /// group exists regardless of this flag.
+  final bool projectOrganizationSeedApplied;
   const AppConfigTableData({
     required this.id,
     required this.scanDir,
@@ -207,6 +268,8 @@ class AppConfigTableData extends DataClass
     required this.gitBinaryPath,
     required this.themeMode,
     required this.vaultDir,
+    required this.viewMode,
+    required this.projectOrganizationSeedApplied,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -217,6 +280,10 @@ class AppConfigTableData extends DataClass
     map['git_binary_path'] = Variable<String>(gitBinaryPath);
     map['theme_mode'] = Variable<String>(themeMode);
     map['vault_dir'] = Variable<String>(vaultDir);
+    map['view_mode'] = Variable<String>(viewMode);
+    map['project_organization_seed_applied'] = Variable<bool>(
+      projectOrganizationSeedApplied,
+    );
     return map;
   }
 
@@ -228,6 +295,8 @@ class AppConfigTableData extends DataClass
       gitBinaryPath: Value(gitBinaryPath),
       themeMode: Value(themeMode),
       vaultDir: Value(vaultDir),
+      viewMode: Value(viewMode),
+      projectOrganizationSeedApplied: Value(projectOrganizationSeedApplied),
     );
   }
 
@@ -243,6 +312,10 @@ class AppConfigTableData extends DataClass
       gitBinaryPath: serializer.fromJson<String>(json['gitBinaryPath']),
       themeMode: serializer.fromJson<String>(json['themeMode']),
       vaultDir: serializer.fromJson<String>(json['vaultDir']),
+      viewMode: serializer.fromJson<String>(json['viewMode']),
+      projectOrganizationSeedApplied: serializer.fromJson<bool>(
+        json['projectOrganizationSeedApplied'],
+      ),
     );
   }
   @override
@@ -255,6 +328,10 @@ class AppConfigTableData extends DataClass
       'gitBinaryPath': serializer.toJson<String>(gitBinaryPath),
       'themeMode': serializer.toJson<String>(themeMode),
       'vaultDir': serializer.toJson<String>(vaultDir),
+      'viewMode': serializer.toJson<String>(viewMode),
+      'projectOrganizationSeedApplied': serializer.toJson<bool>(
+        projectOrganizationSeedApplied,
+      ),
     };
   }
 
@@ -265,6 +342,8 @@ class AppConfigTableData extends DataClass
     String? gitBinaryPath,
     String? themeMode,
     String? vaultDir,
+    String? viewMode,
+    bool? projectOrganizationSeedApplied,
   }) => AppConfigTableData(
     id: id ?? this.id,
     scanDir: scanDir ?? this.scanDir,
@@ -272,6 +351,9 @@ class AppConfigTableData extends DataClass
     gitBinaryPath: gitBinaryPath ?? this.gitBinaryPath,
     themeMode: themeMode ?? this.themeMode,
     vaultDir: vaultDir ?? this.vaultDir,
+    viewMode: viewMode ?? this.viewMode,
+    projectOrganizationSeedApplied:
+        projectOrganizationSeedApplied ?? this.projectOrganizationSeedApplied,
   );
   AppConfigTableData copyWithCompanion(AppConfigTableCompanion data) {
     return AppConfigTableData(
@@ -285,6 +367,11 @@ class AppConfigTableData extends DataClass
           : this.gitBinaryPath,
       themeMode: data.themeMode.present ? data.themeMode.value : this.themeMode,
       vaultDir: data.vaultDir.present ? data.vaultDir.value : this.vaultDir,
+      viewMode: data.viewMode.present ? data.viewMode.value : this.viewMode,
+      projectOrganizationSeedApplied:
+          data.projectOrganizationSeedApplied.present
+          ? data.projectOrganizationSeedApplied.value
+          : this.projectOrganizationSeedApplied,
     );
   }
 
@@ -296,7 +383,11 @@ class AppConfigTableData extends DataClass
           ..write('ignoreListJson: $ignoreListJson, ')
           ..write('gitBinaryPath: $gitBinaryPath, ')
           ..write('themeMode: $themeMode, ')
-          ..write('vaultDir: $vaultDir')
+          ..write('vaultDir: $vaultDir, ')
+          ..write('viewMode: $viewMode, ')
+          ..write(
+            'projectOrganizationSeedApplied: $projectOrganizationSeedApplied',
+          )
           ..write(')'))
         .toString();
   }
@@ -309,6 +400,8 @@ class AppConfigTableData extends DataClass
     gitBinaryPath,
     themeMode,
     vaultDir,
+    viewMode,
+    projectOrganizationSeedApplied,
   );
   @override
   bool operator ==(Object other) =>
@@ -319,7 +412,10 @@ class AppConfigTableData extends DataClass
           other.ignoreListJson == this.ignoreListJson &&
           other.gitBinaryPath == this.gitBinaryPath &&
           other.themeMode == this.themeMode &&
-          other.vaultDir == this.vaultDir);
+          other.vaultDir == this.vaultDir &&
+          other.viewMode == this.viewMode &&
+          other.projectOrganizationSeedApplied ==
+              this.projectOrganizationSeedApplied);
 }
 
 class AppConfigTableCompanion extends UpdateCompanion<AppConfigTableData> {
@@ -329,6 +425,8 @@ class AppConfigTableCompanion extends UpdateCompanion<AppConfigTableData> {
   final Value<String> gitBinaryPath;
   final Value<String> themeMode;
   final Value<String> vaultDir;
+  final Value<String> viewMode;
+  final Value<bool> projectOrganizationSeedApplied;
   const AppConfigTableCompanion({
     this.id = const Value.absent(),
     this.scanDir = const Value.absent(),
@@ -336,6 +434,8 @@ class AppConfigTableCompanion extends UpdateCompanion<AppConfigTableData> {
     this.gitBinaryPath = const Value.absent(),
     this.themeMode = const Value.absent(),
     this.vaultDir = const Value.absent(),
+    this.viewMode = const Value.absent(),
+    this.projectOrganizationSeedApplied = const Value.absent(),
   });
   AppConfigTableCompanion.insert({
     this.id = const Value.absent(),
@@ -344,6 +444,8 @@ class AppConfigTableCompanion extends UpdateCompanion<AppConfigTableData> {
     this.gitBinaryPath = const Value.absent(),
     this.themeMode = const Value.absent(),
     this.vaultDir = const Value.absent(),
+    this.viewMode = const Value.absent(),
+    this.projectOrganizationSeedApplied = const Value.absent(),
   });
   static Insertable<AppConfigTableData> custom({
     Expression<int>? id,
@@ -352,6 +454,8 @@ class AppConfigTableCompanion extends UpdateCompanion<AppConfigTableData> {
     Expression<String>? gitBinaryPath,
     Expression<String>? themeMode,
     Expression<String>? vaultDir,
+    Expression<String>? viewMode,
+    Expression<bool>? projectOrganizationSeedApplied,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -360,6 +464,9 @@ class AppConfigTableCompanion extends UpdateCompanion<AppConfigTableData> {
       if (gitBinaryPath != null) 'git_binary_path': gitBinaryPath,
       if (themeMode != null) 'theme_mode': themeMode,
       if (vaultDir != null) 'vault_dir': vaultDir,
+      if (viewMode != null) 'view_mode': viewMode,
+      if (projectOrganizationSeedApplied != null)
+        'project_organization_seed_applied': projectOrganizationSeedApplied,
     });
   }
 
@@ -370,6 +477,8 @@ class AppConfigTableCompanion extends UpdateCompanion<AppConfigTableData> {
     Value<String>? gitBinaryPath,
     Value<String>? themeMode,
     Value<String>? vaultDir,
+    Value<String>? viewMode,
+    Value<bool>? projectOrganizationSeedApplied,
   }) {
     return AppConfigTableCompanion(
       id: id ?? this.id,
@@ -378,6 +487,9 @@ class AppConfigTableCompanion extends UpdateCompanion<AppConfigTableData> {
       gitBinaryPath: gitBinaryPath ?? this.gitBinaryPath,
       themeMode: themeMode ?? this.themeMode,
       vaultDir: vaultDir ?? this.vaultDir,
+      viewMode: viewMode ?? this.viewMode,
+      projectOrganizationSeedApplied:
+          projectOrganizationSeedApplied ?? this.projectOrganizationSeedApplied,
     );
   }
 
@@ -402,6 +514,14 @@ class AppConfigTableCompanion extends UpdateCompanion<AppConfigTableData> {
     if (vaultDir.present) {
       map['vault_dir'] = Variable<String>(vaultDir.value);
     }
+    if (viewMode.present) {
+      map['view_mode'] = Variable<String>(viewMode.value);
+    }
+    if (projectOrganizationSeedApplied.present) {
+      map['project_organization_seed_applied'] = Variable<bool>(
+        projectOrganizationSeedApplied.value,
+      );
+    }
     return map;
   }
 
@@ -413,7 +533,11 @@ class AppConfigTableCompanion extends UpdateCompanion<AppConfigTableData> {
           ..write('ignoreListJson: $ignoreListJson, ')
           ..write('gitBinaryPath: $gitBinaryPath, ')
           ..write('themeMode: $themeMode, ')
-          ..write('vaultDir: $vaultDir')
+          ..write('vaultDir: $vaultDir, ')
+          ..write('viewMode: $viewMode, ')
+          ..write(
+            'projectOrganizationSeedApplied: $projectOrganizationSeedApplied',
+          )
           ..write(')'))
         .toString();
   }
@@ -484,6 +608,17 @@ class $ProjectSettingsTableTable extends ProjectSettingsTable
     ),
     defaultValue: const Constant(false),
   );
+  static const VerificationMeta _groupIdMeta = const VerificationMeta(
+    'groupId',
+  );
+  @override
+  late final GeneratedColumn<String> groupId = GeneratedColumn<String>(
+    'group_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     folderId,
@@ -491,6 +626,7 @@ class $ProjectSettingsTableTable extends ProjectSettingsTable
     displayName,
     typeSetAt,
     isHidden,
+    groupId,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -542,6 +678,12 @@ class $ProjectSettingsTableTable extends ProjectSettingsTable
         isHidden.isAcceptableOrUnknown(data['is_hidden']!, _isHiddenMeta),
       );
     }
+    if (data.containsKey('group_id')) {
+      context.handle(
+        _groupIdMeta,
+        groupId.isAcceptableOrUnknown(data['group_id']!, _groupIdMeta),
+      );
+    }
     return context;
   }
 
@@ -574,6 +716,10 @@ class $ProjectSettingsTableTable extends ProjectSettingsTable
         DriftSqlType.bool,
         data['${effectivePrefix}is_hidden'],
       )!,
+      groupId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}group_id'],
+      ),
     );
   }
 
@@ -590,12 +736,14 @@ class ProjectSettingsTableData extends DataClass
   final String? displayName;
   final DateTime? typeSetAt;
   final bool isHidden;
+  final String? groupId;
   const ProjectSettingsTableData({
     required this.folderId,
     this.projectType,
     this.displayName,
     this.typeSetAt,
     required this.isHidden,
+    this.groupId,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -611,6 +759,9 @@ class ProjectSettingsTableData extends DataClass
       map['type_set_at'] = Variable<DateTime>(typeSetAt);
     }
     map['is_hidden'] = Variable<bool>(isHidden);
+    if (!nullToAbsent || groupId != null) {
+      map['group_id'] = Variable<String>(groupId);
+    }
     return map;
   }
 
@@ -627,6 +778,9 @@ class ProjectSettingsTableData extends DataClass
           ? const Value.absent()
           : Value(typeSetAt),
       isHidden: Value(isHidden),
+      groupId: groupId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(groupId),
     );
   }
 
@@ -641,6 +795,7 @@ class ProjectSettingsTableData extends DataClass
       displayName: serializer.fromJson<String?>(json['displayName']),
       typeSetAt: serializer.fromJson<DateTime?>(json['typeSetAt']),
       isHidden: serializer.fromJson<bool>(json['isHidden']),
+      groupId: serializer.fromJson<String?>(json['groupId']),
     );
   }
   @override
@@ -652,6 +807,7 @@ class ProjectSettingsTableData extends DataClass
       'displayName': serializer.toJson<String?>(displayName),
       'typeSetAt': serializer.toJson<DateTime?>(typeSetAt),
       'isHidden': serializer.toJson<bool>(isHidden),
+      'groupId': serializer.toJson<String?>(groupId),
     };
   }
 
@@ -661,12 +817,14 @@ class ProjectSettingsTableData extends DataClass
     Value<String?> displayName = const Value.absent(),
     Value<DateTime?> typeSetAt = const Value.absent(),
     bool? isHidden,
+    Value<String?> groupId = const Value.absent(),
   }) => ProjectSettingsTableData(
     folderId: folderId ?? this.folderId,
     projectType: projectType.present ? projectType.value : this.projectType,
     displayName: displayName.present ? displayName.value : this.displayName,
     typeSetAt: typeSetAt.present ? typeSetAt.value : this.typeSetAt,
     isHidden: isHidden ?? this.isHidden,
+    groupId: groupId.present ? groupId.value : this.groupId,
   );
   ProjectSettingsTableData copyWithCompanion(
     ProjectSettingsTableCompanion data,
@@ -681,6 +839,7 @@ class ProjectSettingsTableData extends DataClass
           : this.displayName,
       typeSetAt: data.typeSetAt.present ? data.typeSetAt.value : this.typeSetAt,
       isHidden: data.isHidden.present ? data.isHidden.value : this.isHidden,
+      groupId: data.groupId.present ? data.groupId.value : this.groupId,
     );
   }
 
@@ -691,14 +850,21 @@ class ProjectSettingsTableData extends DataClass
           ..write('projectType: $projectType, ')
           ..write('displayName: $displayName, ')
           ..write('typeSetAt: $typeSetAt, ')
-          ..write('isHidden: $isHidden')
+          ..write('isHidden: $isHidden, ')
+          ..write('groupId: $groupId')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode =>
-      Object.hash(folderId, projectType, displayName, typeSetAt, isHidden);
+  int get hashCode => Object.hash(
+    folderId,
+    projectType,
+    displayName,
+    typeSetAt,
+    isHidden,
+    groupId,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -707,7 +873,8 @@ class ProjectSettingsTableData extends DataClass
           other.projectType == this.projectType &&
           other.displayName == this.displayName &&
           other.typeSetAt == this.typeSetAt &&
-          other.isHidden == this.isHidden);
+          other.isHidden == this.isHidden &&
+          other.groupId == this.groupId);
 }
 
 class ProjectSettingsTableCompanion
@@ -717,6 +884,7 @@ class ProjectSettingsTableCompanion
   final Value<String?> displayName;
   final Value<DateTime?> typeSetAt;
   final Value<bool> isHidden;
+  final Value<String?> groupId;
   final Value<int> rowid;
   const ProjectSettingsTableCompanion({
     this.folderId = const Value.absent(),
@@ -724,6 +892,7 @@ class ProjectSettingsTableCompanion
     this.displayName = const Value.absent(),
     this.typeSetAt = const Value.absent(),
     this.isHidden = const Value.absent(),
+    this.groupId = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   ProjectSettingsTableCompanion.insert({
@@ -732,6 +901,7 @@ class ProjectSettingsTableCompanion
     this.displayName = const Value.absent(),
     this.typeSetAt = const Value.absent(),
     this.isHidden = const Value.absent(),
+    this.groupId = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : folderId = Value(folderId);
   static Insertable<ProjectSettingsTableData> custom({
@@ -740,6 +910,7 @@ class ProjectSettingsTableCompanion
     Expression<String>? displayName,
     Expression<DateTime>? typeSetAt,
     Expression<bool>? isHidden,
+    Expression<String>? groupId,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -748,6 +919,7 @@ class ProjectSettingsTableCompanion
       if (displayName != null) 'display_name': displayName,
       if (typeSetAt != null) 'type_set_at': typeSetAt,
       if (isHidden != null) 'is_hidden': isHidden,
+      if (groupId != null) 'group_id': groupId,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -758,6 +930,7 @@ class ProjectSettingsTableCompanion
     Value<String?>? displayName,
     Value<DateTime?>? typeSetAt,
     Value<bool>? isHidden,
+    Value<String?>? groupId,
     Value<int>? rowid,
   }) {
     return ProjectSettingsTableCompanion(
@@ -766,6 +939,7 @@ class ProjectSettingsTableCompanion
       displayName: displayName ?? this.displayName,
       typeSetAt: typeSetAt ?? this.typeSetAt,
       isHidden: isHidden ?? this.isHidden,
+      groupId: groupId ?? this.groupId,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -788,6 +962,9 @@ class ProjectSettingsTableCompanion
     if (isHidden.present) {
       map['is_hidden'] = Variable<bool>(isHidden.value);
     }
+    if (groupId.present) {
+      map['group_id'] = Variable<String>(groupId.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -802,6 +979,498 @@ class ProjectSettingsTableCompanion
           ..write('displayName: $displayName, ')
           ..write('typeSetAt: $typeSetAt, ')
           ..write('isHidden: $isHidden, ')
+          ..write('groupId: $groupId, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $ProjectGroupsTableTable extends ProjectGroupsTable
+    with TableInfo<$ProjectGroupsTableTable, ProjectGroupsTableData> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ProjectGroupsTableTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+    'name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _isSystemMeta = const VerificationMeta(
+    'isSystem',
+  );
+  @override
+  late final GeneratedColumn<bool> isSystem = GeneratedColumn<bool>(
+    'is_system',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_system" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [id, name, isSystem];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'project_groups_table';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<ProjectGroupsTableData> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+        _nameMeta,
+        name.isAcceptableOrUnknown(data['name']!, _nameMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    if (data.containsKey('is_system')) {
+      context.handle(
+        _isSystemMeta,
+        isSystem.isAcceptableOrUnknown(data['is_system']!, _isSystemMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  ProjectGroupsTableData map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ProjectGroupsTableData(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      name: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}name'],
+      )!,
+      isSystem: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_system'],
+      )!,
+    );
+  }
+
+  @override
+  $ProjectGroupsTableTable createAlias(String alias) {
+    return $ProjectGroupsTableTable(attachedDatabase, alias);
+  }
+}
+
+class ProjectGroupsTableData extends DataClass
+    implements Insertable<ProjectGroupsTableData> {
+  final String id;
+  final String name;
+  final bool isSystem;
+  const ProjectGroupsTableData({
+    required this.id,
+    required this.name,
+    required this.isSystem,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['name'] = Variable<String>(name);
+    map['is_system'] = Variable<bool>(isSystem);
+    return map;
+  }
+
+  ProjectGroupsTableCompanion toCompanion(bool nullToAbsent) {
+    return ProjectGroupsTableCompanion(
+      id: Value(id),
+      name: Value(name),
+      isSystem: Value(isSystem),
+    );
+  }
+
+  factory ProjectGroupsTableData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ProjectGroupsTableData(
+      id: serializer.fromJson<String>(json['id']),
+      name: serializer.fromJson<String>(json['name']),
+      isSystem: serializer.fromJson<bool>(json['isSystem']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'name': serializer.toJson<String>(name),
+      'isSystem': serializer.toJson<bool>(isSystem),
+    };
+  }
+
+  ProjectGroupsTableData copyWith({String? id, String? name, bool? isSystem}) =>
+      ProjectGroupsTableData(
+        id: id ?? this.id,
+        name: name ?? this.name,
+        isSystem: isSystem ?? this.isSystem,
+      );
+  ProjectGroupsTableData copyWithCompanion(ProjectGroupsTableCompanion data) {
+    return ProjectGroupsTableData(
+      id: data.id.present ? data.id.value : this.id,
+      name: data.name.present ? data.name.value : this.name,
+      isSystem: data.isSystem.present ? data.isSystem.value : this.isSystem,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ProjectGroupsTableData(')
+          ..write('id: $id, ')
+          ..write('name: $name, ')
+          ..write('isSystem: $isSystem')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, name, isSystem);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ProjectGroupsTableData &&
+          other.id == this.id &&
+          other.name == this.name &&
+          other.isSystem == this.isSystem);
+}
+
+class ProjectGroupsTableCompanion
+    extends UpdateCompanion<ProjectGroupsTableData> {
+  final Value<String> id;
+  final Value<String> name;
+  final Value<bool> isSystem;
+  final Value<int> rowid;
+  const ProjectGroupsTableCompanion({
+    this.id = const Value.absent(),
+    this.name = const Value.absent(),
+    this.isSystem = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  ProjectGroupsTableCompanion.insert({
+    required String id,
+    required String name,
+    this.isSystem = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       name = Value(name);
+  static Insertable<ProjectGroupsTableData> custom({
+    Expression<String>? id,
+    Expression<String>? name,
+    Expression<bool>? isSystem,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (name != null) 'name': name,
+      if (isSystem != null) 'is_system': isSystem,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  ProjectGroupsTableCompanion copyWith({
+    Value<String>? id,
+    Value<String>? name,
+    Value<bool>? isSystem,
+    Value<int>? rowid,
+  }) {
+    return ProjectGroupsTableCompanion(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      isSystem: isSystem ?? this.isSystem,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (isSystem.present) {
+      map['is_system'] = Variable<bool>(isSystem.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ProjectGroupsTableCompanion(')
+          ..write('id: $id, ')
+          ..write('name: $name, ')
+          ..write('isSystem: $isSystem, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $GroupCollapseStateTableTable extends GroupCollapseStateTable
+    with TableInfo<$GroupCollapseStateTableTable, GroupCollapseStateTableData> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $GroupCollapseStateTableTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _groupIdMeta = const VerificationMeta(
+    'groupId',
+  );
+  @override
+  late final GeneratedColumn<String> groupId = GeneratedColumn<String>(
+    'group_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _collapsedMeta = const VerificationMeta(
+    'collapsed',
+  );
+  @override
+  late final GeneratedColumn<bool> collapsed = GeneratedColumn<bool>(
+    'collapsed',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("collapsed" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [groupId, collapsed];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'group_collapse_state_table';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<GroupCollapseStateTableData> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('group_id')) {
+      context.handle(
+        _groupIdMeta,
+        groupId.isAcceptableOrUnknown(data['group_id']!, _groupIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_groupIdMeta);
+    }
+    if (data.containsKey('collapsed')) {
+      context.handle(
+        _collapsedMeta,
+        collapsed.isAcceptableOrUnknown(data['collapsed']!, _collapsedMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {groupId};
+  @override
+  GroupCollapseStateTableData map(
+    Map<String, dynamic> data, {
+    String? tablePrefix,
+  }) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return GroupCollapseStateTableData(
+      groupId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}group_id'],
+      )!,
+      collapsed: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}collapsed'],
+      )!,
+    );
+  }
+
+  @override
+  $GroupCollapseStateTableTable createAlias(String alias) {
+    return $GroupCollapseStateTableTable(attachedDatabase, alias);
+  }
+}
+
+class GroupCollapseStateTableData extends DataClass
+    implements Insertable<GroupCollapseStateTableData> {
+  final String groupId;
+  final bool collapsed;
+  const GroupCollapseStateTableData({
+    required this.groupId,
+    required this.collapsed,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['group_id'] = Variable<String>(groupId);
+    map['collapsed'] = Variable<bool>(collapsed);
+    return map;
+  }
+
+  GroupCollapseStateTableCompanion toCompanion(bool nullToAbsent) {
+    return GroupCollapseStateTableCompanion(
+      groupId: Value(groupId),
+      collapsed: Value(collapsed),
+    );
+  }
+
+  factory GroupCollapseStateTableData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return GroupCollapseStateTableData(
+      groupId: serializer.fromJson<String>(json['groupId']),
+      collapsed: serializer.fromJson<bool>(json['collapsed']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'groupId': serializer.toJson<String>(groupId),
+      'collapsed': serializer.toJson<bool>(collapsed),
+    };
+  }
+
+  GroupCollapseStateTableData copyWith({String? groupId, bool? collapsed}) =>
+      GroupCollapseStateTableData(
+        groupId: groupId ?? this.groupId,
+        collapsed: collapsed ?? this.collapsed,
+      );
+  GroupCollapseStateTableData copyWithCompanion(
+    GroupCollapseStateTableCompanion data,
+  ) {
+    return GroupCollapseStateTableData(
+      groupId: data.groupId.present ? data.groupId.value : this.groupId,
+      collapsed: data.collapsed.present ? data.collapsed.value : this.collapsed,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('GroupCollapseStateTableData(')
+          ..write('groupId: $groupId, ')
+          ..write('collapsed: $collapsed')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(groupId, collapsed);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is GroupCollapseStateTableData &&
+          other.groupId == this.groupId &&
+          other.collapsed == this.collapsed);
+}
+
+class GroupCollapseStateTableCompanion
+    extends UpdateCompanion<GroupCollapseStateTableData> {
+  final Value<String> groupId;
+  final Value<bool> collapsed;
+  final Value<int> rowid;
+  const GroupCollapseStateTableCompanion({
+    this.groupId = const Value.absent(),
+    this.collapsed = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  GroupCollapseStateTableCompanion.insert({
+    required String groupId,
+    this.collapsed = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : groupId = Value(groupId);
+  static Insertable<GroupCollapseStateTableData> custom({
+    Expression<String>? groupId,
+    Expression<bool>? collapsed,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (groupId != null) 'group_id': groupId,
+      if (collapsed != null) 'collapsed': collapsed,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  GroupCollapseStateTableCompanion copyWith({
+    Value<String>? groupId,
+    Value<bool>? collapsed,
+    Value<int>? rowid,
+  }) {
+    return GroupCollapseStateTableCompanion(
+      groupId: groupId ?? this.groupId,
+      collapsed: collapsed ?? this.collapsed,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (groupId.present) {
+      map['group_id'] = Variable<String>(groupId.value);
+    }
+    if (collapsed.present) {
+      map['collapsed'] = Variable<bool>(collapsed.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('GroupCollapseStateTableCompanion(')
+          ..write('groupId: $groupId, ')
+          ..write('collapsed: $collapsed, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -814,6 +1483,10 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $AppConfigTableTable appConfigTable = $AppConfigTableTable(this);
   late final $ProjectSettingsTableTable projectSettingsTable =
       $ProjectSettingsTableTable(this);
+  late final $ProjectGroupsTableTable projectGroupsTable =
+      $ProjectGroupsTableTable(this);
+  late final $GroupCollapseStateTableTable groupCollapseStateTable =
+      $GroupCollapseStateTableTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -821,6 +1494,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   List<DatabaseSchemaEntity> get allSchemaEntities => [
     appConfigTable,
     projectSettingsTable,
+    projectGroupsTable,
+    groupCollapseStateTable,
   ];
 }
 
@@ -832,6 +1507,8 @@ typedef $$AppConfigTableTableCreateCompanionBuilder =
       Value<String> gitBinaryPath,
       Value<String> themeMode,
       Value<String> vaultDir,
+      Value<String> viewMode,
+      Value<bool> projectOrganizationSeedApplied,
     });
 typedef $$AppConfigTableTableUpdateCompanionBuilder =
     AppConfigTableCompanion Function({
@@ -841,6 +1518,8 @@ typedef $$AppConfigTableTableUpdateCompanionBuilder =
       Value<String> gitBinaryPath,
       Value<String> themeMode,
       Value<String> vaultDir,
+      Value<String> viewMode,
+      Value<bool> projectOrganizationSeedApplied,
     });
 
 class $$AppConfigTableTableFilterComposer
@@ -879,6 +1558,16 @@ class $$AppConfigTableTableFilterComposer
 
   ColumnFilters<String> get vaultDir => $composableBuilder(
     column: $table.vaultDir,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get viewMode => $composableBuilder(
+    column: $table.viewMode,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get projectOrganizationSeedApplied => $composableBuilder(
+    column: $table.projectOrganizationSeedApplied,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -921,6 +1610,17 @@ class $$AppConfigTableTableOrderingComposer
     column: $table.vaultDir,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get viewMode => $composableBuilder(
+    column: $table.viewMode,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get projectOrganizationSeedApplied =>
+      $composableBuilder(
+        column: $table.projectOrganizationSeedApplied,
+        builder: (column) => ColumnOrderings(column),
+      );
 }
 
 class $$AppConfigTableTableAnnotationComposer
@@ -953,6 +1653,15 @@ class $$AppConfigTableTableAnnotationComposer
 
   GeneratedColumn<String> get vaultDir =>
       $composableBuilder(column: $table.vaultDir, builder: (column) => column);
+
+  GeneratedColumn<String> get viewMode =>
+      $composableBuilder(column: $table.viewMode, builder: (column) => column);
+
+  GeneratedColumn<bool> get projectOrganizationSeedApplied =>
+      $composableBuilder(
+        column: $table.projectOrganizationSeedApplied,
+        builder: (column) => column,
+      );
 }
 
 class $$AppConfigTableTableTableManager
@@ -998,6 +1707,9 @@ class $$AppConfigTableTableTableManager
                 Value<String> gitBinaryPath = const Value.absent(),
                 Value<String> themeMode = const Value.absent(),
                 Value<String> vaultDir = const Value.absent(),
+                Value<String> viewMode = const Value.absent(),
+                Value<bool> projectOrganizationSeedApplied =
+                    const Value.absent(),
               }) => AppConfigTableCompanion(
                 id: id,
                 scanDir: scanDir,
@@ -1005,6 +1717,8 @@ class $$AppConfigTableTableTableManager
                 gitBinaryPath: gitBinaryPath,
                 themeMode: themeMode,
                 vaultDir: vaultDir,
+                viewMode: viewMode,
+                projectOrganizationSeedApplied: projectOrganizationSeedApplied,
               ),
           createCompanionCallback:
               ({
@@ -1014,6 +1728,9 @@ class $$AppConfigTableTableTableManager
                 Value<String> gitBinaryPath = const Value.absent(),
                 Value<String> themeMode = const Value.absent(),
                 Value<String> vaultDir = const Value.absent(),
+                Value<String> viewMode = const Value.absent(),
+                Value<bool> projectOrganizationSeedApplied =
+                    const Value.absent(),
               }) => AppConfigTableCompanion.insert(
                 id: id,
                 scanDir: scanDir,
@@ -1021,6 +1738,8 @@ class $$AppConfigTableTableTableManager
                 gitBinaryPath: gitBinaryPath,
                 themeMode: themeMode,
                 vaultDir: vaultDir,
+                viewMode: viewMode,
+                projectOrganizationSeedApplied: projectOrganizationSeedApplied,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
@@ -1054,6 +1773,7 @@ typedef $$ProjectSettingsTableTableCreateCompanionBuilder =
       Value<String?> displayName,
       Value<DateTime?> typeSetAt,
       Value<bool> isHidden,
+      Value<String?> groupId,
       Value<int> rowid,
     });
 typedef $$ProjectSettingsTableTableUpdateCompanionBuilder =
@@ -1063,6 +1783,7 @@ typedef $$ProjectSettingsTableTableUpdateCompanionBuilder =
       Value<String?> displayName,
       Value<DateTime?> typeSetAt,
       Value<bool> isHidden,
+      Value<String?> groupId,
       Value<int> rowid,
     });
 
@@ -1097,6 +1818,11 @@ class $$ProjectSettingsTableTableFilterComposer
 
   ColumnFilters<bool> get isHidden => $composableBuilder(
     column: $table.isHidden,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get groupId => $composableBuilder(
+    column: $table.groupId,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -1134,6 +1860,11 @@ class $$ProjectSettingsTableTableOrderingComposer
     column: $table.isHidden,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get groupId => $composableBuilder(
+    column: $table.groupId,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$ProjectSettingsTableTableAnnotationComposer
@@ -1163,6 +1894,9 @@ class $$ProjectSettingsTableTableAnnotationComposer
 
   GeneratedColumn<bool> get isHidden =>
       $composableBuilder(column: $table.isHidden, builder: (column) => column);
+
+  GeneratedColumn<String> get groupId =>
+      $composableBuilder(column: $table.groupId, builder: (column) => column);
 }
 
 class $$ProjectSettingsTableTableTableManager
@@ -1213,6 +1947,7 @@ class $$ProjectSettingsTableTableTableManager
                 Value<String?> displayName = const Value.absent(),
                 Value<DateTime?> typeSetAt = const Value.absent(),
                 Value<bool> isHidden = const Value.absent(),
+                Value<String?> groupId = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ProjectSettingsTableCompanion(
                 folderId: folderId,
@@ -1220,6 +1955,7 @@ class $$ProjectSettingsTableTableTableManager
                 displayName: displayName,
                 typeSetAt: typeSetAt,
                 isHidden: isHidden,
+                groupId: groupId,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -1229,6 +1965,7 @@ class $$ProjectSettingsTableTableTableManager
                 Value<String?> displayName = const Value.absent(),
                 Value<DateTime?> typeSetAt = const Value.absent(),
                 Value<bool> isHidden = const Value.absent(),
+                Value<String?> groupId = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ProjectSettingsTableCompanion.insert(
                 folderId: folderId,
@@ -1236,6 +1973,7 @@ class $$ProjectSettingsTableTableTableManager
                 displayName: displayName,
                 typeSetAt: typeSetAt,
                 isHidden: isHidden,
+                groupId: groupId,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
@@ -1267,6 +2005,343 @@ typedef $$ProjectSettingsTableTableProcessedTableManager =
       ProjectSettingsTableData,
       PrefetchHooks Function()
     >;
+typedef $$ProjectGroupsTableTableCreateCompanionBuilder =
+    ProjectGroupsTableCompanion Function({
+      required String id,
+      required String name,
+      Value<bool> isSystem,
+      Value<int> rowid,
+    });
+typedef $$ProjectGroupsTableTableUpdateCompanionBuilder =
+    ProjectGroupsTableCompanion Function({
+      Value<String> id,
+      Value<String> name,
+      Value<bool> isSystem,
+      Value<int> rowid,
+    });
+
+class $$ProjectGroupsTableTableFilterComposer
+    extends Composer<_$AppDatabase, $ProjectGroupsTableTable> {
+  $$ProjectGroupsTableTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isSystem => $composableBuilder(
+    column: $table.isSystem,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$ProjectGroupsTableTableOrderingComposer
+    extends Composer<_$AppDatabase, $ProjectGroupsTableTable> {
+  $$ProjectGroupsTableTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isSystem => $composableBuilder(
+    column: $table.isSystem,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$ProjectGroupsTableTableAnnotationComposer
+    extends Composer<_$AppDatabase, $ProjectGroupsTableTable> {
+  $$ProjectGroupsTableTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<bool> get isSystem =>
+      $composableBuilder(column: $table.isSystem, builder: (column) => column);
+}
+
+class $$ProjectGroupsTableTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $ProjectGroupsTableTable,
+          ProjectGroupsTableData,
+          $$ProjectGroupsTableTableFilterComposer,
+          $$ProjectGroupsTableTableOrderingComposer,
+          $$ProjectGroupsTableTableAnnotationComposer,
+          $$ProjectGroupsTableTableCreateCompanionBuilder,
+          $$ProjectGroupsTableTableUpdateCompanionBuilder,
+          (
+            ProjectGroupsTableData,
+            BaseReferences<
+              _$AppDatabase,
+              $ProjectGroupsTableTable,
+              ProjectGroupsTableData
+            >,
+          ),
+          ProjectGroupsTableData,
+          PrefetchHooks Function()
+        > {
+  $$ProjectGroupsTableTableTableManager(
+    _$AppDatabase db,
+    $ProjectGroupsTableTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ProjectGroupsTableTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$ProjectGroupsTableTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$ProjectGroupsTableTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> name = const Value.absent(),
+                Value<bool> isSystem = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => ProjectGroupsTableCompanion(
+                id: id,
+                name: name,
+                isSystem: isSystem,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String name,
+                Value<bool> isSystem = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => ProjectGroupsTableCompanion.insert(
+                id: id,
+                name: name,
+                isSystem: isSystem,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$ProjectGroupsTableTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $ProjectGroupsTableTable,
+      ProjectGroupsTableData,
+      $$ProjectGroupsTableTableFilterComposer,
+      $$ProjectGroupsTableTableOrderingComposer,
+      $$ProjectGroupsTableTableAnnotationComposer,
+      $$ProjectGroupsTableTableCreateCompanionBuilder,
+      $$ProjectGroupsTableTableUpdateCompanionBuilder,
+      (
+        ProjectGroupsTableData,
+        BaseReferences<
+          _$AppDatabase,
+          $ProjectGroupsTableTable,
+          ProjectGroupsTableData
+        >,
+      ),
+      ProjectGroupsTableData,
+      PrefetchHooks Function()
+    >;
+typedef $$GroupCollapseStateTableTableCreateCompanionBuilder =
+    GroupCollapseStateTableCompanion Function({
+      required String groupId,
+      Value<bool> collapsed,
+      Value<int> rowid,
+    });
+typedef $$GroupCollapseStateTableTableUpdateCompanionBuilder =
+    GroupCollapseStateTableCompanion Function({
+      Value<String> groupId,
+      Value<bool> collapsed,
+      Value<int> rowid,
+    });
+
+class $$GroupCollapseStateTableTableFilterComposer
+    extends Composer<_$AppDatabase, $GroupCollapseStateTableTable> {
+  $$GroupCollapseStateTableTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get groupId => $composableBuilder(
+    column: $table.groupId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get collapsed => $composableBuilder(
+    column: $table.collapsed,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$GroupCollapseStateTableTableOrderingComposer
+    extends Composer<_$AppDatabase, $GroupCollapseStateTableTable> {
+  $$GroupCollapseStateTableTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get groupId => $composableBuilder(
+    column: $table.groupId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get collapsed => $composableBuilder(
+    column: $table.collapsed,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$GroupCollapseStateTableTableAnnotationComposer
+    extends Composer<_$AppDatabase, $GroupCollapseStateTableTable> {
+  $$GroupCollapseStateTableTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get groupId =>
+      $composableBuilder(column: $table.groupId, builder: (column) => column);
+
+  GeneratedColumn<bool> get collapsed =>
+      $composableBuilder(column: $table.collapsed, builder: (column) => column);
+}
+
+class $$GroupCollapseStateTableTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $GroupCollapseStateTableTable,
+          GroupCollapseStateTableData,
+          $$GroupCollapseStateTableTableFilterComposer,
+          $$GroupCollapseStateTableTableOrderingComposer,
+          $$GroupCollapseStateTableTableAnnotationComposer,
+          $$GroupCollapseStateTableTableCreateCompanionBuilder,
+          $$GroupCollapseStateTableTableUpdateCompanionBuilder,
+          (
+            GroupCollapseStateTableData,
+            BaseReferences<
+              _$AppDatabase,
+              $GroupCollapseStateTableTable,
+              GroupCollapseStateTableData
+            >,
+          ),
+          GroupCollapseStateTableData,
+          PrefetchHooks Function()
+        > {
+  $$GroupCollapseStateTableTableTableManager(
+    _$AppDatabase db,
+    $GroupCollapseStateTableTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$GroupCollapseStateTableTableFilterComposer(
+                $db: db,
+                $table: table,
+              ),
+          createOrderingComposer: () =>
+              $$GroupCollapseStateTableTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$GroupCollapseStateTableTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> groupId = const Value.absent(),
+                Value<bool> collapsed = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => GroupCollapseStateTableCompanion(
+                groupId: groupId,
+                collapsed: collapsed,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String groupId,
+                Value<bool> collapsed = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => GroupCollapseStateTableCompanion.insert(
+                groupId: groupId,
+                collapsed: collapsed,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$GroupCollapseStateTableTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $GroupCollapseStateTableTable,
+      GroupCollapseStateTableData,
+      $$GroupCollapseStateTableTableFilterComposer,
+      $$GroupCollapseStateTableTableOrderingComposer,
+      $$GroupCollapseStateTableTableAnnotationComposer,
+      $$GroupCollapseStateTableTableCreateCompanionBuilder,
+      $$GroupCollapseStateTableTableUpdateCompanionBuilder,
+      (
+        GroupCollapseStateTableData,
+        BaseReferences<
+          _$AppDatabase,
+          $GroupCollapseStateTableTable,
+          GroupCollapseStateTableData
+        >,
+      ),
+      GroupCollapseStateTableData,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -1275,4 +2350,11 @@ class $AppDatabaseManager {
       $$AppConfigTableTableTableManager(_db, _db.appConfigTable);
   $$ProjectSettingsTableTableTableManager get projectSettingsTable =>
       $$ProjectSettingsTableTableTableManager(_db, _db.projectSettingsTable);
+  $$ProjectGroupsTableTableTableManager get projectGroupsTable =>
+      $$ProjectGroupsTableTableTableManager(_db, _db.projectGroupsTable);
+  $$GroupCollapseStateTableTableTableManager get groupCollapseStateTable =>
+      $$GroupCollapseStateTableTableTableManager(
+        _db,
+        _db.groupCollapseStateTable,
+      );
 }
