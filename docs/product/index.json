@@ -1,0 +1,75 @@
+{
+  "schema_version": 1,
+  "generated": "2026-07-12T19:00:11.441Z",
+  "project": {
+    "id": "pro-orc",
+    "title": "Pro Orc",
+    "status": "active"
+  },
+  "milestones": [
+    {
+      "id": "m1-stabilization",
+      "title": "Stabilization and window fix (v2.2)",
+      "status": "done",
+      "target": null
+    },
+    {
+      "id": "m2-design-refresh",
+      "title": "Light theme design refresh",
+      "status": "done",
+      "target": null
+    },
+    {
+      "id": "m3-agentic-os-views",
+      "title": "AgenticOS views",
+      "status": "done",
+      "target": null
+    },
+    {
+      "id": "m4-sessions-graph",
+      "title": "Session monitoring and collaboration graph",
+      "status": "done",
+      "target": null
+    },
+    {
+      "id": "m5-harness-visibility",
+      "title": "Harness visibility",
+      "status": "done",
+      "target": null
+    },
+    {
+      "id": "m6-learning-loop",
+      "title": "Self-learning OS",
+      "status": "done",
+      "target": null
+    },
+    {
+      "id": "m7-network-costs",
+      "title": "Rounding out v3",
+      "status": "done",
+      "target": null
+    },
+    {
+      "id": "m8-project-organization",
+      "title": "Project organization",
+      "status": "in-progress",
+      "target": null
+    }
+  ],
+  "features": [
+    {
+      "id": "002-project-organization",
+      "milestone": "m8-project-organization",
+      "title": "Project Hub: list/grid toggle, custom groups, archive, a1-badge",
+      "status": "in-flight",
+      "stage": "started",
+      "depends_on": [],
+      "started": "2026-07-12",
+      "finished": null,
+      "spec_path": "projects/pro-orc/spec/002-project-organization.md",
+      "plan_path": "projects/pro-orc/plans/002-project-organization-wave-plan.md"
+    }
+  ],
+  "next": null,
+  "cursor": "002-project-organization"
+}
