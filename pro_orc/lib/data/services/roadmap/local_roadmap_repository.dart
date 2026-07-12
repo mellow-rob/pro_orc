@@ -57,31 +57,33 @@ class LocalRoadmapRepository implements RoadmapRepository {
       final matched = token == null
           ? const <A1Phase>[]
           : phasesByMilestoneToken.remove(token) ?? const <A1Phase>[];
-      milestones.add(RoadmapMilestone(
-        name: m.name,
-        status: m.status,
-        phases: [for (final ph in matched) _toRoadmapPhase(ph)],
-      ));
+      milestones.add(
+        RoadmapMilestone(
+          name: m.name,
+          status: m.status,
+          phases: [for (final ph in matched) _toRoadmapPhase(ph)],
+        ),
+      );
     }
 
     // Phases whose leading token matched no milestone (including ones left
     // over in the map, e.g. duplicate tokens) become standalone entries.
     final leftover = phasesByMilestoneToken.values.expand((v) => v);
     for (final ph in [...unmatchedPhases, ...leftover]) {
-      milestones.add(RoadmapMilestone(
-        name: ph.name,
-        status: ph.isActive ? 'in_progress' : 'done',
-        phases: [_toRoadmapPhase(ph)],
-      ));
+      milestones.add(
+        RoadmapMilestone(
+          name: ph.name,
+          status: ph.isActive ? 'in_progress' : 'done',
+          phases: [_toRoadmapPhase(ph)],
+        ),
+      );
     }
 
     return RoadmapData(milestones: milestones);
   }
 
-  RoadmapPhase _toRoadmapPhase(A1Phase ph) => RoadmapPhase(
-        name: ph.name,
-        status: ph.isActive ? 'in_progress' : 'done',
-      );
+  RoadmapPhase _toRoadmapPhase(A1Phase ph) =>
+      RoadmapPhase(name: ph.name, status: ph.isActive ? 'in_progress' : 'done');
 
   /// Extracts the leading alphanumeric token used to match phases to
   /// milestones, e.g. `M6` from both `M6-learning-loop` and

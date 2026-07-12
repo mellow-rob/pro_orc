@@ -33,5 +33,5 @@ class HiddenProjectsNotifier extends Notifier<Set<String>> {
 
 final hiddenProjectsProvider =
     NotifierProvider<HiddenProjectsNotifier, Set<String>>(
-  HiddenProjectsNotifier.new,
-);
+      HiddenProjectsNotifier.new,
+    );

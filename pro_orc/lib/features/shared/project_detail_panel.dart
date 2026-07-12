@@ -152,7 +152,8 @@ class _ProjectDetailPanelState extends ConsumerState<ProjectDetailPanel> {
                 size: 18,
               ),
               tooltip: 'Zurueck',
-              onPressed: widget.onBack ??
+              onPressed:
+                  widget.onBack ??
                   () => ref.read(openProjectDetailProvider.notifier).close(),
             ),
           ),

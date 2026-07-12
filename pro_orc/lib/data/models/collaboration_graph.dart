@@ -71,7 +71,9 @@ class CollaborationGraphData {
           kind: GraphNodeKind.agent,
           isLocal: true,
         ),
-      for (final name in usedAgentNames.toSet().difference(localAgentNames.toSet()))
+      for (final name in usedAgentNames.toSet().difference(
+        localAgentNames.toSet(),
+      ))
         GraphNode(
           id: 'agent:$name',
           label: name,
@@ -91,8 +93,10 @@ class CollaborationGraphData {
     ];
 
     final edges = [
-      for (final node in agentNodes) GraphEdge(fromId: projectNode.id, toId: node.id),
-      for (final node in skillNodes) GraphEdge(fromId: projectNode.id, toId: node.id),
+      for (final node in agentNodes)
+        GraphEdge(fromId: projectNode.id, toId: node.id),
+      for (final node in skillNodes)
+        GraphEdge(fromId: projectNode.id, toId: node.id),
     ];
 
     return CollaborationGraphData(
@@ -156,7 +160,11 @@ class MultiCollaborationGraphData {
   bool get isEmpty => projectNodes.isEmpty;
 
   /// All nodes (projects, then agents, then skills) in a stable order.
-  List<GraphNode> get allNodes => [...projectNodes, ...agentNodes, ...skillNodes];
+  List<GraphNode> get allNodes => [
+    ...projectNodes,
+    ...agentNodes,
+    ...skillNodes,
+  ];
 
   /// Builds a deduplicated multi-project graph from per-project [inputs].
   ///

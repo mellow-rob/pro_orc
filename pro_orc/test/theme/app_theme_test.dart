@@ -30,13 +30,16 @@ void main() {
   });
 
   group('AppColors.light vs AppColors.dark', () {
-    test('share the same accent hues conceptually but different exact tones', () {
-      // Different tones are expected (light-mode accents are darkened for
-      // contrast), but both themes must define all tokens (no nulls, checked
-      // implicitly by using `const` constructors) and must differ from each
-      // other so the toggle is visibly meaningful.
-      expect(AppColors.light.bgBase, isNot(equals(AppColors.dark.bgBase)));
-      expect(AppColors.light.textPri, isNot(equals(AppColors.dark.textPri)));
-    });
+    test(
+      'share the same accent hues conceptually but different exact tones',
+      () {
+        // Different tones are expected (light-mode accents are darkened for
+        // contrast), but both themes must define all tokens (no nulls, checked
+        // implicitly by using `const` constructors) and must differ from each
+        // other so the toggle is visibly meaningful.
+        expect(AppColors.light.bgBase, isNot(equals(AppColors.dark.bgBase)));
+        expect(AppColors.light.textPri, isNot(equals(AppColors.dark.textPri)));
+      },
+    );
   });
 }

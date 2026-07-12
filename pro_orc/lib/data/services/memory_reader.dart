@@ -28,11 +28,7 @@ Future<MemoryData?> _checkMemoryAt(String projectDir) async {
   final mtime = (await memoryFile.stat()).modified;
   final isStale = DateTime.now().difference(mtime) > const Duration(days: 7);
 
-  return MemoryData(
-    hasMemory: true,
-    lastConsolidated: mtime,
-    isStale: isStale,
-  );
+  return MemoryData(hasMemory: true, lastConsolidated: mtime, isStale: isStale);
 }
 
 /// Returns the mtime of the MEMORY.md that [readMemoryData] would find for
@@ -47,13 +43,15 @@ Future<DateTime?> memoryFileSignature(
 }) async {
   try {
     final claudeHome =
-        claudeHomeDirOverride ?? p.join(Platform.environment['HOME']!, '.claude');
+        claudeHomeDirOverride ??
+        p.join(Platform.environment['HOME']!, '.claude');
     final projectsDir = p.join(claudeHome, 'projects');
     final encodedPath = encodeProjectPath(projectPath);
 
     // Strategy 1: exact encoded path.
-    final exactMemoryFile =
-        File(p.join(projectsDir, encodedPath, 'memory', 'MEMORY.md'));
+    final exactMemoryFile = File(
+      p.join(projectsDir, encodedPath, 'memory', 'MEMORY.md'),
+    );
     if (await exactMemoryFile.exists()) {
       return (await exactMemoryFile.stat()).modified;
     }
@@ -105,7 +103,8 @@ Future<MemoryData> readMemoryData(
 }) async {
   try {
     final claudeHome =
-        claudeHomeDirOverride ?? p.join(Platform.environment['HOME']!, '.claude');
+        claudeHomeDirOverride ??
+        p.join(Platform.environment['HOME']!, '.claude');
     final projectsDir = p.join(claudeHome, 'projects');
     final encodedPath = encodeProjectPath(projectPath);
 
@@ -141,7 +140,8 @@ Future<MemoryData> readMemoryData(
       // Pick the most recently consolidated memory
       if (bestMatch == null ||
           (result.lastConsolidated != null &&
-              (bestMtime == null || result.lastConsolidated!.isAfter(bestMtime)))) {
+              (bestMtime == null ||
+                  result.lastConsolidated!.isAfter(bestMtime)))) {
         bestMatch = result;
         bestMtime = result.lastConsolidated;
       }

@@ -41,11 +41,7 @@ class MemoryIndicator extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(
-                LucideIcons.brain100,
-                color: iconColor,
-                size: 13,
-              ),
+              Icon(LucideIcons.brain100, color: iconColor, size: 13),
               const SizedBox(width: 3),
               Text(
                 'zzz',

@@ -9,8 +9,9 @@ import 'package:pro_orc/data/services/learning_reader.dart';
 /// root path. The caller writes files into it.
 Future<Directory> _createTempVault() async {
   final vault = await Directory.systemTemp.createTemp('learning_vault_');
-  await Directory(p.join(vault.path, 'pattern', 'a1-learnings'))
-      .create(recursive: true);
+  await Directory(
+    p.join(vault.path, 'pattern', 'a1-learnings'),
+  ).create(recursive: true);
   return vault;
 }
 
@@ -24,7 +25,8 @@ void main() {
       addTearDown(() => vault.delete(recursive: true));
 
       // Two entries: one YAML-block with date:, one bare marker.
-      await File(p.join(_learningsDir(vault), 'a1-execute.md')).writeAsString('''
+      await File(p.join(_learningsDir(vault), 'a1-execute.md')).writeAsString(
+        '''
 ---
 date: 2026-07-04
 result: pass
@@ -36,7 +38,8 @@ date: 2026-07-05
 result: pass
 ---
 ✅ Was gut war: ehrliche Reports.
-''');
+''',
+      );
 
       // Single entry, marker-only format.
       await File(p.join(_learningsDir(vault), 'a1-plan.md')).writeAsString('''
@@ -58,12 +61,15 @@ result: pass
       final vault = await _createTempVault();
       addTearDown(() => vault.delete(recursive: true));
 
-      await File(p.join(_learningsDir(vault), 'index.md'))
-          .writeAsString('# Index\n');
-      await File(p.join(_learningsDir(vault), 'patterns.md'))
-          .writeAsString('# Patterns\n');
-      await File(p.join(_learningsDir(vault), 'a1-fix.md'))
-          .writeAsString('✅ Was gut war: x\n');
+      await File(
+        p.join(_learningsDir(vault), 'index.md'),
+      ).writeAsString('# Index\n');
+      await File(
+        p.join(_learningsDir(vault), 'patterns.md'),
+      ).writeAsString('# Patterns\n');
+      await File(
+        p.join(_learningsDir(vault), 'a1-fix.md'),
+      ).writeAsString('✅ Was gut war: x\n');
 
       final reader = LearningReader(vaultDirOverride: vault.path);
       final data = await reader.read([]);
@@ -72,12 +78,14 @@ result: pass
       expect(names, ['a1-fix']);
     });
 
-    test('extracts pattern clusters from table rows and synthesis headings',
-        () async {
-      final vault = await _createTempVault();
-      addTearDown(() => vault.delete(recursive: true));
+    test(
+      'extracts pattern clusters from table rows and synthesis headings',
+      () async {
+        final vault = await _createTempVault();
+        addTearDown(() => vault.delete(recursive: true));
 
-      await File(p.join(_learningsDir(vault), 'patterns.md')).writeAsString('''
+        await File(p.join(_learningsDir(vault), 'patterns.md')).writeAsString(
+          '''
 # Pattern-Cluster
 
 ## Applied (Threshold 3+)
@@ -90,27 +98,32 @@ result: pass
 ### 2026-06-19 Synthese (Agent Space)
 
 ## Monitoring (watch)
-''');
+''',
+        );
 
-      final reader = LearningReader(vaultDirOverride: vault.path);
-      final data = await reader.read([]);
+        final reader = LearningReader(vaultDirOverride: vault.path);
+        final data = await reader.read([]);
 
-      expect(data.patternClusters, contains('gate_enforcement_gap'));
-      // Bold markers stripped.
-      expect(data.patternClusters, contains('gate_fr_token_overcount'));
-      expect(
-        data.patternClusters,
-        contains('2026-06-19 Synthese (Agent Space)'),
-      );
-      // Header row and separator row must not appear.
-      expect(data.patternClusters, isNot(contains('Pattern')));
-    });
+        expect(data.patternClusters, contains('gate_enforcement_gap'));
+        // Bold markers stripped.
+        expect(data.patternClusters, contains('gate_fr_token_overcount'));
+        expect(
+          data.patternClusters,
+          contains('2026-06-19 Synthese (Agent Space)'),
+        );
+        // Header row and separator row must not appear.
+        expect(data.patternClusters, isNot(contains('Pattern')));
+      },
+    );
   });
 
   group('LearningReader — missing vault (AD-1)', () {
     test('returns empty section, never throws, when vault is absent', () async {
       final reader = LearningReader(
-        vaultDirOverride: p.join(Directory.systemTemp.path, 'does_not_exist_xyz'),
+        vaultDirOverride: p.join(
+          Directory.systemTemp.path,
+          'does_not_exist_xyz',
+        ),
       );
       final data = await reader.read([]);
 
@@ -174,7 +187,9 @@ result: pass
 
       final project = await Directory.systemTemp.createTemp('learn_proj_');
       addTearDown(() => project.delete(recursive: true));
-      final phaseDir = Directory(p.join(project.path, '.a1', 'phases', 'M1-p1'));
+      final phaseDir = Directory(
+        p.join(project.path, '.a1', 'phases', 'M1-p1'),
+      );
       await phaseDir.create(recursive: true);
 
       await File(p.join(phaseDir.path, 'observations.jsonl')).writeAsString('''
@@ -195,18 +210,20 @@ not valid json at all
       expect(obs.lastObservation, DateTime.parse('2026-07-03T10:00:00Z'));
     });
 
-    test('skips projects without .a1/phases and malformed files gracefully',
-        () async {
-      final vault = await _createTempVault();
-      addTearDown(() => vault.delete(recursive: true));
+    test(
+      'skips projects without .a1/phases and malformed files gracefully',
+      () async {
+        final vault = await _createTempVault();
+        addTearDown(() => vault.delete(recursive: true));
 
-      final noA1 = await Directory.systemTemp.createTemp('learn_noa1_');
-      addTearDown(() => noA1.delete(recursive: true));
+        final noA1 = await Directory.systemTemp.createTemp('learn_noa1_');
+        addTearDown(() => noA1.delete(recursive: true));
 
-      final reader = LearningReader(vaultDirOverride: vault.path);
-      final data = await reader.read([noA1.path]);
+        final reader = LearningReader(vaultDirOverride: vault.path);
+        final data = await reader.read([noA1.path]);
 
-      expect(data.observations, isEmpty);
-    });
+        expect(data.observations, isEmpty);
+      },
+    );
   });
 }

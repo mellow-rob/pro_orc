@@ -40,13 +40,9 @@ void main() {
 
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [
-          appDatabaseProvider.overrideWithValue(db),
-        ],
+        overrides: [appDatabaseProvider.overrideWithValue(db)],
         child: MaterialApp(
-          theme: ThemeData.dark().copyWith(
-            extensions: const [AppColors.dark],
-          ),
+          theme: ThemeData.dark().copyWith(extensions: const [AppColors.dark]),
           home: Scaffold(
             body: Builder(
               builder: (context) => Center(
@@ -54,8 +50,7 @@ void main() {
                   onPressed: () => showDialog<bool>(
                     context: context,
                     barrierDismissible: false,
-                    builder: (_) =>
-                        RenameProjectDialog(project: project),
+                    builder: (_) => RenameProjectDialog(project: project),
                   ),
                   child: const Text('Open'),
                 ),
@@ -68,8 +63,9 @@ void main() {
   }
 
   group('RenameProjectDialog', () {
-    testWidgets('text field is pre-filled with current displayName',
-        (tester) async {
+    testWidgets('text field is pre-filled with current displayName', (
+      tester,
+    ) async {
       await pumpHost(tester, makeProject(displayName: 'My Project'));
       await tester.tap(find.text('Open'));
       await tester.pumpAndSettle();
@@ -114,8 +110,9 @@ void main() {
       expect(settings?.displayName, isNull);
     });
 
-    testWidgets('save button is disabled when text matches current name',
-        (tester) async {
+    testWidgets('save button is disabled when text matches current name', (
+      tester,
+    ) async {
       await pumpHost(tester, makeProject(displayName: 'Same'));
       await tester.tap(find.text('Open'));
       await tester.pumpAndSettle();

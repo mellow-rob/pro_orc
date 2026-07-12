@@ -25,9 +25,8 @@ class HarnessTab extends ConsumerWidget {
     final async = ref.watch(harnessProvider(''));
 
     return async.when(
-      loading: () => Center(
-        child: CircularProgressIndicator(color: colors.violet),
-      ),
+      loading: () =>
+          Center(child: CircularProgressIndicator(color: colors.violet)),
       error: (_, _) => Center(
         child: Text(
           'Harness-Konfiguration nicht lesbar',
@@ -70,7 +69,9 @@ class HarnessTab extends ConsumerWidget {
                 _HarnessRow(
                   colors: colors,
                   level: h.level,
-                  primary: h.matcher.isEmpty ? h.event : '${h.event} · ${h.matcher}',
+                  primary: h.matcher.isEmpty
+                      ? h.event
+                      : '${h.event} · ${h.matcher}',
                   secondary: h.command,
                 ),
             ],

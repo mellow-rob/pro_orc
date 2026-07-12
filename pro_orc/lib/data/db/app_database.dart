@@ -329,6 +329,17 @@ class AppDatabase extends _$AppDatabase {
     return settings?.groupId;
   }
 
+  /// Returns every folderId's current group assignment (`folderId ->
+  /// groupId`, `null` = "Ohne Gruppe") in one query. Mirrors
+  /// [getHiddenProjectIds]'s bulk-read pattern so [membershipProvider] can
+  /// eager-load on `build()` instead of only tracking folderIds it has been
+  /// explicitly asked about — required for the merged Projekte tab to
+  /// render correct group sections right after a fresh app start.
+  Future<Map<String, String?>> getAllProjectGroupIds() async {
+    final rows = await select(projectSettingsTable).get();
+    return {for (final row in rows) row.folderId: row.groupId};
+  }
+
   /// Returns the collapse state for a group, or `false` if no row exists
   /// yet (fresh user-created groups default to expanded).
   Future<bool> getCollapseState(String groupId) async {

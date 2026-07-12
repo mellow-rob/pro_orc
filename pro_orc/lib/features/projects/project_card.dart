@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:pro_orc/data/models/project_model.dart';
 import 'package:pro_orc/data/models/project_type.dart';
+import 'package:pro_orc/features/projects/a1_badge.dart';
+import 'package:pro_orc/features/projects/type_badge.dart';
 import 'package:pro_orc/features/shared/memory_indicator.dart';
 import 'package:pro_orc/features/shared/project_context_menu.dart';
 import 'package:pro_orc/features/shared/quick_actions.dart';
@@ -13,15 +15,16 @@ import 'package:pro_orc/providers/hidden_projects_provider.dart';
 import 'package:pro_orc/providers/session_provider.dart';
 import 'package:pro_orc/theme/n3_colors.dart';
 
-/// Card widget for a single code project.
+/// Unified grid card for a project, replacing the former per-tab
+/// CodeProjectCard/ResearchProjectCard split now that both project types
+/// live in the merged Projekte tab (FR-012).
 ///
-/// Renders: name, optional a1 progress block, description, memory indicator,
-/// and quick action buttons (Terminal, Finder, GitHub).
-///
-/// Hover adds a subtle cyan glow. Right-click shows Ausblenden/Einblenden
-/// context menu (locked decision). Eye icon in title row does the same toggle.
-class CodeProjectCard extends ConsumerStatefulWidget {
-  const CodeProjectCard({
+/// Renders: [TypeBadge] + [A1Badge], name, optional a1 progress block,
+/// description, memory indicator, and quick action buttons. The accent
+/// color (title icon, hover glow, Claude button) still follows the
+/// project's [ProjectType] to preserve visual continuity with the old tabs.
+class ProjectCard extends ConsumerStatefulWidget {
+  const ProjectCard({
     super.key,
     required this.project,
     this.onTap,
@@ -29,23 +32,27 @@ class CodeProjectCard extends ConsumerStatefulWidget {
   });
 
   final ProjectModel project;
-
-  /// Optional tap callback — wired in Plan 03 (project detail panel).
   final VoidCallback? onTap;
 
   /// When true, the card is rendered with reduced opacity to indicate it's hidden.
   final bool isHiddenCard;
 
   @override
-  ConsumerState<CodeProjectCard> createState() => _CodeProjectCardState();
+  ConsumerState<ProjectCard> createState() => _ProjectCardState();
 }
 
-class _CodeProjectCardState extends ConsumerState<CodeProjectCard> {
+class _ProjectCardState extends ConsumerState<ProjectCard> {
   bool _isHovered = false;
+
+  ProjectType get _type => widget.project.projectType ?? ProjectType.code;
+
+  Color _accent(AppColors colors) =>
+      _type == ProjectType.research ? colors.fuch : colors.cyan;
 
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).extension<AppColors>()!;
+    final accent = _accent(colors);
     final hiddenSet = ref.watch(hiddenProjectsProvider);
     final isHidden = hiddenSet.contains(widget.project.folderId);
 
@@ -59,7 +66,9 @@ class _CodeProjectCardState extends ConsumerState<CodeProjectCard> {
           isHidden: isHidden,
           ref: ref,
           project: widget.project,
-          moveTarget: ProjectType.research,
+          moveTarget: _type == ProjectType.code
+              ? ProjectType.research
+              : ProjectType.code,
         ),
         child: MouseRegion(
           onEnter: (_) => setState(() => _isHovered = true),
@@ -71,7 +80,7 @@ class _CodeProjectCardState extends ConsumerState<CodeProjectCard> {
               boxShadow: _isHovered
                   ? [
                       BoxShadow(
-                        color: colors.cyan.withValues(alpha: 0.15),
+                        color: accent.withValues(alpha: 0.15),
                         blurRadius: 16,
                         spreadRadius: 2,
                       ),
@@ -81,7 +90,7 @@ class _CodeProjectCardState extends ConsumerState<CodeProjectCard> {
             child: GlassCard(
               child: Padding(
                 padding: const EdgeInsets.all(16),
-                child: _buildContent(context, colors, isHidden),
+                child: _buildContent(context, colors, accent, isHidden),
               ),
             ),
           ),
@@ -90,50 +99,75 @@ class _CodeProjectCardState extends ConsumerState<CodeProjectCard> {
     );
   }
 
-  Widget _buildContent(BuildContext context, AppColors colors, bool isHidden) {
+  Widget _buildContent(
+    BuildContext context,
+    AppColors colors,
+    Color accent,
+    bool isHidden,
+  ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // --- Title row ---
-        _buildTitleRow(colors, isHidden),
+        _buildBadgeRow(),
+        const SizedBox(height: 8),
+        _buildTitleRow(colors, accent, isHidden),
         const SizedBox(height: 10),
-
-        // --- a1 progress block (only shown when the project has .a1/ phases) ---
         if (_a1Progress != null) ...[
-          _buildA1Block(colors, _a1Progress!),
+          _buildA1Block(colors, accent, _a1Progress!),
           const SizedBox(height: 10),
         ],
-
-        // --- Memory indicator ---
+        if (widget.project.description != null) ...[
+          Text(
+            widget.project.description!,
+            style: TextStyle(color: colors.textSec, fontSize: 13),
+            maxLines: 3,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 8),
+        ],
         const SizedBox(height: 4),
         MemoryIndicator(
           memory: widget.project.memory,
           colors: colors,
-          onTap: () => ref.read(quickActionsProvider).openRemSleep(widget.project.path),
+          onTap: () =>
+              ref.read(quickActionsProvider).openRemSleep(widget.project.path),
         ),
-
         const Spacer(),
-
-        // --- Claude button (primary action) ---
-        _buildClaudeButton(colors),
+        _buildClaudeButton(colors, accent),
         const SizedBox(height: 8),
-
-        // --- Quick action buttons (secondary) ---
         buildQuickActionRow(
-          buildProjectQuickActions(widget.project, ref.read(quickActionsProvider)),
+          buildProjectQuickActions(
+            widget.project,
+            ref.read(quickActionsProvider),
+          ),
           colors,
         ),
       ],
     );
   }
 
-  Widget _buildTitleRow(AppColors colors, bool isHidden) {
-    final sessionsAsync = ref.watch(projectSessionsProvider(widget.project.path));
+  Widget _buildBadgeRow() {
+    return Row(
+      children: [
+        TypeBadge(type: _type),
+        const SizedBox(width: 6),
+        A1Badge(project: widget.project),
+      ],
+    );
+  }
+
+  Widget _buildTitleRow(AppColors colors, Color accent, bool isHidden) {
+    final sessionsAsync = ref.watch(
+      projectSessionsProvider(widget.project.path),
+    );
     final hasActiveSession = sessionsAsync.value?.hasActiveSession ?? false;
+    final icon = _type == ProjectType.research
+        ? LucideIcons.beaker100
+        : LucideIcons.codeXml100;
 
     return Row(
       children: [
-        Icon(LucideIcons.codeXml100, color: colors.cyan, size: 15),
+        Icon(icon, color: accent, size: 15),
         const SizedBox(width: 6),
         Expanded(
           child: Row(
@@ -156,7 +190,6 @@ class _CodeProjectCardState extends ConsumerState<CodeProjectCard> {
             ],
           ),
         ),
-        // Eye icon for hide/show toggle
         SizedBox(
           width: 28,
           height: 28,
@@ -169,7 +202,9 @@ class _CodeProjectCardState extends ConsumerState<CodeProjectCard> {
             ),
             tooltip: isHidden ? 'Oeffentlich' : 'Privat',
             onPressed: () {
-              ref.read(hiddenProjectsProvider.notifier).toggle(widget.project.folderId);
+              ref
+                  .read(hiddenProjectsProvider.notifier)
+                  .toggle(widget.project.folderId);
             },
           ),
         ),
@@ -181,8 +216,7 @@ class _CodeProjectCardState extends ConsumerState<CodeProjectCard> {
   /// measurable a1 phases.
   int? get _a1Progress => widget.project.a1?.overallProgress;
 
-  /// Compact a1 progress block shown for projects that plan with `.a1/`.
-  Widget _buildA1Block(AppColors colors, int progress) {
+  Widget _buildA1Block(AppColors colors, Color accent, int progress) {
     final a1 = widget.project.a1!;
     final active = a1.activePhase;
     final clamped = progress.clamp(0, 100);
@@ -192,20 +226,9 @@ class _CodeProjectCardState extends ConsumerState<CodeProjectCard> {
       children: [
         Row(
           children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-              decoration: BoxDecoration(
-                color: colors.cyan.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(5),
-              ),
-              child: Text(
-                'a1',
-                style: TextStyle(
-                  color: colors.cyan,
-                  fontSize: 10,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
+            Text(
+              'Fortschritt',
+              style: TextStyle(color: colors.textSec, fontSize: 11),
             ),
             const Spacer(),
             Text(
@@ -225,7 +248,7 @@ class _CodeProjectCardState extends ConsumerState<CodeProjectCard> {
               widthFactor: clamped / 100.0,
               child: Container(
                 decoration: BoxDecoration(
-                  color: colors.cyan,
+                  color: accent,
                   borderRadius: BorderRadius.circular(4),
                 ),
               ),
@@ -244,22 +267,23 @@ class _CodeProjectCardState extends ConsumerState<CodeProjectCard> {
     );
   }
 
-  Widget _buildClaudeButton(AppColors colors) {
+  Widget _buildClaudeButton(AppColors colors, Color accent) {
     return SizedBox(
       height: 32,
       child: TextButton.icon(
-        onPressed: () => ref.read(quickActionsProvider).openClaude(widget.project.path),
-        icon: Icon(LucideIcons.sparkles100, size: 16, color: colors.cyan),
+        onPressed: () =>
+            ref.read(quickActionsProvider).openClaude(widget.project.path),
+        icon: Icon(LucideIcons.sparkles100, size: 16, color: accent),
         label: Text(
           'Claude',
           style: TextStyle(
-            color: colors.cyan,
+            color: accent,
             fontSize: 13,
             fontWeight: FontWeight.w600,
           ),
         ),
         style: TextButton.styleFrom(
-          backgroundColor: colors.cyan.withValues(alpha: 0.1),
+          backgroundColor: accent.withValues(alpha: 0.1),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
         ),

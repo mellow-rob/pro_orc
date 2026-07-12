@@ -123,13 +123,15 @@ class _GraphPainter extends CustomPainter {
       if (from == null || to == null) continue;
 
       final isHighlighted =
-          highlightedNodeId != null && (edge.fromId == highlightedNodeId || edge.toId == highlightedNodeId);
+          highlightedNodeId != null &&
+          (edge.fromId == highlightedNodeId || edge.toId == highlightedNodeId);
 
       final paint = Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = isHighlighted ? 2.0 : 1.0
-        ..color = (isHighlighted ? colors.cyan : colors.textDim)
-            .withValues(alpha: isHighlighted ? 0.8 : 0.25);
+        ..color = (isHighlighted ? colors.cyan : colors.textDim).withValues(
+          alpha: isHighlighted ? 0.8 : 0.25,
+        );
 
       final controlX = (from.dx + to.dx) / 2;
       final path = Path()
@@ -141,7 +143,8 @@ class _GraphPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_GraphPainter oldDelegate) =>
-      oldDelegate.highlightedNodeId != highlightedNodeId || oldDelegate.layout != layout;
+      oldDelegate.highlightedNodeId != highlightedNodeId ||
+      oldDelegate.layout != layout;
 }
 
 /// Small pill label for a single node, with a colored dot indicating kind
@@ -160,10 +163,10 @@ class _NodeLabel extends StatelessWidget {
   final ValueChanged<bool> onHover;
 
   Color get _dotColor => switch (node.kind) {
-        GraphNodeKind.project => colors.cyan,
-        GraphNodeKind.agent => node.isLocal ? colors.violet : colors.textDim,
-        GraphNodeKind.skill => colors.amber,
-      };
+    GraphNodeKind.project => colors.cyan,
+    GraphNodeKind.agent => node.isLocal ? colors.violet : colors.textDim,
+    GraphNodeKind.skill => colors.amber,
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -189,7 +192,10 @@ class _NodeLabel extends StatelessWidget {
               Container(
                 width: 6,
                 height: 6,
-                decoration: BoxDecoration(color: _dotColor, shape: BoxShape.circle),
+                decoration: BoxDecoration(
+                  color: _dotColor,
+                  shape: BoxShape.circle,
+                ),
               ),
               const SizedBox(width: 5),
               Flexible(

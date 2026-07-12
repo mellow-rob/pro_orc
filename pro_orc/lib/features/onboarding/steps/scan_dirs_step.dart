@@ -124,11 +124,7 @@ class ScanDirsStep extends StatelessWidget {
             onTap: () => onRemoveDir(index),
             child: Padding(
               padding: const EdgeInsets.all(4),
-              child: Icon(
-                LucideIcons.circleX,
-                color: colors.textDim,
-                size: 16,
-              ),
+              child: Icon(LucideIcons.circleX, color: colors.textDim, size: 16),
             ),
           ),
         ],

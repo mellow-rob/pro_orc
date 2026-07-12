@@ -83,8 +83,9 @@ class _ImportProjectDialogState extends ConsumerState<ImportProjectDialog> {
         projectPath: widget.analysis.path,
         displayName: widget.analysis.folderName,
         claudeMd: !widget.analysis.hasClaudeMd && _claudeMd,
-        gitignoreTemplate:
-            !widget.analysis.hasGitignore ? _gitignoreTemplate : GitignoreTemplate.none,
+        gitignoreTemplate: !widget.analysis.hasGitignore
+            ? _gitignoreTemplate
+            : GitignoreTemplate.none,
         gitInit: !widget.analysis.hasGit && _gitInit,
       );
 
@@ -102,10 +103,12 @@ class _ImportProjectDialogState extends ConsumerState<ImportProjectDialog> {
       // 3. Persist project type in DB
       final folderId = p.basename(widget.analysis.path);
       final db = ref.read(appDatabaseProvider);
-      await db.upsertProjectSettings(ProjectSettingsTableCompanion.insert(
-        folderId: folderId,
-        projectType: Value(_selectedType.name),
-      ));
+      await db.upsertProjectSettings(
+        ProjectSettingsTableCompanion.insert(
+          folderId: folderId,
+          projectType: Value(_selectedType.name),
+        ),
+      );
 
       // 4. Invalidate watcher + projects — CRITICAL for live update
       ref.invalidate(watcherProvider);
@@ -114,10 +117,7 @@ class _ImportProjectDialogState extends ConsumerState<ImportProjectDialog> {
       if (!mounted) return;
 
       // 5. Close dialog, return success
-      Navigator.of(context).pop({
-        'success': true,
-        'result': result,
-      });
+      Navigator.of(context).pop({'success': true, 'result': result});
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -255,7 +255,10 @@ class _ImportProjectDialogState extends ConsumerState<ImportProjectDialog> {
   }
 
   Widget _buildSmartDefaults(
-      AppColors colors, Color accent, FolderAnalysis analysis) {
+    AppColors colors,
+    Color accent,
+    FolderAnalysis analysis,
+  ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -359,7 +362,10 @@ class _ImportProjectDialogState extends ConsumerState<ImportProjectDialog> {
   }
 
   Widget _buildGitignoreRow(
-      AppColors colors, Color accent, FolderAnalysis analysis) {
+    AppColors colors,
+    Color accent,
+    FolderAnalysis analysis,
+  ) {
     if (analysis.hasGitignore) {
       return _buildScaffoldRow(
         colors: colors,
@@ -387,17 +393,29 @@ class _ImportProjectDialogState extends ConsumerState<ImportProjectDialog> {
         ),
         items: const [
           DropdownMenuItem(
-              value: GitignoreTemplate.none, child: Text('Kein .gitignore')),
+            value: GitignoreTemplate.none,
+            child: Text('Kein .gitignore'),
+          ),
           DropdownMenuItem(
-              value: GitignoreTemplate.flutter, child: Text('Flutter')),
+            value: GitignoreTemplate.flutter,
+            child: Text('Flutter'),
+          ),
           DropdownMenuItem(
-              value: GitignoreTemplate.nodejs, child: Text('Node.js')),
+            value: GitignoreTemplate.nodejs,
+            child: Text('Node.js'),
+          ),
           DropdownMenuItem(
-              value: GitignoreTemplate.nextjs, child: Text('HTML + Next.js')),
+            value: GitignoreTemplate.nextjs,
+            child: Text('HTML + Next.js'),
+          ),
           DropdownMenuItem(
-              value: GitignoreTemplate.python, child: Text('Python')),
+            value: GitignoreTemplate.python,
+            child: Text('Python'),
+          ),
           DropdownMenuItem(
-              value: GitignoreTemplate.html, child: Text('HTML (statisch)')),
+            value: GitignoreTemplate.html,
+            child: Text('HTML (statisch)'),
+          ),
         ],
         onChanged: (value) {
           if (value != null) setState(() => _gitignoreTemplate = value);
@@ -490,10 +508,7 @@ class _ImportProjectDialogState extends ConsumerState<ImportProjectDialog> {
       buttonChild = SizedBox(
         width: 20,
         height: 20,
-        child: CircularProgressIndicator(
-          strokeWidth: 2,
-          color: colors.bgBase,
-        ),
+        child: CircularProgressIndicator(strokeWidth: 2, color: colors.bgBase),
       );
     } else {
       buttonChild = const Text('Importieren');

@@ -70,7 +70,9 @@ class ProOrcApp extends ConsumerWidget {
       theme: buildAppLightTheme(),
       darkTheme: buildAppTheme(),
       themeMode: themeMode,
-      home: const ShellScreen(activationPolicyService: _activationPolicyService),
+      home: const ShellScreen(
+        activationPolicyService: _activationPolicyService,
+      ),
     );
   }
 }

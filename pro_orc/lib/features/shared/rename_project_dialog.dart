@@ -135,8 +135,10 @@ class _RenameProjectDialogState extends ConsumerState<RenameProjectDialog> {
             width: 1,
           ),
         ),
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 12,
+          vertical: 10,
+        ),
       ),
     );
   }
@@ -154,8 +156,7 @@ class _RenameProjectDialogState extends ConsumerState<RenameProjectDialog> {
       mainAxisAlignment: MainAxisAlignment.end,
       children: [
         TextButton(
-          onPressed:
-              _saving ? null : () => Navigator.of(context).pop(false),
+          onPressed: _saving ? null : () => Navigator.of(context).pop(false),
           style: TextButton.styleFrom(
             foregroundColor: colors.textSec,
             disabledForegroundColor: colors.textDim.withValues(alpha: 0.4),

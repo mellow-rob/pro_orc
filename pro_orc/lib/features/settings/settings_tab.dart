@@ -240,7 +240,11 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
                   ...List.generate(_scanDirs.length, (i) {
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 6),
-                      child: _buildDirRow(colors, _scanDirs[i], () => _removeScanDir(i)),
+                      child: _buildDirRow(
+                        colors,
+                        _scanDirs[i],
+                        () => _removeScanDir(i),
+                      ),
                     );
                   }),
                 const SizedBox(height: 8),
@@ -254,7 +258,9 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
                       style: TextStyle(color: colors.cyan, fontSize: 13),
                     ),
                     style: OutlinedButton.styleFrom(
-                      side: BorderSide(color: colors.cyan.withValues(alpha: 0.3)),
+                      side: BorderSide(
+                        color: colors.cyan.withValues(alpha: 0.3),
+                      ),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8),
                       ),
@@ -290,7 +296,11 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
                             fontFamily: 'SF Mono',
                           ),
                         ),
-                        deleteIcon: Icon(Icons.close, size: 14, color: colors.textDim),
+                        deleteIcon: Icon(
+                          Icons.close,
+                          size: 14,
+                          color: colors.textDim,
+                        ),
                         onDeleted: () => _removeIgnorePattern(i),
                         backgroundColor: colors.bgElev.withValues(alpha: 0.6),
                         side: BorderSide.none,
@@ -321,7 +331,11 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
                     const SizedBox(width: 8),
                     IconButton(
                       onPressed: _addIgnorePattern,
-                      icon: Icon(Icons.add_circle_outline, color: colors.cyan, size: 20),
+                      icon: Icon(
+                        Icons.add_circle_outline,
+                        color: colors.cyan,
+                        size: 20,
+                      ),
                       tooltip: 'Hinzufuegen',
                     ),
                   ],
@@ -371,7 +385,8 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
             colors: colors,
             icon: LucideIcons.notebook,
             title: 'Obsidian-Vault',
-            subtitle: 'Pfad zum Vault für die Learning-Ansicht '
+            subtitle:
+                'Pfad zum Vault für die Learning-Ansicht '
                 '(Standard: ~/N3URAL-Vault)',
             child: Row(
               children: [
@@ -552,7 +567,11 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
       ),
       child: Row(
         children: [
-          Icon(Icons.folder, color: colors.cyan.withValues(alpha: 0.7), size: 16),
+          Icon(
+            Icons.folder,
+            color: colors.cyan.withValues(alpha: 0.7),
+            size: 16,
+          ),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
@@ -571,7 +590,11 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
             onTap: onRemove,
             child: Padding(
               padding: const EdgeInsets.all(4),
-              child: Icon(Icons.remove_circle_outline, color: colors.textDim, size: 16),
+              child: Icon(
+                Icons.remove_circle_outline,
+                color: colors.textDim,
+                size: 16,
+              ),
             ),
           ),
         ],

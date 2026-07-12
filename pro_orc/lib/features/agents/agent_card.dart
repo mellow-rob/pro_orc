@@ -123,10 +123,7 @@ class AgentCard extends StatelessWidget {
                         ),
                         child: Text(
                           tool,
-                          style: TextStyle(
-                            color: colors.textDim,
-                            fontSize: 10,
-                          ),
+                          style: TextStyle(color: colors.textDim, fontSize: 10),
                         ),
                       ),
                     if (agent.tools.length > 4)
@@ -141,10 +138,7 @@ class AgentCard extends StatelessWidget {
                         ),
                         child: Text(
                           '+${agent.tools.length - 4}',
-                          style: TextStyle(
-                            color: colors.textDim,
-                            fontSize: 10,
-                          ),
+                          style: TextStyle(color: colors.textDim, fontSize: 10),
                         ),
                       ),
                   ],

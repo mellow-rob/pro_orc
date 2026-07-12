@@ -5,7 +5,8 @@ import 'package:pro_orc/window/activation_policy_service.dart';
 
 class TrayService with TrayListener {
   TrayService({ActivationPolicyService? activationPolicyService})
-      : _activationPolicyService = activationPolicyService ?? ActivationPolicyService();
+    : _activationPolicyService =
+          activationPolicyService ?? ActivationPolicyService();
 
   final ActivationPolicyService _activationPolicyService;
 
@@ -15,15 +16,9 @@ class TrayService with TrayListener {
     await trayManager.setToolTip('Pro Orc');
     final menu = Menu(
       items: [
-        MenuItem(
-          key: 'show_hide',
-          label: 'Show/Hide Window',
-        ),
+        MenuItem(key: 'show_hide', label: 'Show/Hide Window'),
         MenuItem.separator(),
-        MenuItem(
-          key: 'quit',
-          label: 'Quit',
-        ),
+        MenuItem(key: 'quit', label: 'Quit'),
       ],
     );
     await trayManager.setContextMenu(menu);

@@ -19,10 +19,9 @@ import 'package:pro_orc/window/activation_policy_service.dart';
 import 'package:pro_orc/window/window_geometry_service.dart';
 import 'package:pro_orc/features/agents/agents_tab.dart';
 import 'package:pro_orc/features/claude_tools/claude_tools_tab.dart';
-import 'package:pro_orc/features/code/code_tab.dart';
 import 'package:pro_orc/features/harness/harness_tab.dart';
 import 'package:pro_orc/features/learning/learning_tab.dart';
-import 'package:pro_orc/features/research/research_tab.dart';
+import 'package:pro_orc/features/projects/projects_tab.dart';
 import 'package:pro_orc/features/settings/settings_tab.dart';
 import 'package:pro_orc/features/shared/project_detail_panel.dart';
 import 'package:pro_orc/features/shell/glow_border_shell.dart';
@@ -30,8 +29,11 @@ import 'package:pro_orc/features/shell/orb_background.dart';
 import 'package:pro_orc/features/skills/skills_tab.dart';
 
 class ShellScreen extends ConsumerStatefulWidget {
-  const ShellScreen({super.key, ActivationPolicyService? activationPolicyService})
-      : activationPolicyService = activationPolicyService ?? const ActivationPolicyService();
+  const ShellScreen({
+    super.key,
+    ActivationPolicyService? activationPolicyService,
+  }) : activationPolicyService =
+           activationPolicyService ?? const ActivationPolicyService();
 
   /// Shared instance passed down from main.dart so the whole app talks to
   /// the native activation-policy MethodChannel through one object. Defaults
@@ -59,7 +61,9 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
   void initState() {
     super.initState();
     windowManager.addListener(this);
-    _trayService = TrayService(activationPolicyService: widget.activationPolicyService);
+    _trayService = TrayService(
+      activationPolicyService: widget.activationPolicyService,
+    );
     _trayService.init();
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
@@ -78,8 +82,8 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
 
     // Smart skip: if user has custom scan dirs, they don't need the wizard
     final home = Platform.environment['HOME']!;
-    final isDefault = scanDirs.length == 1 &&
-        scanDirs.first == '$home/project_orchestration';
+    final isDefault =
+        scanDirs.length == 1 && scanDirs.first == '$home/project_orchestration';
 
     final prefs = await SharedPreferences.getInstance();
     final wizardCompleted = prefs.getBool('onboarding_completed') ?? false;
@@ -188,8 +192,7 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
                         : IndexedStack(
                             index: _selectedIndex,
                             children: const [
-                              CodeTab(),
-                              ResearchTab(),
+                              ProjectsTab(),
                               ClaudeToolsTab(),
                               AgentsTab(),
                               SkillsTab(),
@@ -225,8 +228,7 @@ class _SideNav extends StatelessWidget {
   final AppColors colors;
 
   static const _items = <({IconData icon, String label})>[
-    (icon: LucideIcons.codeXml100, label: 'Code'),
-    (icon: LucideIcons.beaker100, label: 'Research'),
+    (icon: LucideIcons.folderKanban100, label: 'Projekte'),
     (icon: LucideIcons.brain100, label: 'Tools'),
     (icon: LucideIcons.bot100, label: 'Agents'),
     (icon: LucideIcons.sparkles100, label: 'Skills'),

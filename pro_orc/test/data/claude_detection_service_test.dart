@@ -27,14 +27,16 @@ void main() {
         expect(installed, isFalse);
       });
 
-      test('getClaudeVersion() returns null when claude binary not found',
-          () async {
-        final service = ClaudeDetectionService(
-          claudeCommand: 'nonexistent_claude_binary_xyz',
-        );
-        final version = await service.getClaudeVersion();
-        expect(version, isNull);
-      });
+      test(
+        'getClaudeVersion() returns null when claude binary not found',
+        () async {
+          final service = ClaudeDetectionService(
+            claudeCommand: 'nonexistent_claude_binary_xyz',
+          );
+          final version = await service.getClaudeVersion();
+          expect(version, isNull);
+        },
+      );
     });
   });
 }

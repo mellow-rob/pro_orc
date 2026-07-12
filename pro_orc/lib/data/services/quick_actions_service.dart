@@ -30,7 +30,9 @@ class QuickActionsService {
   Future<void> openClaudeWithPrompt(String projectPath, String prompt) async {
     // Escape single quotes in prompt for shell safety
     final escapedPrompt = prompt.replaceAll("'", "'\\''");
-    final script = _terminalScript("cd \"$projectPath\" && claude '$escapedPrompt'");
+    final script = _terminalScript(
+      "cd \"$projectPath\" && claude '$escapedPrompt'",
+    );
     await Process.run('osascript', ['-e', script], runInShell: true);
     await Process.run('open', ['-a', 'Terminal'], runInShell: true);
   }
@@ -79,11 +81,15 @@ class QuickActionsService {
   /// that fails [isValidSkillName] — an early typo/injection guard.
   Future<void> openClaudeWithSkill(String projectPath, String skillName) async {
     if (!isValidSkillName(skillName)) {
-      developer.log('Refusing to launch invalid skill name: "$skillName"',
-          name: 'quick_actions');
+      developer.log(
+        'Refusing to launch invalid skill name: "$skillName"',
+        name: 'quick_actions',
+      );
       return;
     }
-    final script = _terminalScript(buildSkillLaunchCommand(projectPath, skillName));
+    final script = _terminalScript(
+      buildSkillLaunchCommand(projectPath, skillName),
+    );
     await Process.run('osascript', ['-e', script], runInShell: true);
     await Process.run('open', ['-a', 'Terminal'], runInShell: true);
   }

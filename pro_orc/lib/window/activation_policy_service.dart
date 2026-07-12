@@ -20,7 +20,10 @@ class ActivationPolicyService {
     try {
       await _channel.invokeMethod('setRegular');
     } catch (e) {
-      developer.log('Failed to set regular activation policy: $e', name: 'activation_policy');
+      developer.log(
+        'Failed to set regular activation policy: $e',
+        name: 'activation_policy',
+      );
     }
   }
 
@@ -30,7 +33,10 @@ class ActivationPolicyService {
     try {
       await _channel.invokeMethod('setAccessory');
     } catch (e) {
-      developer.log('Failed to set accessory activation policy: $e', name: 'activation_policy');
+      developer.log(
+        'Failed to set accessory activation policy: $e',
+        name: 'activation_policy',
+      );
     }
   }
 }

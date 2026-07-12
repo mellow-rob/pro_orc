@@ -7,8 +7,7 @@ import 'package:pro_orc/theme/n3_colors.dart';
 
 void main() {
   group('RoadmapTree — single-phase duplicate collapse', () {
-    testWidgets(
-        'collapses a milestone with one identically-named phase into a '
+    testWidgets('collapses a milestone with one identically-named phase into a '
         'single clickable row', (tester) async {
       const milestone = RoadmapMilestone(
         name: '006-deal-project-invoice-chain',
@@ -52,9 +51,7 @@ void main() {
       const milestone = RoadmapMilestone(
         name: 'M6 — Selbstlernendes OS',
         status: 'done',
-        phases: [
-          RoadmapPhase(name: 'M6-learning-loop', status: 'done'),
-        ],
+        phases: [RoadmapPhase(name: 'M6-learning-loop', status: 'done')],
       );
 
       await tester.pumpWidget(
@@ -75,38 +72,42 @@ void main() {
     });
 
     testWidgets(
-        'keeps the nested tree when a milestone has multiple phases, even '
-        'if one phase name matches the milestone name', (tester) async {
-      const milestone = RoadmapMilestone(
-        name: '048-tenant-feature-flags-mvp-dtg',
-        status: 'in_progress',
-        phases: [
-          RoadmapPhase(
-            name: '048-tenant-feature-flags-mvp-dtg',
-            status: 'in_progress',
-          ),
-          RoadmapPhase(name: 'follow-up', status: 'planning'),
-        ],
-      );
+      'keeps the nested tree when a milestone has multiple phases, even '
+      'if one phase name matches the milestone name',
+      (tester) async {
+        const milestone = RoadmapMilestone(
+          name: '048-tenant-feature-flags-mvp-dtg',
+          status: 'in_progress',
+          phases: [
+            RoadmapPhase(
+              name: '048-tenant-feature-flags-mvp-dtg',
+              status: 'in_progress',
+            ),
+            RoadmapPhase(name: 'follow-up', status: 'planning'),
+          ],
+        );
 
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: ThemeData.dark().copyWith(extensions: const [AppColors.dark]),
-          home: Scaffold(
-            body: RoadmapTree(
-              milestones: const [milestone],
-              colors: AppColors.dark,
-              accent: AppColors.dark.cyan,
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: ThemeData.dark().copyWith(
+              extensions: const [AppColors.dark],
+            ),
+            home: Scaffold(
+              body: RoadmapTree(
+                milestones: const [milestone],
+                colors: AppColors.dark,
+                accent: AppColors.dark.cyan,
+              ),
             ),
           ),
-        ),
-      );
+        );
 
-      // Two rows: the milestone header row and the two phase rows (one of
-      // which repeats the milestone's name — expected here since there's
-      // more than one phase, so the collapse rule does not apply).
-      expect(find.text('048-tenant-feature-flags-mvp-dtg'), findsNWidgets(2));
-      expect(find.text('follow-up'), findsOneWidget);
-    });
+        // Two rows: the milestone header row and the two phase rows (one of
+        // which repeats the milestone's name — expected here since there's
+        // more than one phase, so the collapse rule does not apply).
+        expect(find.text('048-tenant-feature-flags-mvp-dtg'), findsNWidgets(2));
+        expect(find.text('follow-up'), findsOneWidget);
+      },
+    );
   });
 }

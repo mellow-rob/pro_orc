@@ -32,8 +32,9 @@ void main() {
 
   group('maskSecrets', () {
     test('masks query params whose name looks like a secret', () {
-      final out =
-          maskSecrets('https://api.example.test/mcp?api_key=abcdefgh1234&x=1');
+      final out = maskSecrets(
+        'https://api.example.test/mcp?api_key=abcdefgh1234&x=1',
+      );
       expect(out, contains('api_key=%E2%80%A2%E2%80%A2%E2%80%A2%E2%80%A21234'));
       // Non-secret param stays intact.
       expect(out, contains('x=1'));

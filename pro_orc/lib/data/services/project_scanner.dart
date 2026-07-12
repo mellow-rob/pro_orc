@@ -25,10 +25,7 @@ class ScanDirectoryNotFoundError implements Exception {
   final String path;
   final String message;
 
-  const ScanDirectoryNotFoundError({
-    required this.path,
-    required this.message,
-  });
+  const ScanDirectoryNotFoundError({required this.path, required this.message});
 
   @override
   String toString() => 'ScanDirectoryNotFoundError: $message (path: $path)';
@@ -139,14 +136,19 @@ Future<DateTime?> _gitSignature(String projectPath) async {
     if (stat.type == FileSystemEntityType.notFound) return null;
 
     var latest = stat.modified;
-    final refsHeadsDir = Directory(p.join(projectPath, '.git', 'refs', 'heads'));
+    final refsHeadsDir = Directory(
+      p.join(projectPath, '.git', 'refs', 'heads'),
+    );
     if (await refsHeadsDir.exists()) {
       final refsStat = await refsHeadsDir.stat();
       if (refsStat.modified.isAfter(latest)) latest = refsStat.modified;
     }
     return latest;
   } catch (e) {
-    developer.log('Failed to compute git signature for $projectPath: $e', name: 'project_scanner');
+    developer.log(
+      'Failed to compute git signature for $projectPath: $e',
+      name: 'project_scanner',
+    );
     return null;
   }
 }
@@ -159,7 +161,10 @@ Future<DateTime?> _phasesSignature(String projectPath) async {
     if (!await phasesDir.exists()) return null;
     return (await phasesDir.stat()).modified;
   } catch (e) {
-    developer.log('Failed to compute phases signature for $projectPath: $e', name: 'project_scanner');
+    developer.log(
+      'Failed to compute phases signature for $projectPath: $e',
+      name: 'project_scanner',
+    );
     return null;
   }
 }
@@ -177,8 +182,10 @@ Future<DateTime?> _a1Signature(String projectPath) async {
     if (await phasesDir.exists()) {
       // Include each PLAN.md mtime so a checkbox toggle (which changes the file
       // but not the phases dir) still invalidates the cache.
-      await for (final entity
-          in phasesDir.list(recursive: true, followLinks: false)) {
+      await for (final entity in phasesDir.list(
+        recursive: true,
+        followLinks: false,
+      )) {
         if (entity is! File) continue;
         if (p.basename(entity.path) != 'PLAN.md') continue;
         final s = (await entity.stat()).modified;
@@ -192,7 +199,10 @@ Future<DateTime?> _a1Signature(String projectPath) async {
     }
     return latest;
   } catch (e) {
-    developer.log('Failed to compute a1 signature for $projectPath: $e', name: 'project_scanner');
+    developer.log(
+      'Failed to compute a1 signature for $projectPath: $e',
+      name: 'project_scanner',
+    );
     return null;
   }
 }
@@ -210,8 +220,10 @@ class ProjectScanner {
   final AppDatabase _db;
   final _FileCache _cache = _FileCache();
   final _ScanResultCache<GitData> _gitCache = _ScanResultCache<GitData>();
-  final _ScanResultCache<MemoryData> _memoryCache = _ScanResultCache<MemoryData>();
-  final _ScanResultCache<List<String>?> _usedAgentsCache = _ScanResultCache<List<String>?>();
+  final _ScanResultCache<MemoryData> _memoryCache =
+      _ScanResultCache<MemoryData>();
+  final _ScanResultCache<List<String>?> _usedAgentsCache =
+      _ScanResultCache<List<String>?>();
   final _ScanResultCache<A1Data> _a1Cache = _ScanResultCache<A1Data>();
   final A1Reader _a1Reader = A1Reader();
 
@@ -220,7 +232,7 @@ class ProjectScanner {
   final String? _claudeHomeDirOverride;
 
   ProjectScanner(this._db, {String? claudeHomeDirOverride})
-      : _claudeHomeDirOverride = claudeHomeDirOverride;
+    : _claudeHomeDirOverride = claudeHomeDirOverride;
 
   /// Scans the configured (or overridden) scan directory and returns a
   /// [List<ProjectModel>] sorted by displayName.
@@ -260,7 +272,10 @@ class ProjectScanner {
         ignorePatterns = _parseIgnoreList(config.ignoreListJson);
       } catch (e) {
         // If DB read fails, proceed with empty ignore list
-        developer.log('Failed to read DB config for ignore list: $e', name: 'project_scanner');
+        developer.log(
+          'Failed to read DB config for ignore list: $e',
+          name: 'project_scanner',
+        );
       }
     }
 
@@ -314,7 +329,8 @@ class ProjectScanner {
 
       // Resolve project type: DB override > content heuristic
       final settings = await _db.getProjectSettings(folderId);
-      final projectType = ProjectType.fromString(settings?.projectType) ??
+      final projectType =
+          ProjectType.fromString(settings?.projectType) ??
           await _inferType(path);
 
       // Nullify empty git data
@@ -335,19 +351,21 @@ class ProjectScanner {
           ? overrideName
           : (metadata.displayName ?? folderId);
 
-      models.add(ProjectModel(
-        folderId: folderId,
-        displayName: resolvedName,
-        path: path,
-        projectType: projectType,
-        description: metadata.description,
-        a1: a1Data.isEmpty ? null : a1Data,
-        git: git,
-        memory: memoryData.hasMemory ? memoryData : null,
-        isStale: isStale,
-        usedAgents: usedAgents,
-        mdFiles: mdFiles,
-      ));
+      models.add(
+        ProjectModel(
+          folderId: folderId,
+          displayName: resolvedName,
+          path: path,
+          projectType: projectType,
+          description: metadata.description,
+          a1: a1Data.isEmpty ? null : a1Data,
+          git: git,
+          memory: memoryData.hasMemory ? memoryData : null,
+          isStale: isStale,
+          usedAgents: usedAgents,
+          mdFiles: mdFiles,
+        ),
+      );
     }
 
     // --- 6. Sort by displayName ---
@@ -395,8 +413,10 @@ class ProjectScanner {
         paths.add(entity.path);
       } else {
         // Not a project — scan its children one level deeper
-        await for (final child
-            in entity.list(recursive: false, followLinks: false)) {
+        await for (final child in entity.list(
+          recursive: false,
+          followLinks: false,
+        )) {
           if (child is! Directory) continue;
           final childName = p.basename(child.path);
           if (childName.startsWith('.')) continue;
@@ -455,7 +475,10 @@ class ProjectScanner {
 
   /// Reads git data using the cache to avoid spawning a git subprocess for
   /// projects whose `.git/HEAD`/refs have not changed since the last scan.
-  Future<GitData> _readGitWithCache(String projectPath, String gitBinary) async {
+  Future<GitData> _readGitWithCache(
+    String projectPath,
+    String gitBinary,
+  ) async {
     final signature = await _gitSignature(projectPath);
     final cached = _gitCache.getBoxed(projectPath, signature);
     if (cached != null) return cached.value;
@@ -532,7 +555,10 @@ class ProjectScanner {
   /// - Non-git project with `.planning/STATE.md`: stale if its mtime is
   ///   older than 30 days
   /// - No signal: not stale (benefit of the doubt)
-  Future<bool> _computeStale(String projectPath, DateTime? lastCommitDate) async {
+  Future<bool> _computeStale(
+    String projectPath,
+    DateTime? lastCommitDate,
+  ) async {
     const threshold = Duration(days: 30);
     final now = DateTime.now();
 
@@ -549,7 +575,10 @@ class ProjectScanner {
       }
     } catch (e) {
       // Ignore errors — no signal means not stale
-      developer.log('Failed to stat $statePath for staleness check: $e', name: 'project_scanner');
+      developer.log(
+        'Failed to stat $statePath for staleness check: $e',
+        name: 'project_scanner',
+      );
     }
 
     return false;
@@ -583,7 +612,10 @@ class ProjectScanner {
             agents.add(match.group(1)!);
           }
         } catch (e) {
-          developer.log('Failed to read ${entity.path}: $e', name: 'project_scanner');
+          developer.log(
+            'Failed to read ${entity.path}: $e',
+            name: 'project_scanner',
+          );
         }
       }
     } catch (e) {
@@ -628,42 +660,53 @@ class ProjectScanner {
         if (entity is! File) continue;
         final name = p.basename(entity.path);
         if (!name.endsWith('.md')) continue;
-        results.add(MdFileInfo(
-          name: name,
-          relativePath: name,
-          path: entity.path,
-          role: _roleMap[name] ?? _suffixRole(name),
-        ));
+        results.add(
+          MdFileInfo(
+            name: name,
+            relativePath: name,
+            path: entity.path,
+            role: _roleMap[name] ?? _suffixRole(name),
+          ),
+        );
       }
     } catch (e) {
-      developer.log('Failed to list root .md files in $projectPath: $e', name: 'project_scanner');
+      developer.log(
+        'Failed to list root .md files in $projectPath: $e',
+        name: 'project_scanner',
+      );
     }
 
     // 2. .planning/ recursive (max depth ~3)
     final planningDir = Directory(p.join(projectPath, '.planning'));
     if (await planningDir.exists()) {
       try {
-        await for (final entity
-            in planningDir.list(recursive: true, followLinks: false)) {
+        await for (final entity in planningDir.list(
+          recursive: true,
+          followLinks: false,
+        )) {
           if (entity is! File) continue;
           final name = p.basename(entity.path);
           if (!name.endsWith('.md')) continue;
 
-          final relativePath =
-              p.relative(entity.path, from: projectPath);
+          final relativePath = p.relative(entity.path, from: projectPath);
           // Enforce max depth (~3 levels inside .planning)
           final segments = p.split(relativePath);
           if (segments.length > 5) continue; // .planning/a/b/c/file.md = 5
 
-          results.add(MdFileInfo(
-            name: name,
-            relativePath: relativePath,
-            path: entity.path,
-            role: _roleMap[name] ?? _suffixRole(name),
-          ));
+          results.add(
+            MdFileInfo(
+              name: name,
+              relativePath: relativePath,
+              path: entity.path,
+              role: _roleMap[name] ?? _suffixRole(name),
+            ),
+          );
         }
       } catch (e) {
-        developer.log('Failed to list $planningDir: $e', name: 'project_scanner');
+        developer.log(
+          'Failed to list $planningDir: $e',
+          name: 'project_scanner',
+        );
       }
     }
 
@@ -685,7 +728,10 @@ class ProjectScanner {
             .toList();
       }
     } catch (e) {
-      developer.log('Malformed ignore list JSON, using empty list: $e', name: 'project_scanner');
+      developer.log(
+        'Malformed ignore list JSON, using empty list: $e',
+        name: 'project_scanner',
+      );
     }
     return [];
   }

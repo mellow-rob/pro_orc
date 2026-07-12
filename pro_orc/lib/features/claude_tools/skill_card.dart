@@ -25,101 +25,97 @@ class SkillCard extends StatelessWidget {
     return GestureDetector(
       onTap: () => showSkillDetail(context, skill),
       child: SizedBox(
-      width: 240,
-      child: GlassCard(
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Name + optional Plugin-Badge
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      skill.name,
-                      style: TextStyle(
-                        color: colors.amber,
-                        fontWeight: FontWeight.w500,
-                        fontSize: 13,
+        width: 240,
+        child: GlassCard(
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Name + optional Plugin-Badge
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        skill.name,
+                        style: TextStyle(
+                          color: colors.amber,
+                          fontWeight: FontWeight.w500,
+                          fontSize: 13,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
                     ),
-                  ),
-                  if (skill.scope == 'plugin') ...[
-                    const SizedBox(width: 6),
-                    _ScopeBadge(
-                      label: skill.pluginName ?? 'Plugin',
-                      colors: colors,
-                    ),
+                    if (skill.scope == 'plugin') ...[
+                      const SizedBox(width: 6),
+                      _ScopeBadge(
+                        label: skill.pluginName ?? 'Plugin',
+                        colors: colors,
+                      ),
+                    ],
                   ],
-                ],
-              ),
-              const SizedBox(height: 4),
-
-              // Description
-              if (skill.description != null)
-                Text(
-                  skill.description!,
-                  style: TextStyle(color: colors.textSec, fontSize: 12),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                )
-              else
-                Text(
-                  'Keine Beschreibung',
-                  style: TextStyle(
-                    color: colors.textDim,
-                    fontSize: 12,
-                    fontStyle: FontStyle.italic,
-                  ),
                 ),
+                const SizedBox(height: 4),
 
-              const SizedBox(height: 8),
-
-              // Action buttons
-              Row(
-                children: [
-                  // Finder
-                  _ActionButton(
-                    icon: LucideIcons.folder100,
-                    tooltip: 'In Finder öffnen',
-                    color: colors.amberLo,
-                    onPressed: () => Process.run(
-                      'open',
-                      [skill.path],
-                      runInShell: true,
+                // Description
+                if (skill.description != null)
+                  Text(
+                    skill.description!,
+                    style: TextStyle(color: colors.textSec, fontSize: 12),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  )
+                else
+                  Text(
+                    'Keine Beschreibung',
+                    style: TextStyle(
+                      color: colors.textDim,
+                      fontSize: 12,
+                      fontStyle: FontStyle.italic,
                     ),
                   ),
 
-                  // Im Editor oeffnen
-                  _ActionButton(
-                    icon: LucideIcons.filePenLine100,
-                    tooltip: 'Im Editor öffnen',
-                    color: colors.amberLo,
-                    onPressed: () {
-                      final skillMdPath = '${skill.path}/SKILL.md';
-                      Process.run('open', [skillMdPath], runInShell: true);
-                    },
-                  ),
+                const SizedBox(height: 8),
 
-                  // Homepage (only if available)
-                  if (skill.homepage != null)
+                // Action buttons
+                Row(
+                  children: [
+                    // Finder
                     _ActionButton(
-                      icon: LucideIcons.globe100,
-                      tooltip: 'Homepage',
+                      icon: LucideIcons.folder100,
+                      tooltip: 'In Finder öffnen',
                       color: colors.amberLo,
                       onPressed: () =>
-                          launchUrl(Uri.parse(skill.homepage!)),
+                          Process.run('open', [skill.path], runInShell: true),
                     ),
-                ],
-              ),
-            ],
+
+                    // Im Editor oeffnen
+                    _ActionButton(
+                      icon: LucideIcons.filePenLine100,
+                      tooltip: 'Im Editor öffnen',
+                      color: colors.amberLo,
+                      onPressed: () {
+                        final skillMdPath = '${skill.path}/SKILL.md';
+                        Process.run('open', [skillMdPath], runInShell: true);
+                      },
+                    ),
+
+                    // Homepage (only if available)
+                    if (skill.homepage != null)
+                      _ActionButton(
+                        icon: LucideIcons.globe100,
+                        tooltip: 'Homepage',
+                        color: colors.amberLo,
+                        onPressed: () => launchUrl(Uri.parse(skill.homepage!)),
+                      ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
-      ),
       ),
     );
   }

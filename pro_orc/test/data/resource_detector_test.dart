@@ -47,17 +47,20 @@ void main() {
       expect(resources.first.uri, equals('https://figma.com/file/abc123'));
     });
 
-    test('does not re-scan the filesystem — relies solely on project.mdFiles', () async {
-      // A .md file exists on disk but is NOT included in project.mdFiles.
-      final file = File(p.join(tmp.path, 'IGNORED.md'));
-      await file.writeAsString('https://figma.com/file/should-not-be-found');
+    test(
+      'does not re-scan the filesystem — relies solely on project.mdFiles',
+      () async {
+        // A .md file exists on disk but is NOT included in project.mdFiles.
+        final file = File(p.join(tmp.path, 'IGNORED.md'));
+        await file.writeAsString('https://figma.com/file/should-not-be-found');
 
-      final project = projectWithMdFiles(const []);
+        final project = projectWithMdFiles(const []);
 
-      final resources = await detectExternalResources(project);
+        final resources = await detectExternalResources(project);
 
-      expect(resources, isEmpty);
-    });
+        expect(resources, isEmpty);
+      },
+    );
 
     test('skips noise domains like localhost', () async {
       final file = File(p.join(tmp.path, 'STATE.md'));

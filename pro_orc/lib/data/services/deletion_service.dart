@@ -15,14 +15,10 @@ Future<bool> deleteProject(String projectPath) async {
   if (!await dir.exists()) return false;
 
   try {
-    final result = await Process.run(
-      'osascript',
-      [
-        '-e',
-        'tell application "Finder" to delete POSIX file "$projectPath"',
-      ],
-      runInShell: true,
-    );
+    final result = await Process.run('osascript', [
+      '-e',
+      'tell application "Finder" to delete POSIX file "$projectPath"',
+    ], runInShell: true);
 
     if (result.exitCode != 0) {
       developer.log(
@@ -34,7 +30,10 @@ Future<bool> deleteProject(String projectPath) async {
 
     return true;
   } catch (e) {
-    developer.log('Failed to move $projectPath to Trash: $e', name: 'deletion_service');
+    developer.log(
+      'Failed to move $projectPath to Trash: $e',
+      name: 'deletion_service',
+    );
     return false;
   }
 }

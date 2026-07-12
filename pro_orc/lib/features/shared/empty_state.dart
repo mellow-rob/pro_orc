@@ -27,11 +27,7 @@ class EmptyState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              Icons.folder_open_outlined,
-              size: 64,
-              color: colors.textDim,
-            ),
+            Icon(Icons.folder_open_outlined, size: 64, color: colors.textDim),
             const SizedBox(height: 20),
             Text(
               'Keine Projekte gefunden',
@@ -54,7 +50,10 @@ class EmptyState extends StatelessWidget {
                 style: OutlinedButton.styleFrom(
                   foregroundColor: colors.cyan,
                   side: BorderSide(color: colors.cyan.withValues(alpha: 0.5)),
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 12,
+                  ),
                 ),
                 child: const Text('Scan-Ordner waehlen'),
               ),

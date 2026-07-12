@@ -29,114 +29,117 @@ class PluginCard extends StatelessWidget {
     return GestureDetector(
       onTap: () => showPluginDetail(context, plugin),
       child: SizedBox(
-      width: 240,
-      child: GlassCard(
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Name
-              Text(
-                plugin.name,
-                style: TextStyle(
-                  color: colors.emerald,
-                  fontWeight: FontWeight.w500,
-                  fontSize: 13,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: 4),
-
-              // Version + enabled status row
-              Row(
-                children: [
-                  if (plugin.version != null) ...[
-                    Text(
-                      plugin.version!,
-                      style: TextStyle(color: colors.textDim, fontSize: 11),
-                    ),
-                    const SizedBox(width: 8),
-                  ],
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 6,
-                      vertical: 2,
-                    ),
-                    decoration: BoxDecoration(
-                      color: plugin.enabled
-                          ? colors.emeraldLo.withValues(alpha: 0.2)
-                          : colors.textDim.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: Text(
-                      plugin.enabled ? 'Aktiv' : 'Inaktiv',
-                      style: TextStyle(
-                        color: plugin.enabled ? colors.emeraldLo : colors.textDim,
-                        fontSize: 10,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-
-              // Author (if available)
-              if (plugin.author != null) ...[
-                const SizedBox(height: 4),
+        width: 240,
+        child: GlassCard(
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Name
                 Text(
-                  'von ${plugin.author}',
+                  plugin.name,
                   style: TextStyle(
-                    color: colors.textDim,
-                    fontSize: 11,
-                    fontStyle: FontStyle.italic,
+                    color: colors.emerald,
+                    fontWeight: FontWeight.w500,
+                    fontSize: 13,
                   ),
-                ),
-              ],
-
-              // Description (if available)
-              if (plugin.description != null) ...[
-                const SizedBox(height: 4),
-                Text(
-                  plugin.description!,
-                  style: TextStyle(color: colors.textSec, fontSize: 12),
-                  maxLines: 2,
+                  maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
-              ],
-
-              // Date (most recent of lastUpdated/installedAt)
-              if (plugin.lastUpdated != null || plugin.installedAt != null) ...[
                 const SizedBox(height: 4),
-                Text(
-                  plugin.lastUpdated != null
-                      ? 'Aktualisiert: ${_formatDate(plugin.lastUpdated!)}'
-                      : 'Installiert: ${_formatDate(plugin.installedAt!)}',
-                  style: TextStyle(color: colors.textDim, fontSize: 10),
+
+                // Version + enabled status row
+                Row(
+                  children: [
+                    if (plugin.version != null) ...[
+                      Text(
+                        plugin.version!,
+                        style: TextStyle(color: colors.textDim, fontSize: 11),
+                      ),
+                      const SizedBox(width: 8),
+                    ],
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: plugin.enabled
+                            ? colors.emeraldLo.withValues(alpha: 0.2)
+                            : colors.textDim.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        plugin.enabled ? 'Aktiv' : 'Inaktiv',
+                        style: TextStyle(
+                          color: plugin.enabled
+                              ? colors.emeraldLo
+                              : colors.textDim,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+
+                // Author (if available)
+                if (plugin.author != null) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    'von ${plugin.author}',
+                    style: TextStyle(
+                      color: colors.textDim,
+                      fontSize: 11,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ],
+
+                // Description (if available)
+                if (plugin.description != null) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    plugin.description!,
+                    style: TextStyle(color: colors.textSec, fontSize: 12),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+
+                // Date (most recent of lastUpdated/installedAt)
+                if (plugin.lastUpdated != null ||
+                    plugin.installedAt != null) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    plugin.lastUpdated != null
+                        ? 'Aktualisiert: ${_formatDate(plugin.lastUpdated!)}'
+                        : 'Installiert: ${_formatDate(plugin.installedAt!)}',
+                    style: TextStyle(color: colors.textDim, fontSize: 10),
+                  ),
+                ],
+
+                const SizedBox(height: 8),
+
+                // Action buttons
+                Row(
+                  children: [
+                    if (plugin.marketplaceUrl != null)
+                      _PluginActionButton(
+                        icon: LucideIcons.store100,
+                        tooltip: 'Marketplace',
+                        color: colors.emeraldLo,
+                        onPressed: () =>
+                            launchUrl(Uri.parse(plugin.marketplaceUrl!)),
+                      ),
+                  ],
                 ),
               ],
-
-              const SizedBox(height: 8),
-
-              // Action buttons
-              Row(
-                children: [
-                  if (plugin.marketplaceUrl != null)
-                    _PluginActionButton(
-                      icon: LucideIcons.store100,
-                      tooltip: 'Marketplace',
-                      color: colors.emeraldLo,
-                      onPressed: () =>
-                          launchUrl(Uri.parse(plugin.marketplaceUrl!)),
-                    ),
-                ],
-              ),
-            ],
+            ),
           ),
         ),
-      ),
       ),
     );
   }

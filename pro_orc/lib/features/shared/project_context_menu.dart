@@ -41,27 +41,12 @@ void showProjectContextMenu({
         value: 'toggle_hidden',
         child: Text(isHidden ? 'Oeffentlich' : 'Privat'),
       ),
-      PopupMenuItem(
-        value: 'move',
-        child: Text(moveLabel),
-      ),
-      const PopupMenuItem(
-        value: 'rename',
-        child: Text('Umbenennen…'),
-      ),
-      const PopupMenuItem(
-        value: 'ignore',
-        child: Text('Ignorieren'),
-      ),
-      const PopupMenuItem(
-        value: 'terminal',
-        child: Text('Terminal'),
-      ),
+      PopupMenuItem(value: 'move', child: Text(moveLabel)),
+      const PopupMenuItem(value: 'rename', child: Text('Umbenennen…')),
+      const PopupMenuItem(value: 'ignore', child: Text('Ignorieren')),
+      const PopupMenuItem(value: 'terminal', child: Text('Terminal')),
       const PopupMenuDivider(),
-      const PopupMenuItem(
-        value: 'delete',
-        child: Text('Projekt loeschen'),
-      ),
+      const PopupMenuItem(value: 'delete', child: Text('Projekt loeschen')),
     ],
   ).then((value) async {
     if (value == 'toggle_hidden') {

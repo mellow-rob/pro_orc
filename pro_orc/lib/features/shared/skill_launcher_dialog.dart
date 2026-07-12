@@ -107,7 +107,11 @@ class _SkillLauncherDialogState extends ConsumerState<SkillLauncherDialog> {
             decoration: InputDecoration(
               hintText: 'Skill suchen…',
               hintStyle: TextStyle(color: colors.textDim),
-              prefixIcon: Icon(LucideIcons.search100, color: colors.textDim, size: 18),
+              prefixIcon: Icon(
+                LucideIcons.search100,
+                color: colors.textDim,
+                size: 18,
+              ),
               filled: true,
               fillColor: colors.bgElev,
               border: OutlineInputBorder(
@@ -118,17 +122,18 @@ class _SkillLauncherDialogState extends ConsumerState<SkillLauncherDialog> {
                 borderRadius: BorderRadius.circular(10),
                 borderSide: BorderSide(color: colors.amberLo, width: 1.5),
               ),
-              contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 14,
+                vertical: 12,
+              ),
             ),
           ),
           const SizedBox(height: 16),
           SizedBox(
             height: 320,
             child: skillsAsync.when(
-              loading: () => Center(
-                child: CircularProgressIndicator(color: accent),
-              ),
+              loading: () =>
+                  Center(child: CircularProgressIndicator(color: accent)),
               error: (_, _) => Center(
                 child: Text(
                   'Skills nicht lesbar',
@@ -159,10 +164,8 @@ class _SkillLauncherDialogState extends ConsumerState<SkillLauncherDialog> {
 
     return ListView.separated(
       itemCount: filtered.length,
-      separatorBuilder: (_, _) => Divider(
-        height: 1,
-        color: colors.bgElev.withValues(alpha: 0.8),
-      ),
+      separatorBuilder: (_, _) =>
+          Divider(height: 1, color: colors.bgElev.withValues(alpha: 0.8)),
       itemBuilder: (context, i) {
         final skill = filtered[i];
         return _SkillTile(
@@ -177,8 +180,10 @@ class _SkillLauncherDialogState extends ConsumerState<SkillLauncherDialog> {
 
   Future<void> _launch(SkillData skill) async {
     Navigator.of(context).pop();
-    await QuickActionsService()
-        .openClaudeWithSkill(widget.projectPath, skill.name);
+    await QuickActionsService().openClaudeWithSkill(
+      widget.projectPath,
+      skill.name,
+    );
   }
 }
 
@@ -205,8 +210,7 @@ class _SkillTileState extends State<_SkillTile> {
   @override
   Widget build(BuildContext context) {
     final colors = widget.colors;
-    final scopeLabel =
-        widget.skill.scope == 'global' ? 'Global' : 'Projekt';
+    final scopeLabel = widget.skill.scope == 'global' ? 'Global' : 'Projekt';
 
     return MouseRegion(
       onEnter: (_) => setState(() => _hovered = true),

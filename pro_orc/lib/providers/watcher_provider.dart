@@ -18,8 +18,11 @@ final watcherProvider = StreamProvider<WatchEvent>((ref) async* {
   final scanDirs = await db.getScanDirs();
 
   // Also watch Claude projects dir for memory changes (rem-sleep updates)
-  final claudeProjectsDir =
-      p.join(Platform.environment['HOME'] ?? '/tmp', '.claude', 'projects');
+  final claudeProjectsDir = p.join(
+    Platform.environment['HOME'] ?? '/tmp',
+    '.claude',
+    'projects',
+  );
   final allDirs = [...scanDirs, claudeProjectsDir];
 
   final service = WatcherService.multi(allDirs);

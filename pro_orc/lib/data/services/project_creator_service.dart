@@ -107,31 +107,25 @@ Future<ProjectCreationResult> createProject({
 // ---------------------------------------------------------------------------
 
 Future<String?> _gitInitAndCommit(
-    String projectPath, String displayName) async {
+  String projectPath,
+  String displayName,
+) async {
   try {
-    final initResult = await _runWithTimeout(
-      'git',
-      ['init'],
-      projectPath,
-    );
+    final initResult = await _runWithTimeout('git', ['init'], projectPath);
     if (initResult.exitCode != 0) {
       return 'git init fehlgeschlagen: ${initResult.stderr}';
     }
 
-    final addResult = await _runWithTimeout(
-      'git',
-      ['add', '-A'],
-      projectPath,
-    );
+    final addResult = await _runWithTimeout('git', ['add', '-A'], projectPath);
     if (addResult.exitCode != 0) {
       return 'git add fehlgeschlagen: ${addResult.stderr}';
     }
 
-    final commitResult = await _runWithTimeout(
-      'git',
-      ['commit', '-m', 'Initial commit: $displayName'],
-      projectPath,
-    );
+    final commitResult = await _runWithTimeout('git', [
+      'commit',
+      '-m',
+      'Initial commit: $displayName',
+    ], projectPath);
     if (commitResult.exitCode != 0) {
       return 'git commit fehlgeschlagen: ${commitResult.stderr}';
     }
@@ -157,7 +151,9 @@ Future<ProcessResult> _runWithTimeout(
   final timeoutFuture = Future<ProcessResult>.delayed(
     const Duration(seconds: 5),
     () => throw TimeoutException(
-        'Git-Befehl hat zu lange gedauert', const Duration(seconds: 5)),
+      'Git-Befehl hat zu lange gedauert',
+      const Duration(seconds: 5),
+    ),
   );
 
   return Future.any([processFuture, timeoutFuture]);

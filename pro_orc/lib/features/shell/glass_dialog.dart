@@ -9,11 +9,7 @@ import 'package:pro_orc/theme/n3_colors.dart';
 /// transparent Dialog → ConstrainedBox → ClipRRect(14) →
 /// BackdropFilter(sigma 20) → Container(bgSurf, padding 24).
 class GlassDialog extends StatelessWidget {
-  const GlassDialog({
-    super.key,
-    required this.child,
-    this.maxWidth = 480,
-  });
+  const GlassDialog({super.key, required this.child, this.maxWidth = 480});
 
   final Widget child;
   final double maxWidth;

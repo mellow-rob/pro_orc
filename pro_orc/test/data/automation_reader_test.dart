@@ -37,18 +37,20 @@ const _unrelatedPlist = '''
 
 void main() {
   group('parseLaunchdPlist (pure)', () {
-    test('extracts label + program and masks secrets when claude is present',
-        () {
-      final a = parseLaunchdPlist(_claudePlist);
-      expect(a, isNotNull);
-      expect(a!.name, 'com.n3ural.claude-nightly');
-      expect(a.source, AutomationSource.launchd);
-      expect(a.schedule, 'RunAtLoad');
-      expect(a.command, contains('/usr/local/bin/claude'));
-      // Secret after --api-key must be masked.
-      expect(a.command, isNot(contains('sk-secret-1234567890')));
-      expect(a.command, contains('••••'));
-    });
+    test(
+      'extracts label + program and masks secrets when claude is present',
+      () {
+        final a = parseLaunchdPlist(_claudePlist);
+        expect(a, isNotNull);
+        expect(a!.name, 'com.n3ural.claude-nightly');
+        expect(a.source, AutomationSource.launchd);
+        expect(a.schedule, 'RunAtLoad');
+        expect(a.command, contains('/usr/local/bin/claude'));
+        // Secret after --api-key must be masked.
+        expect(a.command, isNot(contains('sk-secret-1234567890')));
+        expect(a.command, contains('••••'));
+      },
+    );
 
     test('returns null for a plist that does not reference claude', () {
       expect(parseLaunchdPlist(_unrelatedPlist), isNull);
@@ -88,24 +90,28 @@ void main() {
       // Temp LaunchAgents dir with one claude + one unrelated plist.
       final dir = await Directory.systemTemp.createTemp('launchagents_');
       addTearDown(() => dir.delete(recursive: true));
-      await File(p.join(dir.path, 'com.n3ural.claude-nightly.plist'))
-          .writeAsString(_claudePlist);
-      await File(p.join(dir.path, 'com.google.keystone.agent.plist'))
-          .writeAsString(_unrelatedPlist);
+      await File(
+        p.join(dir.path, 'com.n3ural.claude-nightly.plist'),
+      ).writeAsString(_claudePlist);
+      await File(
+        p.join(dir.path, 'com.google.keystone.agent.plist'),
+      ).writeAsString(_unrelatedPlist);
 
       final reader = AutomationReader(
         launchAgentsDirOverride: dir.path,
         readCrontab: () async => '0 9 * * * claude run\n',
       );
 
-      final data = await reader.read(hooks: const [
-        HarnessHook(
-          event: 'Stop',
-          matcher: '',
-          command: 'session-to-obsidian.py',
-          level: HarnessLevel.global,
-        ),
-      ]);
+      final data = await reader.read(
+        hooks: const [
+          HarnessHook(
+            event: 'Stop',
+            matcher: '',
+            command: 'session-to-obsidian.py',
+            level: HarnessLevel.global,
+          ),
+        ],
+      );
 
       expect(data.ofSource(AutomationSource.launchd), hasLength(1));
       expect(data.ofSource(AutomationSource.cron), hasLength(1));
@@ -113,16 +119,20 @@ void main() {
       expect(data.ofSource(AutomationSource.hook).single.name, 'Stop');
     });
 
-    test('missing LaunchAgents dir + no crontab yields empty (honest state)',
-        () async {
-      final reader = AutomationReader(
-        launchAgentsDirOverride:
-            p.join(Directory.systemTemp.path, 'no_such_launchagents_xyz'),
-        readCrontab: () async => null,
-      );
+    test(
+      'missing LaunchAgents dir + no crontab yields empty (honest state)',
+      () async {
+        final reader = AutomationReader(
+          launchAgentsDirOverride: p.join(
+            Directory.systemTemp.path,
+            'no_such_launchagents_xyz',
+          ),
+          readCrontab: () async => null,
+        );
 
-      final data = await reader.read();
-      expect(data.isEmpty, isTrue);
-    });
+        final data = await reader.read();
+        expect(data.isEmpty, isTrue);
+      },
+    );
   });
 }

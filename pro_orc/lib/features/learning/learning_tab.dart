@@ -26,9 +26,8 @@ class LearningTab extends ConsumerWidget {
     final async = ref.watch(learningProvider);
 
     return async.when(
-      loading: () => Center(
-        child: CircularProgressIndicator(color: colors.emerald),
-      ),
+      loading: () =>
+          Center(child: CircularProgressIndicator(color: colors.emerald)),
       error: (_, _) => Center(
         child: Text(
           'Learning-Daten nicht lesbar',
@@ -59,56 +58,59 @@ class LearningTab extends ConsumerWidget {
               ),
             ),
           if (!data.isEmpty) ...[
-          if (data.evolveDue)
-            _EvolveBanner(colors: colors, count: data.totalSinceLastSynthesis),
-          if (data.evolveDue) const SizedBox(height: 20),
+            if (data.evolveDue)
+              _EvolveBanner(
+                colors: colors,
+                count: data.totalSinceLastSynthesis,
+              ),
+            if (data.evolveDue) const SizedBox(height: 20),
 
-          // --- Retros per skill ---
-          _LearningSection(
-            colors: colors,
-            accent: accent,
-            icon: LucideIcons.brain100,
-            title: 'Retros pro Skill',
-            count: data.retrosPerSkill.length,
-            emptyText: 'Keine Retro-Dateien im Vault gefunden',
-            revealPath: data.learningsRootPath,
-            children: [
-              for (final r in data.retrosPerSkill)
-                _SkillRetroRow(colors: colors, accent: accent, retro: r),
-            ],
-          ),
-          const SizedBox(height: 24),
+            // --- Retros per skill ---
+            _LearningSection(
+              colors: colors,
+              accent: accent,
+              icon: LucideIcons.brain100,
+              title: 'Retros pro Skill',
+              count: data.retrosPerSkill.length,
+              emptyText: 'Keine Retro-Dateien im Vault gefunden',
+              revealPath: data.learningsRootPath,
+              children: [
+                for (final r in data.retrosPerSkill)
+                  _SkillRetroRow(colors: colors, accent: accent, retro: r),
+              ],
+            ),
+            const SizedBox(height: 24),
 
-          // --- Pattern clusters ---
-          _LearningSection(
-            colors: colors,
-            accent: accent,
-            icon: LucideIcons.gitBranch100,
-            title: 'Pattern-Cluster',
-            count: data.patternClusters.length,
-            emptyText: 'Keine Pattern-Cluster in patterns.md',
-            revealPath: data.patternsFilePath,
-            children: [
-              for (final cluster in data.patternClusters)
-                _ClusterRow(colors: colors, title: cluster),
-            ],
-          ),
-          const SizedBox(height: 24),
+            // --- Pattern clusters ---
+            _LearningSection(
+              colors: colors,
+              accent: accent,
+              icon: LucideIcons.gitBranch100,
+              title: 'Pattern-Cluster',
+              count: data.patternClusters.length,
+              emptyText: 'Keine Pattern-Cluster in patterns.md',
+              revealPath: data.patternsFilePath,
+              children: [
+                for (final cluster in data.patternClusters)
+                  _ClusterRow(colors: colors, title: cluster),
+              ],
+            ),
+            const SizedBox(height: 24),
 
-          // --- Observations per project ---
-          _LearningSection(
-            colors: colors,
-            accent: accent,
-            icon: LucideIcons.listChecks100,
-            title: 'Beobachtungen pro Projekt',
-            count: data.observations.length,
-            emptyText: 'Keine .a1-Beobachtungen gefunden',
-            children: [
-              for (final o in data.observations)
-                _ObservationRow(colors: colors, accent: accent, obs: o),
-            ],
-          ),
-          const SizedBox(height: 24),
+            // --- Observations per project ---
+            _LearningSection(
+              colors: colors,
+              accent: accent,
+              icon: LucideIcons.listChecks100,
+              title: 'Beobachtungen pro Projekt',
+              count: data.observations.length,
+              emptyText: 'Keine .a1-Beobachtungen gefunden',
+              children: [
+                for (final o in data.observations)
+                  _ObservationRow(colors: colors, accent: accent, obs: o),
+              ],
+            ),
+            const SizedBox(height: 24),
           ],
 
           // --- Automatisierungen (best-effort, AD-3) — always shown ---
@@ -411,7 +413,11 @@ class _ObservationRow extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
         children: [
-          _CountBadge(colors: colors, accent: accent, count: obs.observationCount),
+          _CountBadge(
+            colors: colors,
+            accent: accent,
+            count: obs.observationCount,
+          ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(

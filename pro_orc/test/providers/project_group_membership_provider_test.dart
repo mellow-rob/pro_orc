@@ -20,10 +20,41 @@ Future<ProviderContainer> _containerWithInMemoryDb() async {
 
 void main() {
   group('membershipProvider', () {
-    test('build() starts empty', () async {
-      final container = await _containerWithInMemoryDb();
-      expect(container.read(membershipProvider), isEmpty);
-    });
+    test(
+      'build() starts empty synchronously, before the DB load resolves',
+      () async {
+        final container = await _containerWithInMemoryDb();
+        expect(container.read(membershipProvider), isEmpty);
+      },
+    );
+
+    test(
+      'build() eager-loads every persisted assignment from the DB',
+      () async {
+        final db = AppDatabase(NativeDatabase.memory());
+        addTearDown(db.close);
+        final groupId = await db.createGroup('Kundenprojekte');
+        await db.setProjectGroup('wtv', groupId);
+        await db.setProjectGroup('vf-tk-deck', null);
+
+        final container = ProviderContainer(
+          overrides: [appDatabaseProvider.overrideWithValue(db)],
+        );
+        addTearDown(container.dispose);
+
+        // Force build() to run, then let the async _loadFromDb() resolve —
+        // mirrors a fresh app start where membershipProvider must reflect
+        // prior assignments without any per-folderId ensureLoaded() call.
+        container.read(membershipProvider);
+        await Future<void>.delayed(Duration.zero);
+        await Future<void>.delayed(Duration.zero);
+
+        final membership = container.read(membershipProvider);
+        expect(membership['wtv'], equals(groupId));
+        expect(membership.containsKey('vf-tk-deck'), isTrue);
+        expect(membership['vf-tk-deck'], isNull);
+      },
+    );
 
     test('assign() writes to DB and updates state', () async {
       final container = await _containerWithInMemoryDb();

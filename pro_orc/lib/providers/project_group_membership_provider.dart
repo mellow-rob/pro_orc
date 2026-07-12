@@ -7,16 +7,24 @@ import 'package:pro_orc/providers/database_provider.dart';
 /// group for that project (enforced by `AppDatabase.setProjectGroup`, a
 /// single-column write, not a junction table).
 ///
-/// The state only ever contains folderIds this notifier has been asked
-/// about (via [ensureLoaded], [assign], or [unassign]) — it does not
-/// preload every project in the scan, mirroring [HiddenProjectsNotifier]'s
-/// lazy-on-mutation style but adding an explicit load hook for the read
-/// side, since membership (unlike hidden-state) is per-project rather than
-/// a single set loaded once.
+/// `build()` eager-loads every persisted assignment via
+/// `AppDatabase.getAllProjectGroupIds()`, mirroring [HiddenProjectsNotifier]'s
+/// bulk-read-at-build pattern — required so `groupedProjectsProvider` renders
+/// each project under its correct section immediately after a fresh app
+/// start, not just for folderIds touched during the current session.
+/// [ensureLoaded]/[refreshFromDb] remain for targeted re-reads (e.g. after a
+/// dissolve outside this notifier's own [assign]/[unassign] writes).
 class ProjectGroupMembershipNotifier extends Notifier<Map<String, String?>> {
   @override
   Map<String, String?> build() {
+    _loadFromDb();
     return const {};
+  }
+
+  Future<void> _loadFromDb() async {
+    final db = ref.read(appDatabaseProvider);
+    final all = await db.getAllProjectGroupIds();
+    state = all;
   }
 
   /// Loads (or re-loads) [folderId]'s current groupId from the DB into

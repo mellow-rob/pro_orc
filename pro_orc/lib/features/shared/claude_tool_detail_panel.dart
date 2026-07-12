@@ -50,13 +50,10 @@ Future<void> _showClaudeToolDetail(BuildContext context, Widget content) async {
     transitionDuration: const Duration(milliseconds: 300),
     transitionBuilder: (context, animation, secondaryAnimation, child) {
       return SlideTransition(
-        position: Tween<Offset>(
-          begin: const Offset(0, 0.05),
-          end: Offset.zero,
-        ).animate(CurvedAnimation(
-          parent: animation,
-          curve: Curves.easeOutCubic,
-        )),
+        position: Tween<Offset>(begin: const Offset(0, 0.05), end: Offset.zero)
+            .animate(
+              CurvedAnimation(parent: animation, curve: Curves.easeOutCubic),
+            ),
         child: FadeTransition(opacity: animation, child: child),
       );
     },
@@ -150,7 +147,9 @@ class _SkillDetailContent extends StatelessWidget {
               label: 'Im Editor öffnen',
               accent: accent,
               colors: colors,
-              onTap: () => Process.run('open', ['${skill.path}/SKILL.md'], runInShell: true),
+              onTap: () => Process.run('open', [
+                '${skill.path}/SKILL.md',
+              ], runInShell: true),
             ),
             if (skill.homepage != null) ...[
               const SizedBox(width: 8),
@@ -201,14 +200,30 @@ class _PluginDetailContent extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               if (plugin.version != null)
-                _InfoRow(label: 'Version', value: plugin.version!, colors: colors),
-              _InfoRow(label: 'Marketplace', value: plugin.marketplace, colors: colors),
+                _InfoRow(
+                  label: 'Version',
+                  value: plugin.version!,
+                  colors: colors,
+                ),
+              _InfoRow(
+                label: 'Marketplace',
+                value: plugin.marketplace,
+                colors: colors,
+              ),
               if (plugin.author != null)
                 _InfoRow(label: 'Autor', value: plugin.author!, colors: colors),
               if (plugin.installedAt != null)
-                _InfoRow(label: 'Installiert', value: _formatDate(plugin.installedAt!), colors: colors),
+                _InfoRow(
+                  label: 'Installiert',
+                  value: _formatDate(plugin.installedAt!),
+                  colors: colors,
+                ),
               if (plugin.lastUpdated != null)
-                _InfoRow(label: 'Aktualisiert', value: _formatDate(plugin.lastUpdated!), colors: colors),
+                _InfoRow(
+                  label: 'Aktualisiert',
+                  value: _formatDate(plugin.lastUpdated!),
+                  colors: colors,
+                ),
             ],
           ),
         ),
@@ -318,17 +333,19 @@ class _McpServerDetailContent extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: server.args!
-                  .map((a) => Padding(
-                        padding: const EdgeInsets.only(bottom: 2),
-                        child: Text(
-                          a,
-                          style: TextStyle(
-                            color: colors.textSec,
-                            fontSize: 12,
-                            fontFamily: 'monospace',
-                          ),
+                  .map(
+                    (a) => Padding(
+                      padding: const EdgeInsets.only(bottom: 2),
+                      child: Text(
+                        a,
+                        style: TextStyle(
+                          color: colors.textSec,
+                          fontSize: 12,
+                          fontFamily: 'monospace',
                         ),
-                      ))
+                      ),
+                    ),
+                  )
                   .toList(),
             ),
           ),
@@ -344,8 +361,9 @@ class _McpServerDetailContent extends StatelessWidget {
               colors: colors,
               onTap: () {
                 final home = Platform.environment['HOME']!;
-                Process.run('open', ['$home/.claude/settings.json'],
-                    runInShell: true);
+                Process.run('open', [
+                  '$home/.claude/settings.json',
+                ], runInShell: true);
               },
             ),
             const SizedBox(width: 8),
@@ -356,8 +374,9 @@ class _McpServerDetailContent extends StatelessWidget {
               colors: colors,
               onTap: () {
                 final home = Platform.environment['HOME']!;
-                Process.run('open', ['$home/.claude/settings.json'],
-                    runInShell: true);
+                Process.run('open', [
+                  '$home/.claude/settings.json',
+                ], runInShell: true);
               },
             ),
           ],
@@ -441,26 +460,25 @@ class _AgentDetailContent extends StatelessWidget {
               spacing: 6,
               runSpacing: 6,
               children: agent.tools
-                  .map((t) => Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
+                  .map(
+                    (t) => Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: accent.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(
+                          color: accent.withValues(alpha: 0.2),
                         ),
-                        decoration: BoxDecoration(
-                          color: accent.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(6),
-                          border: Border.all(
-                            color: accent.withValues(alpha: 0.2),
-                          ),
-                        ),
-                        child: Text(
-                          t,
-                          style: TextStyle(
-                            color: colors.textPri,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ))
+                      ),
+                      child: Text(
+                        t,
+                        style: TextStyle(color: colors.textPri, fontSize: 12),
+                      ),
+                    ),
+                  )
                   .toList(),
             ),
           ),
@@ -481,11 +499,7 @@ class _AgentDetailContent extends StatelessWidget {
                 colors: colors,
               ),
               if (agent.model != null)
-                _InfoRow(
-                  label: 'Modell',
-                  value: agent.model!,
-                  colors: colors,
-                ),
+                _InfoRow(label: 'Modell', value: agent.model!, colors: colors),
               _InfoRow(label: 'Pfad', value: agent.path, colors: colors),
             ],
           ),
@@ -509,8 +523,7 @@ class _AgentDetailContent extends StatelessWidget {
               label: 'Datei öffnen',
               accent: accent,
               colors: colors,
-              onTap: () =>
-                  Process.run('open', [agent.path], runInShell: true),
+              onTap: () => Process.run('open', [agent.path], runInShell: true),
             ),
           ],
         ),
@@ -622,10 +635,7 @@ class _DetailShell extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                if (badge != null) ...[
-                  const SizedBox(width: 10),
-                  badge!,
-                ],
+                if (badge != null) ...[const SizedBox(width: 10), badge!],
               ],
             ),
           ),
@@ -775,19 +785,13 @@ class _InfoRow extends StatelessWidget {
             width: 100,
             child: Text(
               label,
-              style: TextStyle(
-                color: colors.textDim,
-                fontSize: 13,
-              ),
+              style: TextStyle(color: colors.textDim, fontSize: 13),
             ),
           ),
           Expanded(
             child: Text(
               value,
-              style: TextStyle(
-                color: colors.textPri,
-                fontSize: 13,
-              ),
+              style: TextStyle(color: colors.textPri, fontSize: 13),
             ),
           ),
         ],

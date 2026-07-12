@@ -158,10 +158,7 @@ class ScaffoldResult {
   /// Non-fatal warnings encountered during scaffolding.
   final List<String> warnings;
 
-  const ScaffoldResult({
-    this.created = const [],
-    this.warnings = const [],
-  });
+  const ScaffoldResult({this.created = const [], this.warnings = const []});
 }
 
 /// Scaffolds an existing project folder with optional CLAUDE.md,
@@ -228,12 +225,13 @@ Future<ScaffoldResult> scaffoldProject({
   // --- Auto-commit scaffolded files ---
   if (created.isNotEmpty && gitDir.existsSync()) {
     try {
-      final addResult =
-          await _runWithTimeout('git', ['add', '-A'], projectPath);
+      final addResult = await _runWithTimeout('git', [
+        'add',
+        '-A',
+      ], projectPath);
       if (addResult.exitCode == 0) {
         final commitMsg = 'scaffold: ${created.join(', ')}';
-        await _runWithTimeout(
-            'git', ['commit', '-m', commitMsg], projectPath);
+        await _runWithTimeout('git', ['commit', '-m', commitMsg], projectPath);
       }
     } catch (e) {
       warnings.add('git commit fehlgeschlagen: $e');
@@ -262,7 +260,9 @@ Future<ProcessResult> _runWithTimeout(
   final timeoutFuture = Future<ProcessResult>.delayed(
     const Duration(seconds: 5),
     () => throw TimeoutException(
-        'Git-Befehl hat zu lange gedauert', const Duration(seconds: 5)),
+      'Git-Befehl hat zu lange gedauert',
+      const Duration(seconds: 5),
+    ),
   );
 
   return Future.any([processFuture, timeoutFuture]);
@@ -272,7 +272,8 @@ Future<ProcessResult> _runWithTimeout(
 // File content templates (public for reuse by project_creator_service)
 // ---------------------------------------------------------------------------
 
-String claudeMdContent(String displayName) => '''
+String claudeMdContent(String displayName) =>
+    '''
 # CLAUDE.md
 
 ## Project Overview

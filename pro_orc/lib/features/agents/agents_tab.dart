@@ -46,9 +46,8 @@ class _AgentsTabState extends ConsumerState<AgentsTab> {
     final agentsAsync = ref.watch(allAgentsProvider);
 
     return agentsAsync.when(
-      loading: () => Center(
-        child: CircularProgressIndicator(color: colors.cyan),
-      ),
+      loading: () =>
+          Center(child: CircularProgressIndicator(color: colors.cyan)),
       error: (error, _) => Center(
         child: Text(
           'Fehler beim Laden der Agents',
@@ -67,8 +66,8 @@ class _AgentsTabState extends ConsumerState<AgentsTab> {
     final filtered = _searchQuery.isEmpty
         ? agents
         : agents
-            .where((a) => a.name.toLowerCase().contains(_searchQuery))
-            .toList();
+              .where((a) => a.name.toLowerCase().contains(_searchQuery))
+              .toList();
 
     final projectAgents = filtered.where((a) => a.scope == 'project').toList();
     final generalAgents = filtered.where((a) => a.scope != 'project').toList();
@@ -162,8 +161,10 @@ class _AgentsTabState extends ConsumerState<AgentsTab> {
           borderRadius: BorderRadius.circular(10),
           borderSide: BorderSide(color: colors.cyanLo, width: 1.5),
         ),
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 12,
+        ),
       ),
     );
   }
@@ -201,11 +202,7 @@ class _AgentsTabState extends ConsumerState<AgentsTab> {
         ),
         const SizedBox(height: 12),
         if (cards.isNotEmpty)
-          Wrap(
-            spacing: 12,
-            runSpacing: 12,
-            children: cards,
-          )
+          Wrap(spacing: 12, runSpacing: 12, children: cards)
         else
           Text(
             emptyText,

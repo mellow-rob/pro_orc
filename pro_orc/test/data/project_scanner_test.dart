@@ -16,7 +16,9 @@ import 'package:pro_orc/data/services/project_scanner.dart';
 /// Creates a temporary directory containing a `.planning/` project structure
 /// (PROJECT.md with H1 + description) — still a recognized project marker
 /// even though its contents are no longer parsed into a structured model.
-Future<Directory> createPlanningProject(Directory parent, String name, {
+Future<Directory> createPlanningProject(
+  Directory parent,
+  String name, {
   bool withGit = false,
 }) async {
   final dir = Directory(p.join(parent.path, name));
@@ -26,21 +28,49 @@ Future<Directory> createPlanningProject(Directory parent, String name, {
   await planningDir.create();
 
   // Write PROJECT.md
-  final projectContent = '''# $name
+  final projectContent =
+      '''# $name
 
 ## Core Value
 
 Test project description for $name.
 ''';
-  await File(p.join(planningDir.path, 'PROJECT.md')).writeAsString(projectContent);
+  await File(
+    p.join(planningDir.path, 'PROJECT.md'),
+  ).writeAsString(projectContent);
 
   if (withGit) {
-    await Process.run('git', ['init'], workingDirectory: dir.path, runInShell: true);
-    await Process.run('git', ['config', 'user.email', 'test@test.com'], workingDirectory: dir.path, runInShell: true);
-    await Process.run('git', ['config', 'user.name', 'Test'], workingDirectory: dir.path, runInShell: true);
+    await Process.run(
+      'git',
+      ['init'],
+      workingDirectory: dir.path,
+      runInShell: true,
+    );
+    await Process.run(
+      'git',
+      ['config', 'user.email', 'test@test.com'],
+      workingDirectory: dir.path,
+      runInShell: true,
+    );
+    await Process.run(
+      'git',
+      ['config', 'user.name', 'Test'],
+      workingDirectory: dir.path,
+      runInShell: true,
+    );
     await File(p.join(dir.path, 'README.md')).writeAsString('# $name');
-    await Process.run('git', ['add', '.'], workingDirectory: dir.path, runInShell: true);
-    await Process.run('git', ['commit', '-m', 'Initial commit'], workingDirectory: dir.path, runInShell: true);
+    await Process.run(
+      'git',
+      ['add', '.'],
+      workingDirectory: dir.path,
+      runInShell: true,
+    );
+    await Process.run(
+      'git',
+      ['commit', '-m', 'Initial commit'],
+      workingDirectory: dir.path,
+      runInShell: true,
+    );
   }
 
   return dir;
@@ -52,11 +82,36 @@ Future<Directory> createPlainProject(Directory parent, String name) async {
   final dir = Directory(p.join(parent.path, name));
   await dir.create();
   await File(p.join(dir.path, 'README.md')).writeAsString('# $name');
-  await Process.run('git', ['init'], workingDirectory: dir.path, runInShell: true);
-  await Process.run('git', ['config', 'user.email', 'test@test.com'], workingDirectory: dir.path, runInShell: true);
-  await Process.run('git', ['config', 'user.name', 'Test'], workingDirectory: dir.path, runInShell: true);
-  await Process.run('git', ['add', '.'], workingDirectory: dir.path, runInShell: true);
-  await Process.run('git', ['commit', '-m', 'init'], workingDirectory: dir.path, runInShell: true);
+  await Process.run(
+    'git',
+    ['init'],
+    workingDirectory: dir.path,
+    runInShell: true,
+  );
+  await Process.run(
+    'git',
+    ['config', 'user.email', 'test@test.com'],
+    workingDirectory: dir.path,
+    runInShell: true,
+  );
+  await Process.run(
+    'git',
+    ['config', 'user.name', 'Test'],
+    workingDirectory: dir.path,
+    runInShell: true,
+  );
+  await Process.run(
+    'git',
+    ['add', '.'],
+    workingDirectory: dir.path,
+    runInShell: true,
+  );
+  await Process.run(
+    'git',
+    ['commit', '-m', 'init'],
+    workingDirectory: dir.path,
+    runInShell: true,
+  );
   return dir;
 }
 
@@ -126,7 +181,9 @@ void main() {
       });
 
       test('ignores files at scan root level', () async {
-        await File(p.join(scanRoot.path, 'some_file.txt')).writeAsString('hello');
+        await File(
+          p.join(scanRoot.path, 'some_file.txt'),
+        ).writeAsString('hello');
         final results = await scanner.scanAll(scanDirOverride: scanRoot.path);
         expect(results, isEmpty);
       });
@@ -155,32 +212,38 @@ void main() {
         expect(results.first.folderId, equals('visible-project'));
       });
 
-      test('skips directories matching ignore patterns (exact match)', () async {
-        await createPlainProject(scanRoot, 'my-app');
-        await createPlainProject(scanRoot, 'node_modules');
+      test(
+        'skips directories matching ignore patterns (exact match)',
+        () async {
+          await createPlainProject(scanRoot, 'my-app');
+          await createPlainProject(scanRoot, 'node_modules');
 
-        // Ensure config row exists, then override ignore list
-        await db.getConfig();
-        await db.updateConfig(ignoreListJson: '["node_modules"]');
+          // Ensure config row exists, then override ignore list
+          await db.getConfig();
+          await db.updateConfig(ignoreListJson: '["node_modules"]');
 
-        final results = await scanner.scanAll(scanDirOverride: scanRoot.path);
-        expect(results.length, equals(1));
-        expect(results.first.folderId, equals('my-app'));
-      });
+          final results = await scanner.scanAll(scanDirOverride: scanRoot.path);
+          expect(results.length, equals(1));
+          expect(results.first.folderId, equals('my-app'));
+        },
+      );
 
-      test('skips directories matching ignore patterns (wildcard prefix *)', () async {
-        await createPlainProject(scanRoot, 'my-app');
-        await createPlainProject(scanRoot, 'build');
-        await createPlainProject(scanRoot, 'build-cache');
+      test(
+        'skips directories matching ignore patterns (wildcard prefix *)',
+        () async {
+          await createPlainProject(scanRoot, 'my-app');
+          await createPlainProject(scanRoot, 'build');
+          await createPlainProject(scanRoot, 'build-cache');
 
-        // Ensure config row exists, then override ignore list
-        await db.getConfig();
-        await db.updateConfig(ignoreListJson: '["build*"]');
+          // Ensure config row exists, then override ignore list
+          await db.getConfig();
+          await db.updateConfig(ignoreListJson: '["build*"]');
 
-        final results = await scanner.scanAll(scanDirOverride: scanRoot.path);
-        expect(results.length, equals(1));
-        expect(results.first.folderId, equals('my-app'));
-      });
+          final results = await scanner.scanAll(scanDirOverride: scanRoot.path);
+          expect(results.length, equals(1));
+          expect(results.first.folderId, equals('my-app'));
+        },
+      );
 
       test('results are sorted by displayName', () async {
         await createPlainProject(scanRoot, 'zebra-project');
@@ -190,7 +253,10 @@ void main() {
         final results = await scanner.scanAll(scanDirOverride: scanRoot.path);
         final names = results.map((r) => r.displayName).toList();
         // Plain projects use folder name as displayName
-        expect(names, equals(['alpha-project', 'mango-project', 'zebra-project']));
+        expect(
+          names,
+          equals(['alpha-project', 'mango-project', 'zebra-project']),
+        );
       });
     });
 
@@ -206,12 +272,15 @@ void main() {
         expect(results.first.displayName, equals('my-project'));
       });
 
-      test('displayName falls back to folder name when no PROJECT.md/CLAUDE.md', () async {
-        await createPlainProject(scanRoot, 'folder-name');
+      test(
+        'displayName falls back to folder name when no PROJECT.md/CLAUDE.md',
+        () async {
+          await createPlainProject(scanRoot, 'folder-name');
 
-        final results = await scanner.scanAll(scanDirOverride: scanRoot.path);
-        expect(results.first.displayName, equals('folder-name'));
-      });
+          final results = await scanner.scanAll(scanDirOverride: scanRoot.path);
+          expect(results.first.displayName, equals('folder-name'));
+        },
+      );
 
       test('description comes from PROJECT.md Core Value section', () async {
         await createPlanningProject(scanRoot, 'my-project');
@@ -331,8 +400,14 @@ void main() {
         final byId = {for (final r in results) r.folderId: r};
 
         expect(byId['code-project']!.projectType, equals(ProjectType.code));
-        expect(byId['research-project']!.projectType, equals(ProjectType.research));
-        expect(byId['untyped-project']!.projectType, equals(ProjectType.research));
+        expect(
+          byId['research-project']!.projectType,
+          equals(ProjectType.research),
+        );
+        expect(
+          byId['untyped-project']!.projectType,
+          equals(ProjectType.research),
+        );
       });
     });
 
@@ -341,12 +416,19 @@ void main() {
     // -----------------------------------------------------------------------
 
     group('stale detection', () {
-      test('non-stale git project: recent commit returns isStale=false', () async {
-        await createPlanningProject(scanRoot, 'fresh-git-project', withGit: true);
+      test(
+        'non-stale git project: recent commit returns isStale=false',
+        () async {
+          await createPlanningProject(
+            scanRoot,
+            'fresh-git-project',
+            withGit: true,
+          );
 
-        final results = await scanner.scanAll(scanDirOverride: scanRoot.path);
-        expect(results.first.isStale, isFalse);
-      });
+          final results = await scanner.scanAll(scanDirOverride: scanRoot.path);
+          expect(results.first.isStale, isFalse);
+        },
+      );
 
       test('non-git project with no signal is not stale', () async {
         await createPlainProject(scanRoot, 'no-signal-project');
@@ -387,13 +469,16 @@ void main() {
     // -----------------------------------------------------------------------
 
     group('memory data integration', () {
-      test('scanned project has memory == null when no MEMORY.md exists', () async {
-        await createPlanningProject(scanRoot, 'no-memory-project');
+      test(
+        'scanned project has memory == null when no MEMORY.md exists',
+        () async {
+          await createPlanningProject(scanRoot, 'no-memory-project');
 
-        final results = await scanner.scanAll(scanDirOverride: scanRoot.path);
-        expect(results.length, equals(1));
-        expect(results.first.memory, isNull);
-      });
+          final results = await scanner.scanAll(scanDirOverride: scanRoot.path);
+          expect(results.length, equals(1));
+          expect(results.first.memory, isNull);
+        },
+      );
 
       test('ProjectModel.memory field is accessible for UI layer', () async {
         await createPlanningProject(scanRoot, 'memory-check-project');
@@ -424,9 +509,13 @@ void main() {
       late ProjectScanner scannerWithClaudeHome;
 
       setUp(() {
-        claudeHome = Directory.systemTemp.createTempSync('claude_home_scanner_test_');
-        scannerWithClaudeHome =
-            ProjectScanner(db, claudeHomeDirOverride: claudeHome.path);
+        claudeHome = Directory.systemTemp.createTempSync(
+          'claude_home_scanner_test_',
+        );
+        scannerWithClaudeHome = ProjectScanner(
+          db,
+          claudeHomeDirOverride: claudeHome.path,
+        );
       });
 
       tearDown(() async {
@@ -441,47 +530,54 @@ void main() {
           .replaceAll(' ', '-')
           .replaceAll('.', '-');
 
-      test('rescan after MEMORY.md is updated returns the new consolidation time',
-          () async {
-        final projectDir = await createPlanningProject(scanRoot, 'memory-cache-project');
-        final encoded = encode(projectDir.path);
-        final memoryDir = Directory(
-          p.join(claudeHome.path, 'projects', encoded, 'memory'),
-        );
-        await memoryDir.create(recursive: true);
-        final memoryFile = File(p.join(memoryDir.path, 'MEMORY.md'));
-        await memoryFile.writeAsString('# Memory v1');
+      test(
+        'rescan after MEMORY.md is updated returns the new consolidation time',
+        () async {
+          final projectDir = await createPlanningProject(
+            scanRoot,
+            'memory-cache-project',
+          );
+          final encoded = encode(projectDir.path);
+          final memoryDir = Directory(
+            p.join(claudeHome.path, 'projects', encoded, 'memory'),
+          );
+          await memoryDir.create(recursive: true);
+          final memoryFile = File(p.join(memoryDir.path, 'MEMORY.md'));
+          await memoryFile.writeAsString('# Memory v1');
 
-        final results1 = await scannerWithClaudeHome.scanAll(
-          scanDirOverride: scanRoot.path,
-        );
-        final firstConsolidated = results1.first.memory?.lastConsolidated;
-        expect(firstConsolidated, isNotNull);
+          final results1 = await scannerWithClaudeHome.scanAll(
+            scanDirOverride: scanRoot.path,
+          );
+          final firstConsolidated = results1.first.memory?.lastConsolidated;
+          expect(firstConsolidated, isNotNull);
 
-        // Simulate rem-sleep writing a new consolidation later. `touch -t`
-        // rounds to whole seconds, so a few-ms delay isn't guaranteed to
-        // land in a different second — push the mtime 5 minutes forward
-        // instead to make the "after" assertion unambiguous.
-        await memoryFile.writeAsString('# Memory v2 - updated');
-        final newMtime = DateTime.now().add(const Duration(minutes: 5));
-        await Process.run(
-          'touch',
-          ['-t', _touchFormat(newMtime), memoryFile.path],
-        );
+          // Simulate rem-sleep writing a new consolidation later. `touch -t`
+          // rounds to whole seconds, so a few-ms delay isn't guaranteed to
+          // land in a different second — push the mtime 5 minutes forward
+          // instead to make the "after" assertion unambiguous.
+          await memoryFile.writeAsString('# Memory v2 - updated');
+          final newMtime = DateTime.now().add(const Duration(minutes: 5));
+          await Process.run('touch', [
+            '-t',
+            _touchFormat(newMtime),
+            memoryFile.path,
+          ]);
 
-        final results2 = await scannerWithClaudeHome.scanAll(
-          scanDirOverride: scanRoot.path,
-        );
-        final secondConsolidated = results2.first.memory?.lastConsolidated;
+          final results2 = await scannerWithClaudeHome.scanAll(
+            scanDirOverride: scanRoot.path,
+          );
+          final secondConsolidated = results2.first.memory?.lastConsolidated;
 
-        expect(secondConsolidated, isNotNull);
-        expect(
-          secondConsolidated!.isAfter(firstConsolidated!),
-          isTrue,
-          reason: 'Cache must invalidate on MEMORY.md mtime change, not '
-              'project directory mtime',
-        );
-      });
+          expect(secondConsolidated, isNotNull);
+          expect(
+            secondConsolidated!.isAfter(firstConsolidated!),
+            isTrue,
+            reason:
+                'Cache must invalidate on MEMORY.md mtime change, not '
+                'project directory mtime',
+          );
+        },
+      );
     });
 
     // -----------------------------------------------------------------------
@@ -504,15 +600,21 @@ void main() {
       });
 
       test('scan after PROJECT.md content changes picks up new data', () async {
-        final projDir = await createPlanningProject(scanRoot, 'updating-project');
+        final projDir = await createPlanningProject(
+          scanRoot,
+          'updating-project',
+        );
 
         final results1 = await scanner.scanAll(scanDirOverride: scanRoot.path);
         expect(results1.first.displayName, equals('updating-project'));
 
         // Modify PROJECT.md with a small delay to change mtime
         await Future.delayed(const Duration(milliseconds: 50));
-        await File(p.join(projDir.path, '.planning', 'PROJECT.md'))
-            .writeAsString('# Renamed Project\n\n## Core Value\n\nNew description.\n');
+        await File(
+          p.join(projDir.path, '.planning', 'PROJECT.md'),
+        ).writeAsString(
+          '# Renamed Project\n\n## Core Value\n\nNew description.\n',
+        );
 
         final results2 = await scanner.scanAll(scanDirOverride: scanRoot.path);
         expect(results2.first.displayName, equals('Renamed Project'));
@@ -524,49 +626,73 @@ void main() {
     // -----------------------------------------------------------------------
 
     group('rescan caching (git/memory/used-agents)', () {
-      test('unrelated project is unaffected when only one project changes', () async {
-        await createPlanningProject(scanRoot, 'project-a', withGit: true);
-        await createPlanningProject(scanRoot, 'project-b', withGit: true);
+      test(
+        'unrelated project is unaffected when only one project changes',
+        () async {
+          await createPlanningProject(scanRoot, 'project-a', withGit: true);
+          await createPlanningProject(scanRoot, 'project-b', withGit: true);
 
-        final results1 = await scanner.scanAll(scanDirOverride: scanRoot.path);
-        final byId1 = {for (final r in results1) r.folderId: r};
-        final bHashBefore = byId1['project-b']!.git!.lastCommitHash;
+          final results1 = await scanner.scanAll(
+            scanDirOverride: scanRoot.path,
+          );
+          final byId1 = {for (final r in results1) r.folderId: r};
+          final bHashBefore = byId1['project-b']!.git!.lastCommitHash;
 
-        // Add a new commit to project-a only.
-        final projectADir = Directory(p.join(scanRoot.path, 'project-a'));
-        await File(p.join(projectADir.path, 'new-file.txt')).writeAsString('x');
-        await Process.run('git', ['add', '.'], workingDirectory: projectADir.path, runInShell: true);
-        await Process.run(
-          'git',
-          ['commit', '-m', 'Second commit'],
-          workingDirectory: projectADir.path,
-          runInShell: true,
-        );
+          // Add a new commit to project-a only.
+          final projectADir = Directory(p.join(scanRoot.path, 'project-a'));
+          await File(
+            p.join(projectADir.path, 'new-file.txt'),
+          ).writeAsString('x');
+          await Process.run(
+            'git',
+            ['add', '.'],
+            workingDirectory: projectADir.path,
+            runInShell: true,
+          );
+          await Process.run(
+            'git',
+            ['commit', '-m', 'Second commit'],
+            workingDirectory: projectADir.path,
+            runInShell: true,
+          );
 
-        final results2 = await scanner.scanAll(scanDirOverride: scanRoot.path);
-        final byId2 = {for (final r in results2) r.folderId: r};
+          final results2 = await scanner.scanAll(
+            scanDirOverride: scanRoot.path,
+          );
+          final byId2 = {for (final r in results2) r.folderId: r};
 
-        // project-a picked up the new commit.
-        expect(
-          byId2['project-a']!.git!.lastCommitMessage,
-          equals('Second commit'),
-        );
-        // project-b's cached git data is unchanged (same commit hash).
-        expect(byId2['project-b']!.git!.lastCommitHash, equals(bHashBefore));
-      });
+          // project-a picked up the new commit.
+          expect(
+            byId2['project-a']!.git!.lastCommitMessage,
+            equals('Second commit'),
+          );
+          // project-b's cached git data is unchanged (same commit hash).
+          expect(byId2['project-b']!.git!.lastCommitHash, equals(bHashBefore));
+        },
+      );
 
-      test('repeated scanAll() with no changes returns stable git data from cache',
-          () async {
-        await createPlanningProject(scanRoot, 'stable-project', withGit: true);
+      test(
+        'repeated scanAll() with no changes returns stable git data from cache',
+        () async {
+          await createPlanningProject(
+            scanRoot,
+            'stable-project',
+            withGit: true,
+          );
 
-        final results1 = await scanner.scanAll(scanDirOverride: scanRoot.path);
-        final results2 = await scanner.scanAll(scanDirOverride: scanRoot.path);
+          final results1 = await scanner.scanAll(
+            scanDirOverride: scanRoot.path,
+          );
+          final results2 = await scanner.scanAll(
+            scanDirOverride: scanRoot.path,
+          );
 
-        expect(
-          results1.first.git!.lastCommitHash,
-          equals(results2.first.git!.lastCommitHash),
-        );
-      });
+          expect(
+            results1.first.git!.lastCommitHash,
+            equals(results2.first.git!.lastCommitHash),
+          );
+        },
+      );
     });
   });
 }

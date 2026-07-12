@@ -26,10 +26,10 @@ enum AutomationSource {
 extension AutomationSourceLabel on AutomationSource {
   /// Short German-facing badge label.
   String get label => switch (this) {
-        AutomationSource.launchd => 'launchd',
-        AutomationSource.cron => 'cron',
-        AutomationSource.hook => 'Hook',
-      };
+    AutomationSource.launchd => 'launchd',
+    AutomationSource.cron => 'cron',
+    AutomationSource.hook => 'Hook',
+  };
 }
 
 /// A single discovered automation.
