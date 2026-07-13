@@ -4,7 +4,7 @@ type: roadmap
 project: pro-orc
 title: "Pro Orc"
 status: active
-updated: 2026-07-12
+updated: 2026-07-13
 source: "scaffolded by a1-tools product init"
 milestones:
   - id: m1-stabilization
@@ -44,7 +44,7 @@ features:
     milestone: m8-project-organization
     title: "Project Hub: list/grid toggle, custom groups, archive, a1-badge"
     status: in-flight
-    stage: started
+    stage: complete
     depends_on: []
     started: 2026-07-12
     finished: null
@@ -78,6 +78,7 @@ None.
 - **2026-07-12** — 002-project-organization -> started — stage transition via `product stage`
 - **2026-07-12** — feature.md created for '002-project-organization' — formal spec/plan attached via `product feature-init`
 - **2026-07-12** — adopt: migrated legacy .a1/roadmap.md (M1-M8) to docs/product/ROADMAP.md schema v1 — M1-M7 marked done from merged feature branches + merge commits on main (evidence ladder rung b: feature/v2.2-stabilization, feature/v3-m5-harness-visibility, feature/v3-m6-learning-loop, feature/v3-m7-network-costs) plus release tag v3.0.0; M8 carried over as in-progress (no completion evidence yet). Legacy .a1/roadmap.md kept as-is, not deleted.
+- **2026-07-13** — 002-project-organization -> complete — stage transition via `product stage`
 
 ## Appendix — migrated details
 

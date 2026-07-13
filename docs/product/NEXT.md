@@ -4,7 +4,7 @@
 
 # Pro Orc
 
-updated: 2026-07-12
+updated: 2026-07-13
 
 ## You are here
 
@@ -12,7 +12,7 @@ updated: 2026-07-12
 
 ## In-flight features
 
-- **002-project-organization** — Project Hub: list/grid toggle, custom groups, archive, a1-badge (milestone: m8-project-organization, stage: started) — scope: projects/pro-orc/spec/002-project-organization.md, projects/pro-orc/plans/002-project-organization-wave-plan.md
+- **002-project-organization** — Project Hub: list/grid toggle, custom groups, archive, a1-badge (milestone: m8-project-organization, stage: complete) — scope: projects/pro-orc/spec/002-project-organization.md, projects/pro-orc/plans/002-project-organization-wave-plan.md
 
 ## Next cursor
 
