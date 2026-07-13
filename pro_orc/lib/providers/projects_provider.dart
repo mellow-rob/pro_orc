@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:pro_orc/data/models/project_model.dart';
+import 'package:pro_orc/data/services/project_organization_seed_service.dart';
 import 'package:pro_orc/providers/database_provider.dart';
 import 'package:pro_orc/providers/watcher_provider.dart';
 
@@ -16,5 +17,12 @@ final projectsProvider = FutureProvider<List<ProjectModel>>((ref) async {
   });
 
   final scanner = ref.read(projectScannerProvider);
-  return scanner.scanAll();
+  final projects = await scanner.scanAll();
+
+  // One-time, idempotent seed (FR-014/015/016) — runs after every scan but
+  // the seed-applied flag makes every call after the first a no-op.
+  final db = ref.read(appDatabaseProvider);
+  await ProjectOrganizationSeedService(db).applyIfNeeded(projects);
+
+  return projects;
 });
