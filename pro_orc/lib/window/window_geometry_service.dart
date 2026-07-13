@@ -65,7 +65,10 @@ class WindowGeometryService {
       }
       return false;
     } catch (e) {
-      developer.log('Failed to query displays for off-screen guard: $e', name: 'window_geometry_service');
+      developer.log(
+        'Failed to query displays for off-screen guard: $e',
+        name: 'window_geometry_service',
+      );
       return true;
     }
   }

@@ -275,7 +275,10 @@ class _OnboardingWizardState extends ConsumerState<OnboardingWizard> {
               ),
               child: Text(
                 isLastStep ? 'Fertig' : 'Weiter',
-                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
           ],

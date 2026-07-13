@@ -17,8 +17,8 @@ class SelectedProjectPathNotifier extends Notifier<String?> {
 
 final selectedProjectPathProvider =
     NotifierProvider<SelectedProjectPathNotifier, String?>(
-  SelectedProjectPathNotifier.new,
-);
+      SelectedProjectPathNotifier.new,
+    );
 
 /// Live Claude Tools data — rescans on every watcher event.
 ///
@@ -50,9 +50,9 @@ final projectToolsProvider = FutureProvider<ClaudeToolsData?>((ref) async {
 /// disturbing the tools-tab's own selection.
 final projectToolsByPathProvider =
     FutureProvider.family<ClaudeToolsData, String>((ref, projectPath) async {
-  final scanner = ref.watch(_sharedClaudeToolsScannerProvider);
-  return scanner.scanProjectTools(projectPath);
-});
+      final scanner = ref.watch(_sharedClaudeToolsScannerProvider);
+      return scanner.scanProjectTools(projectPath);
+    });
 
 /// Reuses a single [ClaudeToolsScanner] instance across [allAgentsProvider]
 /// rebuilds so its internal per-project mtime cache (M3 rescan-cost fix)
@@ -71,7 +71,9 @@ final _sharedClaudeToolsScannerProvider = Provider<ClaudeToolsScanner>((ref) {
 /// Individual project scans are cached by [ClaudeToolsScanner] itself (M3
 /// rescan-cost fix), so a change affecting only one project does not force
 /// re-reading every other project's `.claude/`.
-final _allProjectToolsProvider = FutureProvider<List<ClaudeToolsData>>((ref) async {
+final _allProjectToolsProvider = FutureProvider<List<ClaudeToolsData>>((
+  ref,
+) async {
   ref.listen(claudeToolsWatcherProvider, (previous, next) {
     if (next.hasValue) ref.invalidateSelf();
   });

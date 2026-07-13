@@ -212,17 +212,15 @@ void main() {
       );
 
       expect(result.created, contains('CLAUDE.md'));
-      expect(
-        File(p.join(projectDir.path, 'CLAUDE.md')).existsSync(),
-        isTrue,
-      );
+      expect(File(p.join(projectDir.path, 'CLAUDE.md')).existsSync(), isTrue);
     });
 
     test('skips CLAUDE.md when already exists', () async {
       final projectDir = Directory(p.join(tempDir.path, 'has-claude'));
       await projectDir.create();
-      await File(p.join(projectDir.path, 'CLAUDE.md'))
-          .writeAsString('original');
+      await File(
+        p.join(projectDir.path, 'CLAUDE.md'),
+      ).writeAsString('original');
 
       final result = await scaffoldProject(
         projectPath: projectDir.path,
@@ -231,8 +229,9 @@ void main() {
       );
 
       expect(result.created.where((f) => f.contains('CLAUDE.md')), isEmpty);
-      final content =
-          await File(p.join(projectDir.path, 'CLAUDE.md')).readAsString();
+      final content = await File(
+        p.join(projectDir.path, 'CLAUDE.md'),
+      ).readAsString();
       expect(content, 'original');
     });
 
@@ -247,16 +246,18 @@ void main() {
       );
 
       expect(result.created, contains('.gitignore'));
-      final content =
-          await File(p.join(projectDir.path, '.gitignore')).readAsString();
+      final content = await File(
+        p.join(projectDir.path, '.gitignore'),
+      ).readAsString();
       expect(content, contains('.dart_tool/'));
     });
 
     test('skips .gitignore when already exists', () async {
       final projectDir = Directory(p.join(tempDir.path, 'has-gi'));
       await projectDir.create();
-      await File(p.join(projectDir.path, '.gitignore'))
-          .writeAsString('my-rules');
+      await File(
+        p.join(projectDir.path, '.gitignore'),
+      ).writeAsString('my-rules');
 
       final result = await scaffoldProject(
         projectPath: projectDir.path,
@@ -265,8 +266,9 @@ void main() {
       );
 
       expect(result.created.where((f) => f.contains('.gitignore')), isEmpty);
-      final content =
-          await File(p.join(projectDir.path, '.gitignore')).readAsString();
+      final content = await File(
+        p.join(projectDir.path, '.gitignore'),
+      ).readAsString();
       expect(content, 'my-rules');
     });
 
@@ -290,8 +292,12 @@ void main() {
       final projectDir = Directory(p.join(tempDir.path, 'has-git'));
       await projectDir.create();
       // Pre-init git
-      await Process.run('git', ['init'],
-          workingDirectory: projectDir.path, runInShell: true);
+      await Process.run(
+        'git',
+        ['init'],
+        workingDirectory: projectDir.path,
+        runInShell: true,
+      );
 
       final result = await scaffoldProject(
         projectPath: projectDir.path,
@@ -307,12 +313,24 @@ void main() {
       final projectDir = Directory(p.join(tempDir.path, 'auto-commit'));
       await projectDir.create();
       // Pre-init git with config
-      await Process.run('git', ['init'],
-          workingDirectory: projectDir.path, runInShell: true);
-      await Process.run('git', ['config', 'user.email', 'test@test.com'],
-          workingDirectory: projectDir.path, runInShell: true);
-      await Process.run('git', ['config', 'user.name', 'Test'],
-          workingDirectory: projectDir.path, runInShell: true);
+      await Process.run(
+        'git',
+        ['init'],
+        workingDirectory: projectDir.path,
+        runInShell: true,
+      );
+      await Process.run(
+        'git',
+        ['config', 'user.email', 'test@test.com'],
+        workingDirectory: projectDir.path,
+        runInShell: true,
+      );
+      await Process.run(
+        'git',
+        ['config', 'user.name', 'Test'],
+        workingDirectory: projectDir.path,
+        runInShell: true,
+      );
 
       await scaffoldProject(
         projectPath: projectDir.path,
@@ -321,8 +339,12 @@ void main() {
       );
 
       // Verify commit was made
-      final logResult = await Process.run('git', ['log', '--oneline', '-1'],
-          workingDirectory: projectDir.path, runInShell: true);
+      final logResult = await Process.run(
+        'git',
+        ['log', '--oneline', '-1'],
+        workingDirectory: projectDir.path,
+        runInShell: true,
+      );
       expect(logResult.stdout.toString(), contains('scaffold'));
     });
 
@@ -332,16 +354,36 @@ void main() {
       // Pre-create everything
       await File(p.join(projectDir.path, 'CLAUDE.md')).writeAsString('x');
       // Init git
-      await Process.run('git', ['init'],
-          workingDirectory: projectDir.path, runInShell: true);
-      await Process.run('git', ['config', 'user.email', 'test@test.com'],
-          workingDirectory: projectDir.path, runInShell: true);
-      await Process.run('git', ['config', 'user.name', 'Test'],
-          workingDirectory: projectDir.path, runInShell: true);
-      await Process.run('git', ['add', '.'],
-          workingDirectory: projectDir.path, runInShell: true);
-      await Process.run('git', ['commit', '-m', 'init'],
-          workingDirectory: projectDir.path, runInShell: true);
+      await Process.run(
+        'git',
+        ['init'],
+        workingDirectory: projectDir.path,
+        runInShell: true,
+      );
+      await Process.run(
+        'git',
+        ['config', 'user.email', 'test@test.com'],
+        workingDirectory: projectDir.path,
+        runInShell: true,
+      );
+      await Process.run(
+        'git',
+        ['config', 'user.name', 'Test'],
+        workingDirectory: projectDir.path,
+        runInShell: true,
+      );
+      await Process.run(
+        'git',
+        ['add', '.'],
+        workingDirectory: projectDir.path,
+        runInShell: true,
+      );
+      await Process.run(
+        'git',
+        ['commit', '-m', 'init'],
+        workingDirectory: projectDir.path,
+        runInShell: true,
+      );
 
       await scaffoldProject(
         projectPath: projectDir.path,
@@ -351,8 +393,11 @@ void main() {
 
       // Should still only have one commit
       final logResult = await Process.run(
-          'git', ['rev-list', '--count', 'HEAD'],
-          workingDirectory: projectDir.path, runInShell: true);
+        'git',
+        ['rev-list', '--count', 'HEAD'],
+        workingDirectory: projectDir.path,
+        runInShell: true,
+      );
       expect(logResult.stdout.toString().trim(), '1');
     });
 
@@ -368,10 +413,7 @@ void main() {
 
       // File created but no git commit (no .git dir)
       expect(result.created, contains('CLAUDE.md'));
-      expect(
-        Directory(p.join(projectDir.path, '.git')).existsSync(),
-        isFalse,
-      );
+      expect(Directory(p.join(projectDir.path, '.git')).existsSync(), isFalse);
     });
 
     test('returns empty created list when all options false', () async {

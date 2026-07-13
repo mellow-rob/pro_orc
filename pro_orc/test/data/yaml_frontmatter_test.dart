@@ -25,14 +25,20 @@ description: "A quoted description."
       expect(result['description'], 'A quoted description.');
     });
 
-    test('handles values containing colons by splitting only at the first colon', () {
-      final result = parseYamlFrontmatter('''---
+    test(
+      'handles values containing colons by splitting only at the first colon',
+      () {
+        final result = parseYamlFrontmatter('''---
 description: Deploy to https://example.com:8080/path
 ---
 ''');
 
-      expect(result['description'], 'Deploy to https://example.com:8080/path');
-    });
+        expect(
+          result['description'],
+          'Deploy to https://example.com:8080/path',
+        );
+      },
+    );
 
     test('folds a ">" block scalar into a single space-joined line', () {
       final result = parseYamlFrontmatter('''---
@@ -66,8 +72,10 @@ name: falk
       expect(result['name'], 'falk');
     });
 
-    test('a key after a block scalar is parsed correctly (dedent ends the block)', () {
-      final result = parseYamlFrontmatter('''---
+    test(
+      'a key after a block scalar is parsed correctly (dedent ends the block)',
+      () {
+        final result = parseYamlFrontmatter('''---
 description: >
   Multi-line text
   continues here.
@@ -76,13 +84,16 @@ color: purple
 ---
 ''');
 
-      expect(result['description'], 'Multi-line text continues here.');
-      expect(result['model'], 'opus');
-      expect(result['color'], 'purple');
-    });
+        expect(result['description'], 'Multi-line text continues here.');
+        expect(result['model'], 'opus');
+        expect(result['color'], 'purple');
+      },
+    );
 
     test('returns empty map for content with no frontmatter delimiters', () {
-      final result = parseYamlFrontmatter('# Just a heading\nNo frontmatter here.');
+      final result = parseYamlFrontmatter(
+        '# Just a heading\nNo frontmatter here.',
+      );
       expect(result, isEmpty);
     });
 

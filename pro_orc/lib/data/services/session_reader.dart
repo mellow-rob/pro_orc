@@ -5,7 +5,8 @@ import 'dart:io';
 import 'package:path/path.dart' as p;
 
 import 'package:pro_orc/data/models/session_data.dart';
-import 'package:pro_orc/data/services/memory_reader.dart' show encodeProjectPath;
+import 'package:pro_orc/data/services/memory_reader.dart'
+    show encodeProjectPath;
 
 /// A session is considered "active" if its `.jsonl` file was modified within
 /// this window.
@@ -39,7 +40,8 @@ class SessionReader {
   /// found or on any error.
   Future<ProjectSessionData> readProjectSessions(String projectPath) async {
     try {
-      final claudeHome = claudeHomeDirOverride ??
+      final claudeHome =
+          claudeHomeDirOverride ??
           p.join(Platform.environment['HOME']!, '.claude');
       final projectsDir = p.join(claudeHome, 'projects');
       final encodedPath = encodeProjectPath(projectPath);
@@ -74,7 +76,10 @@ class SessionReader {
 
       return ProjectSessionData.empty;
     } catch (e) {
-      developer.log('Failed to read sessions for $projectPath: $e', name: 'session_reader');
+      developer.log(
+        'Failed to read sessions for $projectPath: $e',
+        name: 'session_reader',
+      );
       return ProjectSessionData.empty;
     }
   }
@@ -92,14 +97,20 @@ class SessionReader {
       try {
         final stat = await entity.stat();
         final lastActivity = stat.modified;
-        result.add(SessionInfo(
-          id: name.substring(0, name.length - '.jsonl'.length),
-          path: entity.path,
-          lastActivity: lastActivity,
-          isActive: DateTime.now().difference(lastActivity) < _activeThreshold,
-        ));
+        result.add(
+          SessionInfo(
+            id: name.substring(0, name.length - '.jsonl'.length),
+            path: entity.path,
+            lastActivity: lastActivity,
+            isActive:
+                DateTime.now().difference(lastActivity) < _activeThreshold,
+          ),
+        );
       } catch (e) {
-        developer.log('Failed to stat session file ${entity.path}: $e', name: 'session_reader');
+        developer.log(
+          'Failed to stat session file ${entity.path}: $e',
+          name: 'session_reader',
+        );
       }
     }
 
@@ -188,7 +199,10 @@ class SessionReader {
           }
         } catch (e) {
           // Malformed line — skip, never let one bad line abort the scan.
-          developer.log('Skipping malformed session line in ${session.path}: $e', name: 'session_reader');
+          developer.log(
+            'Skipping malformed session line in ${session.path}: $e',
+            name: 'session_reader',
+          );
         }
       }
 
@@ -204,7 +218,10 @@ class SessionReader {
         cacheTokens: sawUsage ? cacheTokens : null,
       );
     } catch (e) {
-      developer.log('Failed to read session detail for ${session.path}: $e', name: 'session_reader');
+      developer.log(
+        'Failed to read session detail for ${session.path}: $e',
+        name: 'session_reader',
+      );
       return session;
     }
   }

@@ -26,16 +26,22 @@ Future<List<ExternalResource>> detectExternalResources(
   try {
     final githubUrl = project.git?.githubUrl;
     if (githubUrl != null && githubUrl.isNotEmpty) {
-      resources.add(ExternalResource(
-        type: ExternalResourceType.github,
-        label: 'GitHub-Repository',
-        uri: githubUrl,
-        hint: 'Repository via `gh repo delete` loeschen oder manuell auf GitHub',
-      ));
+      resources.add(
+        ExternalResource(
+          type: ExternalResourceType.github,
+          label: 'GitHub-Repository',
+          uri: githubUrl,
+          hint:
+              'Repository via `gh repo delete` loeschen oder manuell auf GitHub',
+        ),
+      );
       seenUris.add(githubUrl);
     }
   } catch (e) {
-    developer.log('Failed to detect GitHub resource: $e', name: 'resource_detector');
+    developer.log(
+      'Failed to detect GitHub resource: $e',
+      name: 'resource_detector',
+    );
   }
 
   // CLN-04: Claude Memory directory
@@ -45,17 +51,22 @@ Future<List<ExternalResource>> detectExternalResources(
       final encodedPath = encodeProjectPath(project.path);
       final claudeProjectDir = p.join(home, '.claude', 'projects', encodedPath);
       if (Directory(claudeProjectDir).existsSync()) {
-        resources.add(ExternalResource(
-          type: ExternalResourceType.claudeMemory,
-          label: 'Claude Memory',
-          uri: claudeProjectDir,
-          hint: 'Claude-Projektverzeichnis loeschen (Memory + Einstellungen)',
-        ));
+        resources.add(
+          ExternalResource(
+            type: ExternalResourceType.claudeMemory,
+            label: 'Claude Memory',
+            uri: claudeProjectDir,
+            hint: 'Claude-Projektverzeichnis loeschen (Memory + Einstellungen)',
+          ),
+        );
         seenUris.add(claudeProjectDir);
       }
     }
   } catch (e) {
-    developer.log('Failed to detect Claude memory resource: $e', name: 'resource_detector');
+    developer.log(
+      'Failed to detect Claude memory resource: $e',
+      name: 'resource_detector',
+    );
   }
 
   // CLN-03: Figma and other URLs from .md files.
@@ -65,7 +76,10 @@ Future<List<ExternalResource>> detectExternalResources(
     final urlResources = await _scanMdFilesForUrls(project.mdFiles, seenUris);
     resources.addAll(urlResources);
   } catch (e) {
-    developer.log('Failed to scan .md files for URLs: $e', name: 'resource_detector');
+    developer.log(
+      'Failed to scan .md files for URLs: $e',
+      name: 'resource_detector',
+    );
   }
 
   return resources;
@@ -93,7 +107,10 @@ Future<List<ExternalResource>> _scanMdFilesForUrls(
 
       final content = await file.readAsString();
       for (final match in urlRegex.allMatches(content)) {
-        final url = match.group(0)!.trimRight().replaceAll(RegExp(r'[.,;:]+$'), '');
+        final url = match
+            .group(0)!
+            .trimRight()
+            .replaceAll(RegExp(r'[.,;:]+$'), '');
         if (seenUris.contains(url)) continue;
         if (foundUrls.containsKey(url)) continue;
         if (foundUrls.length >= 10) break;
@@ -103,7 +120,10 @@ Future<List<ExternalResource>> _scanMdFilesForUrls(
         try {
           parsed = Uri.parse(url);
         } catch (e) {
-          developer.log('Skipping unparsable URL "$url": $e', name: 'resource_detector');
+          developer.log(
+            'Skipping unparsable URL "$url": $e',
+            name: 'resource_detector',
+          );
           continue;
         }
         final host = parsed.host.toLowerCase();
@@ -118,7 +138,10 @@ Future<List<ExternalResource>> _scanMdFilesForUrls(
         foundUrls[url] = resource;
       }
     } catch (e) {
-      developer.log('Failed to read md file ${mdFile.path}: $e', name: 'resource_detector');
+      developer.log(
+        'Failed to read md file ${mdFile.path}: $e',
+        name: 'resource_detector',
+      );
     }
   }
 

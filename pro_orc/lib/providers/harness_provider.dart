@@ -5,7 +5,9 @@ import 'package:pro_orc/data/services/harness_reader.dart';
 import 'package:pro_orc/providers/watcher_provider.dart';
 
 /// Shared [HarnessReader] instance — stateless, single entry point.
-final _harnessReaderProvider = Provider<HarnessReader>((ref) => HarnessReader());
+final _harnessReaderProvider = Provider<HarnessReader>(
+  (ref) => HarnessReader(),
+);
 
 /// Read-only harness configuration (hooks, permissions, env, rules, MCP) for
 /// the global level plus an optional project overlay, keyed by project path.
@@ -14,8 +16,10 @@ final _harnessReaderProvider = Provider<HarnessReader>((ref) => HarnessReader())
 /// Rescans on `~/.claude` changes (via [watcherProvider], which already
 /// watches that tree). Follows the same stateless FutureProvider +
 /// ref.listen-invalidation pattern as [projectSessionsProvider].
-final harnessProvider =
-    FutureProvider.family<HarnessData, String>((ref, projectPath) async {
+final harnessProvider = FutureProvider.family<HarnessData, String>((
+  ref,
+  projectPath,
+) async {
   ref.listen(watcherProvider, (previous, next) {
     if (next.hasValue) ref.invalidateSelf();
   });

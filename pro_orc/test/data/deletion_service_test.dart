@@ -11,31 +11,36 @@ void main() {
       expect(result, isFalse);
     });
 
-    test('moves an existing directory to the Trash and removes it from its original location', () async {
-      final tmp = await Directory.systemTemp.createTemp('deletion_service_test_');
-      final projectDir = Directory('${tmp.path}/my-project');
-      await projectDir.create();
-      await File('${projectDir.path}/README.md').writeAsString('# Test');
+    test(
+      'moves an existing directory to the Trash and removes it from its original location',
+      () async {
+        final tmp = await Directory.systemTemp.createTemp(
+          'deletion_service_test_',
+        );
+        final projectDir = Directory('${tmp.path}/my-project');
+        await projectDir.create();
+        await File('${projectDir.path}/README.md').writeAsString('# Test');
 
-      final result = await deleteProject(projectDir.path);
+        final result = await deleteProject(projectDir.path);
 
-      expect(result, isTrue);
-      expect(await projectDir.exists(), isFalse);
+        expect(result, isTrue);
+        expect(await projectDir.exists(), isFalse);
 
-      // Clean up: find the moved item in ~/.Trash and remove it so repeated
-      // test runs don't accumulate junk. Best-effort — do not fail the test
-      // if this cleanup step itself fails.
-      try {
-        final home = Platform.environment['HOME'];
-        if (home != null) {
-          final trashed = Directory('$home/.Trash/my-project');
-          if (await trashed.exists()) {
-            await trashed.delete(recursive: true);
+        // Clean up: find the moved item in ~/.Trash and remove it so repeated
+        // test runs don't accumulate junk. Best-effort — do not fail the test
+        // if this cleanup step itself fails.
+        try {
+          final home = Platform.environment['HOME'];
+          if (home != null) {
+            final trashed = Directory('$home/.Trash/my-project');
+            if (await trashed.exists()) {
+              await trashed.delete(recursive: true);
+            }
           }
-        }
-      } catch (_) {}
+        } catch (_) {}
 
-      await tmp.delete(recursive: true).catchError((_) => tmp);
-    });
+        await tmp.delete(recursive: true).catchError((_) => tmp);
+      },
+    );
   });
 }

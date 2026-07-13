@@ -49,9 +49,8 @@ class _ClaudeToolsTabState extends ConsumerState<ClaudeToolsTab> {
     final toolsAsync = ref.watch(claudeToolsProvider);
 
     return toolsAsync.when(
-      loading: () => Center(
-        child: CircularProgressIndicator(color: colors.cyan),
-      ),
+      loading: () =>
+          Center(child: CircularProgressIndicator(color: colors.cyan)),
       error: (error, _) => Center(
         child: Text(
           'Fehler beim Laden der Claude Tools',
@@ -165,7 +164,10 @@ class _ClaudeToolsTabState extends ConsumerState<ClaudeToolsTab> {
     final projectToolsAsync = ref.watch(projectToolsProvider);
 
     // Merge global + project MCP servers when a project is selected
-    final mergedMcp = _mergeMcpServers(globalData.mcpServers, projectToolsAsync);
+    final mergedMcp = _mergeMcpServers(
+      globalData.mcpServers,
+      projectToolsAsync,
+    );
     // Plugins are always global
     final allPlugins = globalData.plugins;
 
@@ -173,13 +175,13 @@ class _ClaudeToolsTabState extends ConsumerState<ClaudeToolsTab> {
     final filteredPlugins = _searchQuery.isEmpty
         ? allPlugins
         : allPlugins
-            .where((p) => p.name.toLowerCase().contains(_searchQuery))
-            .toList();
+              .where((p) => p.name.toLowerCase().contains(_searchQuery))
+              .toList();
     final filteredMcp = _searchQuery.isEmpty
         ? mergedMcp
         : mergedMcp
-            .where((m) => m.name.toLowerCase().contains(_searchQuery))
-            .toList();
+              .where((m) => m.name.toLowerCase().contains(_searchQuery))
+              .toList();
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
@@ -215,12 +217,14 @@ class _ClaudeToolsTabState extends ConsumerState<ClaudeToolsTab> {
             count: filteredMcp.length,
             emptyText: 'Keine MCP-Server konfiguriert',
             cards: filteredMcp
-                .map((m) => _wrapWithScopeBadge(
-                      colors,
-                      McpServerCard(server: m),
-                      m.scope,
-                      selectedPath != null,
-                    ))
+                .map(
+                  (m) => _wrapWithScopeBadge(
+                    colors,
+                    McpServerCard(server: m),
+                    m.scope,
+                    selectedPath != null,
+                  ),
+                )
                 .toList(),
           ),
         ],
@@ -316,14 +320,16 @@ class _ClaudeToolsTabState extends ConsumerState<ClaudeToolsTab> {
                     style: TextStyle(color: colors.textPri, fontSize: 13),
                   ),
                 ),
-                ...projects.map((p) => DropdownMenuItem<String?>(
-                      value: p.path,
-                      child: Text(
-                        p.displayName,
-                        style: TextStyle(color: colors.textPri, fontSize: 13),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    )),
+                ...projects.map(
+                  (p) => DropdownMenuItem<String?>(
+                    value: p.path,
+                    child: Text(
+                      p.displayName,
+                      style: TextStyle(color: colors.textPri, fontSize: 13),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ),
               ],
               onChanged: (value) {
                 ref.read(selectedProjectPathProvider.notifier).select(value);
@@ -360,7 +366,10 @@ class _ClaudeToolsTabState extends ConsumerState<ClaudeToolsTab> {
           borderRadius: BorderRadius.circular(10),
           borderSide: BorderSide(color: colors.cyanLo, width: 1.5),
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 12,
+        ),
       ),
     );
   }
@@ -405,11 +414,7 @@ class _ClaudeToolsTabState extends ConsumerState<ClaudeToolsTab> {
 
         // Cards or empty state
         if (cards.isNotEmpty)
-          Wrap(
-            spacing: 12,
-            runSpacing: 12,
-            children: cards,
-          )
+          Wrap(spacing: 12, runSpacing: 12, children: cards)
         else
           Text(
             emptyText,

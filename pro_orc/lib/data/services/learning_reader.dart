@@ -21,8 +21,9 @@ class LearningReader {
   final String vaultDir;
 
   LearningReader({String? vaultDirOverride})
-      : vaultDir = vaultDirOverride ??
-            p.join(Platform.environment['HOME'] ?? '', 'N3URAL-Vault');
+    : vaultDir =
+          vaultDirOverride ??
+          p.join(Platform.environment['HOME'] ?? '', 'N3URAL-Vault');
 
   /// Sub-path of the learnings folder relative to the vault root.
   static const _learningsRelPath = 'pattern/a1-learnings';
@@ -60,9 +61,14 @@ class LearningReader {
           patternsPath = patternsFile.path;
           try {
             patternsModified = (await patternsFile.stat()).modified;
-            clusters.addAll(_extractClusters(await patternsFile.readAsString()));
+            clusters.addAll(
+              _extractClusters(await patternsFile.readAsString()),
+            );
           } catch (e) {
-            developer.log('Failed to read patterns.md: $e', name: 'learning_reader');
+            developer.log(
+              'Failed to read patterns.md: $e',
+              name: 'learning_reader',
+            );
           }
         }
 
@@ -71,8 +77,7 @@ class LearningReader {
 
       final observations = await _readObservations(projectPaths);
 
-      final sinceSynthesis =
-          _countRetrosSince(retros, patternsModified);
+      final sinceSynthesis = _countRetrosSince(retros, patternsModified);
 
       return LearningData(
         retrosPerSkill: retros,
@@ -83,7 +88,10 @@ class LearningReader {
         patternsFilePath: patternsPath,
       );
     } catch (e) {
-      developer.log('Failed to read learning loop: $e', name: 'learning_reader');
+      developer.log(
+        'Failed to read learning loop: $e',
+        name: 'learning_reader',
+      );
       return LearningData.empty;
     }
   }
@@ -92,8 +100,10 @@ class LearningReader {
   Future<List<SkillRetro>> _readSkillRetros(Directory learningsRoot) async {
     final out = <SkillRetro>[];
     try {
-      await for (final entity
-          in learningsRoot.list(recursive: false, followLinks: false)) {
+      await for (final entity in learningsRoot.list(
+        recursive: false,
+        followLinks: false,
+      )) {
         if (entity is! File) continue;
         final name = p.basename(entity.path);
         if (!name.endsWith('.md')) continue;
@@ -106,15 +116,20 @@ class LearningReader {
           count = _retroMarker.allMatches(content).length;
           modified = (await entity.stat()).modified;
         } catch (e) {
-          developer.log('Failed to read retro ${entity.path}: $e', name: 'learning_reader');
+          developer.log(
+            'Failed to read retro ${entity.path}: $e',
+            name: 'learning_reader',
+          );
         }
 
-        out.add(SkillRetro(
-          skill: name.substring(0, name.length - 3), // strip ".md"
-          retroCount: count,
-          absolutePath: entity.path,
-          lastModified: modified,
-        ));
+        out.add(
+          SkillRetro(
+            skill: name.substring(0, name.length - 3), // strip ".md"
+            retroCount: count,
+            absolutePath: entity.path,
+            lastModified: modified,
+          ),
+        );
       }
     } catch (e) {
       developer.log('Failed to list retros: $e', name: 'learning_reader');
@@ -144,8 +159,7 @@ class LearningReader {
 
       // Table rows: | pattern | × | file | synthese |
       if (trimmed.startsWith('|') && trimmed.contains('|', 1)) {
-        final cells =
-            trimmed.split('|').map((c) => c.trim()).toList();
+        final cells = trimmed.split('|').map((c) => c.trim()).toList();
         // cells[0] is empty (leading pipe); the pattern name is cells[1].
         if (cells.length >= 2) {
           final first = cells[1].replaceAll('*', '').trim();
@@ -162,8 +176,10 @@ class LearningReader {
       // Synthesis / cluster section headings.
       if (trimmed.startsWith('### ') || trimmed.startsWith('## ')) {
         final heading = trimmed.replaceFirst(RegExp(r'^#{2,3}\s+'), '');
-        if (RegExp(r'Synthese|Cluster', caseSensitive: false)
-            .hasMatch(heading)) {
+        if (RegExp(
+          r'Synthese|Cluster',
+          caseSensitive: false,
+        ).hasMatch(heading)) {
           add(heading);
         }
       }
@@ -205,14 +221,17 @@ class LearningReader {
       DateTime? latest;
 
       try {
-        await for (final entity
-            in phasesDir.list(recursive: true, followLinks: false)) {
+        await for (final entity in phasesDir.list(
+          recursive: true,
+          followLinks: false,
+        )) {
           if (entity is! File) continue;
           if (p.basename(entity.path) != 'observations.jsonl') continue;
 
           try {
-            final lines = const LineSplitter()
-                .convert(await entity.readAsString());
+            final lines = const LineSplitter().convert(
+              await entity.readAsString(),
+            );
             for (final line in lines) {
               final trimmed = line.trim();
               if (trimmed.isEmpty) continue;
@@ -230,7 +249,10 @@ class LearningReader {
               }
             }
           } catch (e) {
-            developer.log('Failed to read ${entity.path}: $e', name: 'learning_reader');
+            developer.log(
+              'Failed to read ${entity.path}: $e',
+              name: 'learning_reader',
+            );
           }
         }
       } catch (e) {
@@ -238,12 +260,14 @@ class LearningReader {
       }
 
       if (count > 0) {
-        out.add(ProjectObservations(
-          project: p.basename(projectPath),
-          projectPath: projectPath,
-          observationCount: count,
-          lastObservation: latest,
-        ));
+        out.add(
+          ProjectObservations(
+            project: p.basename(projectPath),
+            projectPath: projectPath,
+            observationCount: count,
+            lastObservation: latest,
+          ),
+        );
       }
     }
 

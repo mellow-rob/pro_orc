@@ -49,7 +49,10 @@ class McpServerCard extends StatelessWidget {
                 Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
                       decoration: BoxDecoration(
                         color: colors.violetLo.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(4),
@@ -66,7 +69,10 @@ class McpServerCard extends StatelessWidget {
                     ),
                     const SizedBox(width: 6),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
                       decoration: BoxDecoration(
                         color: server.enabled
                             ? colors.violetLo.withValues(alpha: 0.2)
@@ -80,7 +86,9 @@ class McpServerCard extends StatelessWidget {
                             width: 5,
                             height: 5,
                             decoration: BoxDecoration(
-                              color: server.enabled ? colors.violetLo : colors.textDim,
+                              color: server.enabled
+                                  ? colors.violetLo
+                                  : colors.textDim,
                               shape: BoxShape.circle,
                             ),
                           ),
@@ -88,7 +96,9 @@ class McpServerCard extends StatelessWidget {
                           Text(
                             server.enabled ? 'Aktiv' : 'Inaktiv',
                             style: TextStyle(
-                              color: server.enabled ? colors.violetLo : colors.textDim,
+                              color: server.enabled
+                                  ? colors.violetLo
+                                  : colors.textDim,
                               fontSize: 10,
                               fontWeight: FontWeight.w500,
                             ),
@@ -136,13 +146,10 @@ class McpServerCard extends StatelessWidget {
                       tooltip: 'settings.json öffnen',
                       color: colors.violetLo,
                       onPressed: () {
-                        final home =
-                            Platform.environment['HOME']!;
-                        Process.run(
-                          'open',
-                          ['$home/.claude/settings.json'],
-                          runInShell: true,
-                        );
+                        final home = Platform.environment['HOME']!;
+                        Process.run('open', [
+                          '$home/.claude/settings.json',
+                        ], runInShell: true);
                       },
                     ),
                     _McpActionButton(
@@ -151,11 +158,9 @@ class McpServerCard extends StatelessWidget {
                       color: colors.violetLo,
                       onPressed: () {
                         final home = Platform.environment['HOME']!;
-                        Process.run(
-                          'open',
-                          ['$home/.claude/settings.json'],
-                          runInShell: true,
-                        );
+                        Process.run('open', [
+                          '$home/.claude/settings.json',
+                        ], runInShell: true);
                       },
                     ),
                   ],

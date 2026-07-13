@@ -99,11 +99,8 @@ class LearningData {
   bool get evolveDue => totalSinceLastSynthesis >= evolveThreshold;
 
   /// Total retro entries across all skills.
-  int get totalRetros =>
-      retrosPerSkill.fold(0, (sum, r) => sum + r.retroCount);
+  int get totalRetros => retrosPerSkill.fold(0, (sum, r) => sum + r.retroCount);
 
   bool get isEmpty =>
-      retrosPerSkill.isEmpty &&
-      patternClusters.isEmpty &&
-      observations.isEmpty;
+      retrosPerSkill.isEmpty && patternClusters.isEmpty && observations.isEmpty;
 }

@@ -18,10 +18,7 @@ import 'package:pro_orc/theme/n3_colors.dart';
 /// summary with cleanup hints before closing. Otherwise pops immediately.
 /// On cancel: pops with `false` — no side effects.
 class DeleteProjectDialog extends ConsumerStatefulWidget {
-  const DeleteProjectDialog({
-    super.key,
-    required this.project,
-  });
+  const DeleteProjectDialog({super.key, required this.project});
 
   final ProjectModel project;
 
@@ -66,8 +63,7 @@ class _DeleteProjectDialogState extends ConsumerState<DeleteProjectDialog> {
     super.dispose();
   }
 
-  bool get _nameMatches =>
-      _textController.text == widget.project.displayName;
+  bool get _nameMatches => _textController.text == widget.project.displayName;
 
   Future<void> _onDelete() async {
     if (!_nameMatches || _isDeleting) return;
@@ -111,9 +107,7 @@ class _DeleteProjectDialogState extends ConsumerState<DeleteProjectDialog> {
 
     return GlassDialog(
       maxWidth: 440,
-      child: _showSummary
-          ? _buildSummary(colors)
-          : _buildMainForm(colors),
+      child: _showSummary ? _buildSummary(colors) : _buildMainForm(colors),
     );
   }
 
@@ -178,10 +172,7 @@ class _DeleteProjectDialogState extends ConsumerState<DeleteProjectDialog> {
       child: Text(
         'Der Projektordner wird in den Papierkorb verschoben. '
         'Du kannst ihn dort bei Bedarf wiederherstellen.',
-        style: TextStyle(
-          color: colors.textSec,
-          fontSize: 13,
-        ),
+        style: TextStyle(color: colors.textSec, fontSize: 13),
       ),
     );
   }
@@ -302,10 +293,7 @@ class _DeleteProjectDialogState extends ConsumerState<DeleteProjectDialog> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Projekt',
-          style: TextStyle(color: colors.textDim, fontSize: 12),
-        ),
+        Text('Projekt', style: TextStyle(color: colors.textDim, fontSize: 12)),
         const SizedBox(height: 4),
         Text(
           widget.project.displayName,
@@ -347,8 +335,10 @@ class _DeleteProjectDialogState extends ConsumerState<DeleteProjectDialog> {
             width: 1,
           ),
         ),
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 12,
+          vertical: 10,
+        ),
       ),
     );
   }
@@ -360,7 +350,9 @@ class _DeleteProjectDialogState extends ConsumerState<DeleteProjectDialog> {
       mainAxisAlignment: MainAxisAlignment.end,
       children: [
         TextButton(
-          onPressed: _isDeleting ? null : () => Navigator.of(context).pop(false),
+          onPressed: _isDeleting
+              ? null
+              : () => Navigator.of(context).pop(false),
           style: TextButton.styleFrom(
             foregroundColor: colors.textSec,
             disabledForegroundColor: colors.textDim.withValues(alpha: 0.4),
@@ -403,8 +395,11 @@ class _DeleteProjectDialogState extends ConsumerState<DeleteProjectDialog> {
         // Header
         Row(
           children: [
-            Icon(Icons.check_circle_outline,
-                color: Colors.green.shade400, size: 22),
+            Icon(
+              Icons.check_circle_outline,
+              color: Colors.green.shade400,
+              size: 22,
+            ),
             const SizedBox(width: 8),
             Text(
               'Projekt geloescht',

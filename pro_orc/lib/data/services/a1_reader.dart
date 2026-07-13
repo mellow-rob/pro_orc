@@ -15,12 +15,10 @@ import 'package:pro_orc/data/models/a1_data.dart';
 /// yield empty results, malformed markdown is skipped rather than thrown.
 class A1Reader {
   /// Checked checkbox line: `- [x] …` (case-insensitive x).
-  static final RegExp _checked =
-      RegExp(r'^\s*- \[[xX]\]\s', multiLine: true);
+  static final RegExp _checked = RegExp(r'^\s*- \[[xX]\]\s', multiLine: true);
 
   /// Unchecked checkbox line: `- [ ] …`.
-  static final RegExp _unchecked =
-      RegExp(r'^\s*- \[ \]\s', multiLine: true);
+  static final RegExp _unchecked = RegExp(r'^\s*- \[ \]\s', multiLine: true);
 
   /// Reads `.a1/roadmap.md` + `.a1/phases/*/PLAN.md` for [projectPath].
   ///
@@ -35,7 +33,10 @@ class A1Reader {
 
       return A1Data(milestones: milestones, phases: phases);
     } catch (e) {
-      developer.log('Failed to read a1 data for $projectPath: $e', name: 'a1_reader');
+      developer.log(
+        'Failed to read a1 data for $projectPath: $e',
+        name: 'a1_reader',
+      );
       return A1Data.empty;
     }
   }
@@ -90,7 +91,10 @@ class A1Reader {
     if (!await dir.exists()) return out;
 
     try {
-      await for (final entity in dir.list(recursive: false, followLinks: false)) {
+      await for (final entity in dir.list(
+        recursive: false,
+        followLinks: false,
+      )) {
         if (entity is! Directory) continue;
         final planFile = File(p.join(entity.path, 'PLAN.md'));
         if (!await planFile.exists()) continue;
@@ -103,15 +107,20 @@ class A1Reader {
           final unchecked = _unchecked.allMatches(content).length;
           total = checked + unchecked;
         } catch (e) {
-          developer.log('Failed to read ${planFile.path}: $e', name: 'a1_reader');
+          developer.log(
+            'Failed to read ${planFile.path}: $e',
+            name: 'a1_reader',
+          );
         }
 
-        out.add(A1Phase(
-          name: p.basename(entity.path),
-          checkedTasks: checked,
-          totalTasks: total,
-          planPath: planFile.path,
-        ));
+        out.add(
+          A1Phase(
+            name: p.basename(entity.path),
+            checkedTasks: checked,
+            totalTasks: total,
+            planPath: planFile.path,
+          ),
+        );
       }
     } catch (e) {
       developer.log('Failed to list $phasesPath: $e', name: 'a1_reader');

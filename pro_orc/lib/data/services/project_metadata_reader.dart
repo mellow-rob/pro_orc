@@ -22,10 +22,7 @@ final _rDescSection = RegExp(
 );
 
 // Fallback: first non-empty paragraph after H1 heading (no ## required)
-final _rAfterH1 = RegExp(
-  r'^#\s+.+\n+([^\n#][^\n]*)',
-  multiLine: true,
-);
+final _rAfterH1 = RegExp(r'^#\s+.+\n+([^\n#][^\n]*)', multiLine: true);
 
 // Strip bold markers **text**
 final _rBold = RegExp(r'\*\*([^*]+)\*\*');
@@ -37,7 +34,8 @@ Future<ProjectMetadata> readProjectMetadata(String projectPath) async {
   String? displayName;
   String? description;
 
-  final projectContent = await _safeRead('$projectPath/.planning/PROJECT.md') ??
+  final projectContent =
+      await _safeRead('$projectPath/.planning/PROJECT.md') ??
       await _safeRead('$projectPath/PROJECT.md');
   if (projectContent != null) {
     final h1 = _rH1.firstMatch(projectContent);

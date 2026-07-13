@@ -65,7 +65,8 @@ class _MilestoneNode extends StatelessWidget {
   /// an identical phase row underneath is pure visual duplication, so this
   /// case collapses to a single clickable row instead.
   bool get _isSinglePhaseDuplicate =>
-      milestone.phases.length == 1 && milestone.phases.single.name == milestone.name;
+      milestone.phases.length == 1 &&
+      milestone.phases.single.name == milestone.name;
 
   @override
   Widget build(BuildContext context) {
@@ -168,8 +169,8 @@ class _PhaseNode extends StatelessWidget {
           children: [
             Text(
               phase.name,
-              style: nameStyle ??
-                  TextStyle(color: colors.textSec, fontSize: 11),
+              style:
+                  nameStyle ?? TextStyle(color: colors.textSec, fontSize: 11),
               overflow: TextOverflow.ellipsis,
             ),
             const SizedBox(height: 3),

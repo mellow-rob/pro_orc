@@ -37,7 +37,10 @@ class WatcherService {
           }
         },
         onError: (Object error, StackTrace stackTrace) {
-          developer.log('Suppressed watcher error: $error', name: 'watcher_service');
+          developer.log(
+            'Suppressed watcher error: $error',
+            name: 'watcher_service',
+          );
         },
         onDone: () {
           // Individual watcher done — don't close controller

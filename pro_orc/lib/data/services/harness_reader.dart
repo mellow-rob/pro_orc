@@ -25,8 +25,9 @@ class HarnessReader {
   final String claudeHomeDir;
 
   HarnessReader({String? claudeHomeDirOverride})
-      : claudeHomeDir = claudeHomeDirOverride ??
-            p.join(Platform.environment['HOME']!, '.claude');
+    : claudeHomeDir =
+          claudeHomeDirOverride ??
+          p.join(Platform.environment['HOME']!, '.claude');
 
   /// Reads harness config for [projectPath]. If [projectPath] is null, only
   /// the global level is read (used when no project is selected).
@@ -44,8 +45,9 @@ class HarnessReader {
       final localSettings = projectPath == null
           ? null
           : p.join(projectPath, '.claude', 'settings.local.json');
-      final projectMcp =
-          projectPath == null ? null : p.join(projectPath, '.mcp.json');
+      final projectMcp = projectPath == null
+          ? null
+          : p.join(projectPath, '.mcp.json');
       final rulesRoot = p.join(claudeHomeDir, 'rules');
 
       await _readSettingsFile(
@@ -89,8 +91,7 @@ class HarnessReader {
         rules: rules,
         mcpServers: mcpServers,
         sources: HarnessSources(
-          globalSettingsPath:
-              await _existingPath(globalSettings),
+          globalSettingsPath: await _existingPath(globalSettings),
           projectSettingsPath: projectSettings == null
               ? null
               : await _existingPath(projectSettings),
@@ -101,7 +102,10 @@ class HarnessReader {
         ),
       );
     } catch (e) {
-      developer.log('Failed to read harness config: $e', name: 'harness_reader');
+      developer.log(
+        'Failed to read harness config: $e',
+        name: 'harness_reader',
+      );
       return HarnessData.empty;
     }
   }
@@ -125,7 +129,10 @@ class HarnessReader {
       if (decoded is! Map<String, dynamic>) return;
       json = decoded;
     } catch (e) {
-      developer.log('Skipping unreadable settings $path: $e', name: 'harness_reader');
+      developer.log(
+        'Skipping unreadable settings $path: $e',
+        name: 'harness_reader',
+      );
       return;
     }
 
@@ -153,12 +160,14 @@ class HarnessReader {
           }
         }
         if (commands.isEmpty) continue;
-        out.add(HarnessHook(
-          event: event,
-          matcher: matcher,
-          command: commands.join('; '),
-          level: level,
-        ));
+        out.add(
+          HarnessHook(
+            event: event,
+            matcher: matcher,
+            command: commands.join('; '),
+            level: level,
+          ),
+        );
       }
     }
   }
@@ -184,13 +193,15 @@ class HarnessReader {
     if (raw is! Map) return;
     for (final entry in raw.entries) {
       final key = entry.key.toString();
-      out.add(HarnessEnvVar(
-        key: key,
-        // Mask values of secret-looking keys so credentials are never shown
-        // in plain text (security review).
-        value: maskEnvValue(key, entry.value?.toString() ?? ''),
-        level: level,
-      ));
+      out.add(
+        HarnessEnvVar(
+          key: key,
+          // Mask values of secret-looking keys so credentials are never shown
+          // in plain text (security review).
+          value: maskEnvValue(key, entry.value?.toString() ?? ''),
+          level: level,
+        ),
+      );
     }
   }
 
@@ -202,11 +213,13 @@ class HarnessReader {
     if (raw is! Map) return;
     for (final entry in raw.entries) {
       final config = entry.value;
-      out.add(HarnessMcpServer(
-        name: entry.key.toString(),
-        detail: _mcpDetail(config),
-        level: level,
-      ));
+      out.add(
+        HarnessMcpServer(
+          name: entry.key.toString(),
+          detail: _mcpDetail(config),
+          level: level,
+        ),
+      );
     }
   }
 
@@ -228,7 +241,10 @@ class HarnessReader {
           : decoded;
       _extractInlineMcp(servers, level, out);
     } catch (e) {
-      developer.log('Skipping unreadable .mcp.json $path: $e', name: 'harness_reader');
+      developer.log(
+        'Skipping unreadable .mcp.json $path: $e',
+        name: 'harness_reader',
+      );
     }
   }
 
@@ -255,7 +271,10 @@ class HarnessReader {
       final dir = Directory(rulesRoot);
       if (!await dir.exists()) return out;
 
-      await for (final entity in dir.list(recursive: true, followLinks: false)) {
+      await for (final entity in dir.list(
+        recursive: true,
+        followLinks: false,
+      )) {
         if (entity is! File) continue;
         if (!entity.path.endsWith('.md')) continue;
         final relative = p.relative(entity.path, from: rulesRoot);
@@ -263,18 +282,26 @@ class HarnessReader {
         try {
           title = await _firstH1(entity);
         } catch (e) {
-          developer.log('Failed to read rule ${entity.path}: $e', name: 'harness_reader');
+          developer.log(
+            'Failed to read rule ${entity.path}: $e',
+            name: 'harness_reader',
+          );
         }
-        out.add(HarnessRule(
-          title: (title != null && title.isNotEmpty)
-              ? title
-              : p.basename(entity.path),
-          relativePath: relative,
-          absolutePath: entity.path,
-        ));
+        out.add(
+          HarnessRule(
+            title: (title != null && title.isNotEmpty)
+                ? title
+                : p.basename(entity.path),
+            relativePath: relative,
+            absolutePath: entity.path,
+          ),
+        );
       }
     } catch (e) {
-      developer.log('Failed to list rules under $rulesRoot: $e', name: 'harness_reader');
+      developer.log(
+        'Failed to list rules under $rulesRoot: $e',
+        name: 'harness_reader',
+      );
     }
     out.sort((a, b) => a.relativePath.compareTo(b.relativePath));
     return out;

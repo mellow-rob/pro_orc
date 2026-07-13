@@ -43,9 +43,8 @@ class _SkillsTabState extends ConsumerState<SkillsTab> {
     final skillsAsync = ref.watch(allSkillsProvider);
 
     return skillsAsync.when(
-      loading: () => Center(
-        child: CircularProgressIndicator(color: colors.amber),
-      ),
+      loading: () =>
+          Center(child: CircularProgressIndicator(color: colors.amber)),
       error: (error, _) => Center(
         child: Text(
           'Fehler beim Laden der Skills',
@@ -64,11 +63,13 @@ class _SkillsTabState extends ConsumerState<SkillsTab> {
     final filtered = _searchQuery.isEmpty
         ? allSkills
         : allSkills
-            .where((s) => s.name.toLowerCase().contains(_searchQuery))
-            .toList();
+              .where((s) => s.name.toLowerCase().contains(_searchQuery))
+              .toList();
 
     final globalFiltered = filtered.where((s) => s.scope == 'global').toList();
-    final projectFiltered = filtered.where((s) => s.scope == 'project').toList();
+    final projectFiltered = filtered
+        .where((s) => s.scope == 'project')
+        .toList();
     final pluginFiltered = filtered.where((s) => s.scope == 'plugin').toList();
 
     if (allSkills.isEmpty && _searchQuery.isEmpty) {
@@ -155,8 +156,10 @@ class _SkillsTabState extends ConsumerState<SkillsTab> {
           borderRadius: BorderRadius.circular(10),
           borderSide: BorderSide(color: colors.amberLo, width: 1.5),
         ),
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 12,
+        ),
       ),
     );
   }
@@ -194,11 +197,7 @@ class _SkillsTabState extends ConsumerState<SkillsTab> {
         ),
         const SizedBox(height: 12),
         if (cards.isNotEmpty)
-          Wrap(
-            spacing: 12,
-            runSpacing: 12,
-            children: cards,
-          )
+          Wrap(spacing: 12, runSpacing: 12, children: cards)
         else
           Text(
             emptyText,

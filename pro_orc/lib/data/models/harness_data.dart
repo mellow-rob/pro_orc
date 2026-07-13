@@ -15,10 +15,10 @@ enum HarnessLevel {
 extension HarnessLevelLabel on HarnessLevel {
   /// German label for the origin badge.
   String get label => switch (this) {
-        HarnessLevel.global => 'Global',
-        HarnessLevel.project => 'Projekt',
-        HarnessLevel.local => 'Local',
-      };
+    HarnessLevel.global => 'Global',
+    HarnessLevel.project => 'Projekt',
+    HarnessLevel.local => 'Local',
+  };
 }
 
 /// A single hook entry — one matcher/command pair under a hook event, tagged

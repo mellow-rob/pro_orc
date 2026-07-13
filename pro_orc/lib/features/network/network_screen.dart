@@ -143,10 +143,7 @@ class _LegendDot extends StatelessWidget {
           decoration: BoxDecoration(color: color, shape: BoxShape.circle),
         ),
         const SizedBox(width: 5),
-        Text(
-          label,
-          style: TextStyle(color: colors.textDim, fontSize: 11),
-        ),
+        Text(label, style: TextStyle(color: colors.textDim, fontSize: 11)),
       ],
     );
   }
@@ -283,14 +280,16 @@ class _NetworkPainter extends CustomPainter {
       final to = layout.positions[edge.toId];
       if (from == null || to == null) continue;
 
-      final isHighlighted = highlightedNodeId != null &&
+      final isHighlighted =
+          highlightedNodeId != null &&
           (edge.fromId == highlightedNodeId || edge.toId == highlightedNodeId);
 
       final paint = Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = isHighlighted ? 2.0 : 1.0
-        ..color = (isHighlighted ? colors.cyan : colors.textDim)
-            .withValues(alpha: isHighlighted ? 0.8 : 0.18);
+        ..color = (isHighlighted ? colors.cyan : colors.textDim).withValues(
+          alpha: isHighlighted ? 0.8 : 0.18,
+        );
 
       final midY = (from.dy + to.dy) / 2;
       final controlX = (from.dx + to.dx) / 2;
@@ -325,10 +324,10 @@ class _NetworkNodeLabel extends StatelessWidget {
   final VoidCallback onTap;
 
   Color get _dotColor => switch (node.kind) {
-        GraphNodeKind.project => colors.cyan,
-        GraphNodeKind.agent => colors.violet,
-        GraphNodeKind.skill => colors.amber,
-      };
+    GraphNodeKind.project => colors.cyan,
+    GraphNodeKind.agent => colors.violet,
+    GraphNodeKind.skill => colors.amber,
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -358,8 +357,10 @@ class _NetworkNodeLabel extends StatelessWidget {
                 Container(
                   width: 6,
                   height: 6,
-                  decoration:
-                      BoxDecoration(color: _dotColor, shape: BoxShape.circle),
+                  decoration: BoxDecoration(
+                    color: _dotColor,
+                    shape: BoxShape.circle,
+                  ),
                 ),
                 const SizedBox(width: 6),
                 Flexible(
@@ -368,8 +369,7 @@ class _NetworkNodeLabel extends StatelessWidget {
                     style: TextStyle(
                       color: highlighted ? _dotColor : colors.textSec,
                       fontSize: 11,
-                      fontWeight:
-                          isProject ? FontWeight.w600 : FontWeight.w400,
+                      fontWeight: isProject ? FontWeight.w600 : FontWeight.w400,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,

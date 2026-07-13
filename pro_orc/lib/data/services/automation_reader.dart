@@ -49,8 +49,10 @@ String parsePlistProgram(String xml) {
 
 /// True when a plist declares `RunAtLoad`, used as a coarse schedule hint.
 bool parsePlistRunAtLoad(String xml) {
-  return RegExp(r'<key>\s*RunAtLoad\s*</key>\s*<true\s*/>', dotAll: true)
-      .hasMatch(xml);
+  return RegExp(
+    r'<key>\s*RunAtLoad\s*</key>\s*<true\s*/>',
+    dotAll: true,
+  ).hasMatch(xml);
 }
 
 /// Parses a single launchd plist XML into an [Automation], or null when it does
@@ -87,12 +89,14 @@ List<Automation> parseCrontab(String output) {
       schedule = parts.take(5).join(' ');
       command = parts.skip(5).join(' ');
     }
-    out.add(Automation(
-      name: 'crontab',
-      command: maskSecrets(command),
-      schedule: schedule,
-      source: AutomationSource.cron,
-    ));
+    out.add(
+      Automation(
+        name: 'crontab',
+        command: maskSecrets(command),
+        schedule: schedule,
+        source: AutomationSource.cron,
+      ),
+    );
   }
   return out;
 }
@@ -122,9 +126,14 @@ class AutomationReader {
   AutomationReader({
     String? launchAgentsDirOverride,
     Future<String?> Function()? readCrontab,
-  })  : launchAgentsDir = launchAgentsDirOverride ??
-            p.join(Platform.environment['HOME'] ?? '', 'Library', 'LaunchAgents'),
-        _readCrontab = readCrontab ?? _defaultReadCrontab;
+  }) : launchAgentsDir =
+           launchAgentsDirOverride ??
+           p.join(
+             Platform.environment['HOME'] ?? '',
+             'Library',
+             'LaunchAgents',
+           ),
+       _readCrontab = readCrontab ?? _defaultReadCrontab;
 
   /// Reads all sources and returns the combined result. [hooks] come from the
   /// already-loaded [HarnessData] so hooks are surfaced as automations without
@@ -156,11 +165,17 @@ class AutomationReader {
           );
           if (automation != null) out.add(automation);
         } catch (e) {
-          developer.log('Skipping unreadable plist ${entity.path}: $e', name: 'automation_reader');
+          developer.log(
+            'Skipping unreadable plist ${entity.path}: $e',
+            name: 'automation_reader',
+          );
         }
       }
     } catch (e) {
-      developer.log('Failed to list $launchAgentsDir: $e', name: 'automation_reader');
+      developer.log(
+        'Failed to list $launchAgentsDir: $e',
+        name: 'automation_reader',
+      );
     }
     out.sort((a, b) => a.name.compareTo(b.name));
     return out;
@@ -196,8 +211,9 @@ class AutomationReader {
   /// not inherit a login PATH). Returns null when there is no crontab.
   static Future<String?> _defaultReadCrontab() async {
     try {
-      final result = await Process.run('crontab', ['-l'], runInShell: true)
-          .timeout(const Duration(seconds: 5));
+      final result = await Process.run('crontab', [
+        '-l',
+      ], runInShell: true).timeout(const Duration(seconds: 5));
       if (result.exitCode != 0) return null; // "no crontab for user"
       final stdout = result.stdout;
       return stdout is String ? stdout : stdout.toString();

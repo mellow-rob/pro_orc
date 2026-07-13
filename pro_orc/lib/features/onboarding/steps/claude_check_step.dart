@@ -46,7 +46,10 @@ class ClaudeCheckStep extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 20),
-        if (isInstalled) _buildInstalledState(colors) else _buildNotInstalledState(context, colors),
+        if (isInstalled)
+          _buildInstalledState(colors)
+        else
+          _buildNotInstalledState(context, colors),
         const Spacer(),
         _buildAutostartToggle(colors),
         const SizedBox(height: 8),

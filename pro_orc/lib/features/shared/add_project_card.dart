@@ -4,8 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:pro_orc/theme/n3_colors.dart';
 
 /// Callback signature for tap events that include position information.
-typedef PositionTapCallback = void Function(
-    BuildContext context, Offset globalPosition);
+typedef PositionTapCallback =
+    void Function(BuildContext context, Offset globalPosition);
 
 /// Ghost GlassCard that invites the user to create a new project.
 ///

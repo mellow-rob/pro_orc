@@ -136,7 +136,9 @@ class SessionInfo {
   /// Used as a Riverpod `family` provider key (see `sessionDetailProvider`).
   @override
   bool operator ==(Object other) =>
-      other is SessionInfo && other.path == path && other.lastActivity == lastActivity;
+      other is SessionInfo &&
+      other.path == path &&
+      other.lastActivity == lastActivity;
 
   @override
   int get hashCode => Object.hash(path, lastActivity);

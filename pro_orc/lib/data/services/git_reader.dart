@@ -19,13 +19,14 @@ Future<GitData> readGitData(
 }) async {
   try {
     // --- Last commit ---
-    final logResult = await _runWithTimeout(
-      gitBinary,
-      ['log', '--format=%H%n%aI%n%s', '-1'],
-      projectPath,
-    );
+    final logResult = await _runWithTimeout(gitBinary, [
+      'log',
+      '--format=%H%n%aI%n%s',
+      '-1',
+    ], projectPath);
 
-    if (logResult.exitCode != 0 || (logResult.stdout as String).trim().isEmpty) {
+    if (logResult.exitCode != 0 ||
+        (logResult.stdout as String).trim().isEmpty) {
       return GitData.empty;
     }
 
@@ -38,15 +39,17 @@ Future<GitData> readGitData(
 
     if (fullHash.isEmpty) return GitData.empty;
 
-    final shortHash = fullHash.length >= 7 ? fullHash.substring(0, 7) : fullHash;
+    final shortHash = fullHash.length >= 7
+        ? fullHash.substring(0, 7)
+        : fullHash;
     final commitDate = DateTime.tryParse(isoDate);
 
     // --- Remote URL ---
-    final remoteResult = await _runWithTimeout(
-      gitBinary,
-      ['remote', 'get-url', 'origin'],
-      projectPath,
-    );
+    final remoteResult = await _runWithTimeout(gitBinary, [
+      'remote',
+      'get-url',
+      'origin',
+    ], projectPath);
 
     String? githubUrl;
     if (remoteResult.exitCode == 0) {
@@ -85,8 +88,10 @@ Future<List<GitData>> readAllGitData(
 
     final chunkResults = await Future.wait(
       chunk.map(
-        (path) => readGitData(path, gitBinary: gitBinary)
-            .catchError((_) => GitData.empty),
+        (path) => readGitData(
+          path,
+          gitBinary: gitBinary,
+        ).catchError((_) => GitData.empty),
       ),
     );
 
@@ -107,14 +112,18 @@ String? remoteToGithubUrl(String remoteUrl) => _remoteToGithubUrl(remoteUrl);
 
 String? _remoteToGithubUrl(String remoteUrl) {
   // SSH format: git@github.com:owner/repo.git
-  final sshMatch = RegExp(r'^git@github\.com:(.+?)(?:\.git)?$').firstMatch(remoteUrl.trim());
+  final sshMatch = RegExp(
+    r'^git@github\.com:(.+?)(?:\.git)?$',
+  ).firstMatch(remoteUrl.trim());
   if (sshMatch != null) {
     return 'https://github.com/${sshMatch.group(1)}';
   }
 
   // HTTPS format: https://github.com/owner/repo.git
   // Also matches userinfo-prefixed remotes, e.g. https://x-access-token:TOKEN@github.com/owner/repo.git
-  final httpsMatch = RegExp(r'^https://(?:[^@/]+@)?github\.com/(.+?)(?:\.git)?/?$').firstMatch(remoteUrl.trim());
+  final httpsMatch = RegExp(
+    r'^https://(?:[^@/]+@)?github\.com/(.+?)(?:\.git)?/?$',
+  ).firstMatch(remoteUrl.trim());
   if (httpsMatch != null) {
     return 'https://github.com/${httpsMatch.group(1)}';
   }
@@ -140,7 +149,10 @@ Future<ProcessResult> _runWithTimeout(
 
   final timeoutFuture = Future<ProcessResult>.delayed(
     const Duration(seconds: 5),
-    () => throw TimeoutException('Git command timed out', const Duration(seconds: 5)),
+    () => throw TimeoutException(
+      'Git command timed out',
+      const Duration(seconds: 5),
+    ),
   );
 
   return Future.any([processFuture, timeoutFuture]);

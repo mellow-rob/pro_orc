@@ -39,9 +39,7 @@ class ProjectPreviewStep extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 20),
-        Expanded(
-          child: _buildContent(colors),
-        ),
+        Expanded(child: _buildContent(colors)),
         const SizedBox(height: 8),
       ],
     );
@@ -53,10 +51,7 @@ class ProjectPreviewStep extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            CircularProgressIndicator(
-              strokeWidth: 2,
-              color: colors.cyan,
-            ),
+            CircularProgressIndicator(strokeWidth: 2, color: colors.cyan),
             const SizedBox(height: 12),
             Text(
               'Suche Projekte...',
@@ -101,10 +96,7 @@ class ProjectPreviewStep extends StatelessWidget {
               Expanded(
                 child: Text(
                   projectNames[index],
-                  style: TextStyle(
-                    color: colors.textSec,
-                    fontSize: 13,
-                  ),
+                  style: TextStyle(color: colors.textSec, fontSize: 13),
                   overflow: TextOverflow.ellipsis,
                 ),
               ),

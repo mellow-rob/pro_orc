@@ -55,12 +55,7 @@ class _OrbBackgroundState extends State<OrbBackground>
 
     return RepaintBoundary(
       child: CustomPaint(
-        painter: _OrbPainter(
-          c1: _c1,
-          c2: _c2,
-          c3: _c3,
-          colors: colors,
-        ),
+        painter: _OrbPainter(c1: _c1, c2: _c2, c3: _c3, colors: colors),
       ),
     );
   }
@@ -91,7 +86,10 @@ class _OrbPainter extends CustomPainter {
     // Orb 1 — Cyan, top-left drift
     _drawOrb(
       canvas: canvas,
-      center: Offset(w * (0.15 + 0.20 * c1.value), h * (0.20 + 0.15 * c1.value)),
+      center: Offset(
+        w * (0.15 + 0.20 * c1.value),
+        h * (0.20 + 0.15 * c1.value),
+      ),
       radius: s * 0.35,
       color: colors.cyanOrb,
       opacity: 0.18,
@@ -100,7 +98,10 @@ class _OrbPainter extends CustomPainter {
     // Orb 2 — Fuchsia, bottom-right drift
     _drawOrb(
       canvas: canvas,
-      center: Offset(w * (0.70 + 0.18 * c2.value), h * (0.65 + 0.18 * c2.value)),
+      center: Offset(
+        w * (0.70 + 0.18 * c2.value),
+        h * (0.65 + 0.18 * c2.value),
+      ),
       radius: s * 0.40,
       color: colors.fuchOrb,
       opacity: 0.14,
@@ -109,7 +110,10 @@ class _OrbPainter extends CustomPainter {
     // Orb 3 — Cyan, top-right, slower
     _drawOrb(
       canvas: canvas,
-      center: Offset(w * (0.75 - 0.15 * c3.value), h * (0.15 + 0.12 * c3.value)),
+      center: Offset(
+        w * (0.75 - 0.15 * c3.value),
+        h * (0.15 + 0.12 * c3.value),
+      ),
       radius: s * 0.28,
       color: colors.cyanOrb,
       opacity: 0.10,

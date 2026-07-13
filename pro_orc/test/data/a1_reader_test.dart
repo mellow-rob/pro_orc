@@ -91,19 +91,21 @@ void main() {
       expect(phase.isActive, isTrue);
     });
 
-    test('activePhase is the first with unfinished tasks, sorted by name',
-        () async {
-      final project = await _createTempProject();
-      addTearDown(() => project.delete(recursive: true));
+    test(
+      'activePhase is the first with unfinished tasks, sorted by name',
+      () async {
+        final project = await _createTempProject();
+        addTearDown(() => project.delete(recursive: true));
 
-      await _writePhasePlan(project, 'M1-done', '- [x] a\n- [x] b\n');
-      await _writePhasePlan(project, 'M2-active', '- [x] a\n- [ ] b\n');
+        await _writePhasePlan(project, 'M1-done', '- [x] a\n- [x] b\n');
+        await _writePhasePlan(project, 'M2-active', '- [x] a\n- [ ] b\n');
 
-      final data = await A1Reader().read(project.path);
+        final data = await A1Reader().read(project.path);
 
-      expect(data.phases.map((ph) => ph.name), ['M1-done', 'M2-active']);
-      expect(data.activePhase?.name, 'M2-active');
-    });
+        expect(data.phases.map((ph) => ph.name), ['M1-done', 'M2-active']);
+        expect(data.activePhase?.name, 'M2-active');
+      },
+    );
 
     test('overallProgress aggregates across all phases', () async {
       final project = await _createTempProject();
@@ -142,8 +144,9 @@ void main() {
       final project = await _createTempProject();
       addTearDown(() => project.delete(recursive: true));
 
-      await Directory(p.join(project.path, '.a1', 'phases', 'empty-phase'))
-          .create(recursive: true);
+      await Directory(
+        p.join(project.path, '.a1', 'phases', 'empty-phase'),
+      ).create(recursive: true);
 
       final data = await A1Reader().read(project.path);
       expect(data.phases, isEmpty);

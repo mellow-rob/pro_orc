@@ -40,8 +40,10 @@ void main() {
       });
 
       test('handles paths with spaces', () {
-        final cmd =
-            service.buildSkillLaunchCommand('/my project/folder', 'a1-execute');
+        final cmd = service.buildSkillLaunchCommand(
+          '/my project/folder',
+          'a1-execute',
+        );
 
         expect(cmd, 'cd "/my project/folder" && claude "/a1-execute"');
       });

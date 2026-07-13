@@ -12,15 +12,12 @@ import 'package:pro_orc/theme/n3_colors.dart';
 
 /// Dialog for creating a new Code or Research project.
 ///
-/// Opened from [CodeTab] or [ResearchTab] via their Add+ cards.
+/// Opened from the merged Projekte tab's Add+ menu.
 /// Calls [createProject] to create the filesystem scaffold, then
 /// triggers optional post-creation actions (Terminal, rem-sleep).
 /// Auto-closes on success after a brief feedback moment.
 class CreateProjectDialog extends ConsumerStatefulWidget {
-  const CreateProjectDialog({
-    super.key,
-    required this.initialTab,
-  });
+  const CreateProjectDialog({super.key, required this.initialTab});
 
   /// Initial tab to display: 'code' or 'research'.
   final String initialTab;
@@ -505,12 +502,30 @@ class _CreateProjectDialogState extends ConsumerState<CreateProjectDialog>
           isDense: true,
         ),
         items: const [
-          DropdownMenuItem(value: GitignoreTemplate.none, child: Text('Kein .gitignore')),
-          DropdownMenuItem(value: GitignoreTemplate.flutter, child: Text('Flutter')),
-          DropdownMenuItem(value: GitignoreTemplate.nodejs, child: Text('Node.js')),
-          DropdownMenuItem(value: GitignoreTemplate.nextjs, child: Text('HTML + Next.js')),
-          DropdownMenuItem(value: GitignoreTemplate.python, child: Text('Python')),
-          DropdownMenuItem(value: GitignoreTemplate.html, child: Text('HTML (statisch)')),
+          DropdownMenuItem(
+            value: GitignoreTemplate.none,
+            child: Text('Kein .gitignore'),
+          ),
+          DropdownMenuItem(
+            value: GitignoreTemplate.flutter,
+            child: Text('Flutter'),
+          ),
+          DropdownMenuItem(
+            value: GitignoreTemplate.nodejs,
+            child: Text('Node.js'),
+          ),
+          DropdownMenuItem(
+            value: GitignoreTemplate.nextjs,
+            child: Text('HTML + Next.js'),
+          ),
+          DropdownMenuItem(
+            value: GitignoreTemplate.python,
+            child: Text('Python'),
+          ),
+          DropdownMenuItem(
+            value: GitignoreTemplate.html,
+            child: Text('HTML (statisch)'),
+          ),
         ],
         onChanged: (value) {
           if (value != null) setState(() => _gitignoreTemplate = value);
@@ -564,10 +579,7 @@ class _CreateProjectDialogState extends ConsumerState<CreateProjectDialog>
       buttonChild = SizedBox(
         width: 20,
         height: 20,
-        child: CircularProgressIndicator(
-          strokeWidth: 2,
-          color: colors.bgBase,
-        ),
+        child: CircularProgressIndicator(strokeWidth: 2, color: colors.bgBase),
       );
     } else if (_isCreated) {
       buttonChild = Row(
@@ -585,7 +597,7 @@ class _CreateProjectDialogState extends ConsumerState<CreateProjectDialog>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-          // Warning/error text — shown above buttons row
+        // Warning/error text — shown above buttons row
         if (_errorMessage != null)
           Padding(
             padding: const EdgeInsets.only(bottom: 8),

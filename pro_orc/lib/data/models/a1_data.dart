@@ -20,15 +20,16 @@ class A1Milestone {
   const A1Milestone({required this.name, required this.status});
 
   /// True when the status text indicates completion.
-  bool get isDone =>
-      RegExp(r'\bdone\b|abgeschlossen|complete|shipped', caseSensitive: false)
-          .hasMatch(status);
+  bool get isDone => RegExp(
+    r'\bdone\b|abgeschlossen|complete|shipped',
+    caseSensitive: false,
+  ).hasMatch(status);
 
   /// True when the status text indicates active work.
   bool get isActive => RegExp(
-        r'in[_ -]?progress|building|wip|läuft|aktiv',
-        caseSensitive: false,
-      ).hasMatch(status);
+    r'in[_ -]?progress|building|wip|läuft|aktiv',
+    caseSensitive: false,
+  ).hasMatch(status);
 }
 
 /// Checkbox progress for one `.a1/phases/<name>/PLAN.md`.
@@ -70,10 +71,7 @@ class A1Data {
   /// Phase progress entries, sorted by phase name.
   final List<A1Phase> phases;
 
-  const A1Data({
-    this.milestones = const [],
-    this.phases = const [],
-  });
+  const A1Data({this.milestones = const [], this.phases = const []});
 
   static const empty = A1Data();
 

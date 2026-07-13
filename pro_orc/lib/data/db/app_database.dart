@@ -1,21 +1,31 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math';
 
 import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
 import 'package:path_provider/path_provider.dart';
 
 import 'tables/app_config_table.dart';
+import 'tables/group_collapse_state_table.dart';
+import 'tables/project_groups_table.dart';
 import 'tables/project_settings_table.dart';
 
 part 'app_database.g.dart';
 
-@DriftDatabase(tables: [AppConfigTable, ProjectSettingsTable])
+@DriftDatabase(
+  tables: [
+    AppConfigTable,
+    ProjectSettingsTable,
+    ProjectGroupsTable,
+    GroupCollapseStateTable,
+  ],
+)
 class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? e]) : super(e ?? _connect());
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -29,6 +39,19 @@ class AppDatabase extends _$AppDatabase {
       if (from < 4) {
         await m.addColumn(appConfigTable, appConfigTable.vaultDir);
       }
+      if (from < 5) {
+        await m.createTable(projectGroupsTable);
+        await m.addColumn(projectSettingsTable, projectSettingsTable.groupId);
+        await m.addColumn(appConfigTable, appConfigTable.viewMode);
+        await m.addColumn(
+          appConfigTable,
+          appConfigTable.projectOrganizationSeedApplied,
+        );
+        await m.createTable(groupCollapseStateTable);
+      }
+    },
+    beforeOpen: (details) async {
+      await ensureSystemGroups();
     },
   );
 
@@ -51,9 +74,9 @@ class AppDatabase extends _$AppDatabase {
   /// Returns the single app config row (id=1), inserting defaults on first access.
   /// If scanDir is empty, auto-populates with ~/project_orchestration.
   Future<AppConfigTableData> getConfig() async {
-    final existing = await (select(appConfigTable)
-          ..where((t) => t.id.equals(1)))
-        .getSingleOrNull();
+    final existing = await (select(
+      appConfigTable,
+    )..where((t) => t.id.equals(1))).getSingleOrNull();
 
     if (existing != null) {
       // Auto-populate empty scanDir with default
@@ -64,11 +87,9 @@ class AppDatabase extends _$AppDatabase {
       return existing;
     }
 
-    await into(appConfigTable).insert(
-      AppConfigTableCompanion(
-        scanDir: Value(_defaultScanDir),
-      ),
-    );
+    await into(
+      appConfigTable,
+    ).insert(AppConfigTableCompanion(scanDir: Value(_defaultScanDir)));
 
     return (select(appConfigTable)..where((t) => t.id.equals(1))).getSingle();
   }
@@ -85,7 +106,10 @@ class AppDatabase extends _$AppDatabase {
       try {
         final decoded = jsonDecode(raw);
         if (decoded is List) {
-          final dirs = decoded.whereType<String>().where((s) => s.isNotEmpty).toList();
+          final dirs = decoded
+              .whereType<String>()
+              .where((s) => s.isNotEmpty)
+              .toList();
           return dirs.isEmpty ? [_defaultScanDir] : dirs;
         }
       } catch (_) {
@@ -109,6 +133,8 @@ class AppDatabase extends _$AppDatabase {
     String? gitBinaryPath,
     String? themeMode,
     String? vaultDir,
+    String? viewMode,
+    bool? projectOrganizationSeedApplied,
   }) async {
     await (update(appConfigTable)..where((t) => t.id.equals(1))).write(
       AppConfigTableCompanion(
@@ -121,6 +147,10 @@ class AppDatabase extends _$AppDatabase {
             : const Value.absent(),
         themeMode: themeMode != null ? Value(themeMode) : const Value.absent(),
         vaultDir: vaultDir != null ? Value(vaultDir) : const Value.absent(),
+        viewMode: viewMode != null ? Value(viewMode) : const Value.absent(),
+        projectOrganizationSeedApplied: projectOrganizationSeedApplied != null
+            ? Value(projectOrganizationSeedApplied)
+            : const Value.absent(),
       ),
     );
   }
@@ -175,23 +205,23 @@ class AppDatabase extends _$AppDatabase {
 
   /// Returns the set of folderIds marked as hidden.
   Future<Set<String>> getHiddenProjectIds() async {
-    final rows = await (select(projectSettingsTable)
-          ..where((t) => t.isHidden.equals(true)))
-        .get();
+    final rows = await (select(
+      projectSettingsTable,
+    )..where((t) => t.isHidden.equals(true))).get();
     return rows.map((r) => r.folderId).toSet();
   }
 
   /// Returns project settings for a given folderId, or null if not found.
-  Future<ProjectSettingsTableData?> getProjectSettings(
-      String folderId) async {
-    return (select(projectSettingsTable)
-          ..where((t) => t.folderId.equals(folderId)))
-        .getSingleOrNull();
+  Future<ProjectSettingsTableData?> getProjectSettings(String folderId) async {
+    return (select(
+      projectSettingsTable,
+    )..where((t) => t.folderId.equals(folderId))).getSingleOrNull();
   }
 
   /// Upserts project settings (insert or update on conflict).
   Future<void> upsertProjectSettings(
-      ProjectSettingsTableCompanion companion) async {
+    ProjectSettingsTableCompanion companion,
+  ) async {
     await into(projectSettingsTable).insertOnConflictUpdate(companion);
   }
 
@@ -208,5 +238,152 @@ class AppDatabase extends _$AppDatabase {
         displayName: Value(value),
       ),
     );
+  }
+
+  /// Idempotently ensures the "Archiv" system group and its collapse row
+  /// exist. Runs outside the migration (called from `beforeOpen`) so it
+  /// covers both fresh installs and upgrades — see
+  /// records/2026-07-12-archiv-modeling-adr.md.
+  Future<void> ensureSystemGroups() async {
+    await into(projectGroupsTable).insertOnConflictUpdate(
+      const ProjectGroupsTableCompanion(
+        id: Value(kArchiveGroupId),
+        name: Value('Archiv'),
+        isSystem: Value(true),
+      ),
+    );
+
+    final existingCollapse = await (select(
+      groupCollapseStateTable,
+    )..where((t) => t.groupId.equals(kArchiveGroupId))).getSingleOrNull();
+    if (existingCollapse == null) {
+      await into(groupCollapseStateTable).insert(
+        GroupCollapseStateTableCompanion.insert(
+          groupId: kArchiveGroupId,
+          collapsed: const Value(true),
+        ),
+      );
+    }
+  }
+
+  /// Generates a collision-free group id. Never derived from the group
+  /// name, and distinct from the reserved [kArchiveGroupId] sentinel — see
+  /// ADR "Geprüfte Einwände" §1.
+  String _generateGroupId() {
+    final random = Random.secure();
+    final suffix = List.generate(
+      16,
+      (_) => random.nextInt(16).toRadixString(16),
+    ).join();
+    return 'grp_${DateTime.now().microsecondsSinceEpoch}_$suffix';
+  }
+
+  /// Returns all project groups (including the "Archiv" system group).
+  Future<List<ProjectGroupsTableData>> getGroups() async {
+    return select(projectGroupsTable).get();
+  }
+
+  /// Creates a new user group with the given [name] and returns its
+  /// generated id. Does not validate name uniqueness or reserved names —
+  /// that guard lives in the provider layer (Wave 2), per the wave plan.
+  Future<String> createGroup(String name) async {
+    final id = _generateGroupId();
+    await into(
+      projectGroupsTable,
+    ).insert(ProjectGroupsTableCompanion.insert(id: id, name: name));
+    return id;
+  }
+
+  /// Renames an existing group. Does not guard against renaming a system
+  /// group — that guard lives in the provider layer (Wave 2).
+  Future<void> renameGroup(String id, String name) async {
+    await (update(projectGroupsTable)..where((t) => t.id.equals(id))).write(
+      ProjectGroupsTableCompanion(name: Value(name)),
+    );
+  }
+
+  /// Deletes a group and resets `groupId` to null for all its members
+  /// (dissolve behavior). Does not guard against deleting a system group —
+  /// that guard lives in the provider layer (Wave 2).
+  Future<void> deleteGroup(String id) async {
+    await (update(projectSettingsTable)..where((t) => t.groupId.equals(id)))
+        .write(const ProjectSettingsTableCompanion(groupId: Value(null)));
+    await (delete(projectGroupsTable)..where((t) => t.id.equals(id))).go();
+  }
+
+  /// Assigns a project to a group (or `null` for "Ohne Gruppe"), replacing
+  /// any previous group assignment (1:1 membership).
+  Future<void> setProjectGroup(String folderId, String? groupId) async {
+    await upsertProjectSettings(
+      ProjectSettingsTableCompanion.insert(
+        folderId: folderId,
+        groupId: Value(groupId),
+      ),
+    );
+  }
+
+  /// Returns the group id a project is currently assigned to, or null when
+  /// it is "Ohne Gruppe" (or has no settings row yet).
+  Future<String?> getProjectGroupId(String folderId) async {
+    final settings = await getProjectSettings(folderId);
+    return settings?.groupId;
+  }
+
+  /// Returns every folderId's current group assignment (`folderId ->
+  /// groupId`, `null` = "Ohne Gruppe") in one query. Mirrors
+  /// [getHiddenProjectIds]'s bulk-read pattern so [membershipProvider] can
+  /// eager-load on `build()` instead of only tracking folderIds it has been
+  /// explicitly asked about — required for the merged Projekte tab to
+  /// render correct group sections right after a fresh app start.
+  Future<Map<String, String?>> getAllProjectGroupIds() async {
+    final rows = await select(projectSettingsTable).get();
+    return {for (final row in rows) row.folderId: row.groupId};
+  }
+
+  /// Returns the collapse state for a group, or `false` if no row exists
+  /// yet (fresh user-created groups default to expanded).
+  Future<bool> getCollapseState(String groupId) async {
+    final row = await (select(
+      groupCollapseStateTable,
+    )..where((t) => t.groupId.equals(groupId))).getSingleOrNull();
+    return row?.collapsed ?? false;
+  }
+
+  /// Persists the collapse state for a group.
+  Future<void> setCollapseState(String groupId, bool collapsed) async {
+    await into(groupCollapseStateTable).insertOnConflictUpdate(
+      GroupCollapseStateTableCompanion.insert(
+        groupId: groupId,
+        collapsed: Value(collapsed),
+      ),
+    );
+  }
+
+  /// Returns the persisted global view-mode preference: 'grid' or 'list'.
+  /// Defaults to 'grid' (via the column default) if never set.
+  Future<String> getViewMode() async {
+    final config = await getConfig();
+    return config.viewMode;
+  }
+
+  /// Persists the global view-mode preference. [mode] must be one of
+  /// 'grid', 'list'.
+  Future<void> setViewMode(String mode) async {
+    await getConfig(); // ensure id=1 row exists
+    await updateConfig(viewMode: mode);
+  }
+
+  /// Returns whether the one-time Project-Organization example-group seed
+  /// (Wave 5) has already run.
+  Future<bool> isProjectOrganizationSeedApplied() async {
+    final config = await getConfig();
+    return config.projectOrganizationSeedApplied;
+  }
+
+  /// Marks the one-time Project-Organization example-group seed as applied
+  /// so it never runs again.
+  Future<void> markProjectOrganizationSeedApplied() async {
+    await getConfig(); // ensure id=1 row exists
+    await updateConfig(projectOrganizationSeedApplied: true);
   }
 }

@@ -8,9 +8,7 @@ Future<bool> showLaunchAtLoginDialog(BuildContext context) async {
       backgroundColor: const Color(0xFF1A1A2E),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: BorderSide(
-          color: const Color(0xFF00E5FF).withValues(alpha: 0.2),
-        ),
+        side: BorderSide(color: const Color(0xFF00E5FF).withValues(alpha: 0.2)),
       ),
       title: const Text(
         'Start Pro Orc when you log in?',
@@ -22,10 +20,7 @@ Future<bool> showLaunchAtLoginDialog(BuildContext context) async {
       ),
       content: const Text(
         'Pro Orc can start automatically when you log in to your Mac.',
-        style: TextStyle(
-          color: Color(0xFFB0B0C0),
-          fontSize: 14,
-        ),
+        style: TextStyle(color: Color(0xFFB0B0C0), fontSize: 14),
       ),
       actions: [
         TextButton(

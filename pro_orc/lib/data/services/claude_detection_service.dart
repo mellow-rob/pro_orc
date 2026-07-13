@@ -15,17 +15,15 @@ class ClaudeDetectionService {
   const ClaudeDetectionService({
     String whichCommand = 'which',
     String claudeCommand = 'claude',
-  })  : _whichCommand = whichCommand,
-        _claudeCommand = claudeCommand;
+  }) : _whichCommand = whichCommand,
+       _claudeCommand = claudeCommand;
 
   /// Check if Claude Code CLI is installed via `which claude`.
   Future<bool> isClaudeInstalled() async {
     try {
-      final result = await Process.run(
-        _whichCommand,
-        [_claudeCommand],
-        runInShell: true,
-      );
+      final result = await Process.run(_whichCommand, [
+        _claudeCommand,
+      ], runInShell: true);
       return result.exitCode == 0;
     } catch (_) {
       return false;
@@ -35,11 +33,9 @@ class ClaudeDetectionService {
   /// Get Claude CLI version string, or null if not installed.
   Future<String?> getClaudeVersion() async {
     try {
-      final result = await Process.run(
-        _claudeCommand,
-        ['--version'],
-        runInShell: true,
-      );
+      final result = await Process.run(_claudeCommand, [
+        '--version',
+      ], runInShell: true);
       if (result.exitCode != 0) return null;
       final output = (result.stdout as String).trim();
       return output.isEmpty ? null : output;

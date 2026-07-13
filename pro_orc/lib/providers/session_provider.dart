@@ -6,7 +6,9 @@ import 'package:pro_orc/providers/watcher_provider.dart';
 
 /// Shared [SessionReader] instance — stateless, but kept as a single
 /// provider so all session lookups go through one place.
-final _sessionReaderProvider = Provider<SessionReader>((ref) => const SessionReader());
+final _sessionReaderProvider = Provider<SessionReader>(
+  (ref) => const SessionReader(),
+);
 
 /// Cheap (stat-only, no JSONL parsing) session metadata for a single
 /// project, keyed by project path.
@@ -19,20 +21,22 @@ final _sessionReaderProvider = Provider<SessionReader>((ref) => const SessionRea
 /// are actually displaying.
 final projectSessionsProvider =
     FutureProvider.family<ProjectSessionData, String>((ref, projectPath) async {
-  ref.listen(watcherProvider, (previous, next) {
-    if (next.hasValue) ref.invalidateSelf();
-  });
+      ref.listen(watcherProvider, (previous, next) {
+        if (next.hasValue) ref.invalidateSelf();
+      });
 
-  final reader = ref.watch(_sessionReaderProvider);
-  return reader.readProjectSessions(projectPath);
-});
+      final reader = ref.watch(_sessionReaderProvider);
+      return reader.readProjectSessions(projectPath);
+    });
 
 /// Lazily parsed detail (message count, start time) for a single session.
 /// Only fetched when a session's detail is actually shown (e.g. an expanded
 /// row in the project detail panel), keeping the cheap card-level indicator
 /// free of JSONL parsing cost.
-final sessionDetailProvider =
-    FutureProvider.family<SessionInfo, SessionInfo>((ref, session) async {
+final sessionDetailProvider = FutureProvider.family<SessionInfo, SessionInfo>((
+  ref,
+  session,
+) async {
   final reader = ref.watch(_sessionReaderProvider);
   return reader.readSessionDetail(session);
 });
@@ -45,10 +49,13 @@ final sessionDetailProvider =
 ///
 /// Keyed by project path; reuses [projectSessionsProvider] for the cheap list
 /// and [sessionDetailProvider]'s reader for the per-session parse.
-final projectTokenEstimateProvider =
-    FutureProvider.family<int?, String>((ref, projectPath) async {
-  final sessionData =
-      await ref.watch(projectSessionsProvider(projectPath).future);
+final projectTokenEstimateProvider = FutureProvider.family<int?, String>((
+  ref,
+  projectPath,
+) async {
+  final sessionData = await ref.watch(
+    projectSessionsProvider(projectPath).future,
+  );
   final recent = sessionData.recentFive;
   if (recent.isEmpty) return null;
 

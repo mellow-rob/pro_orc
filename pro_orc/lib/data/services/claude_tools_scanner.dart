@@ -24,13 +24,14 @@ class ClaudeToolsScanner {
   /// `~/.claude/` would force a full re-scan of every project's local
   /// agents/skills/MCP config, which is unnecessary when nothing there
   /// changed.
-  final Map<String, ({DateTime? signature, ClaudeToolsData data})> _projectCache = {};
+  final Map<String, ({DateTime? signature, ClaudeToolsData data})>
+  _projectCache = {};
 
   /// Creates a scanner targeting [claudeDirOverride] if provided, otherwise
   /// defaults to `$HOME/.claude`.
   ClaudeToolsScanner({String? claudeDirOverride})
-      : claudeDir = claudeDirOverride ??
-            '${Platform.environment['HOME']!}/.claude';
+    : claudeDir =
+          claudeDirOverride ?? '${Platform.environment['HOME']!}/.claude';
 
   // ---------------------------------------------------------------------------
   // Public API
@@ -98,7 +99,10 @@ class ClaudeToolsScanner {
     try {
       final skills = await _scanProjectSkills(projectPath);
       final mcpServers = await _scanProjectMcpServers(projectPath);
-      final agents = await _scanProjectAgents(projectPath, projectName: projectName);
+      final agents = await _scanProjectAgents(
+        projectPath,
+        projectName: projectName,
+      );
       return ClaudeToolsData(
         skills: skills,
         plugins: const [],
@@ -120,7 +124,10 @@ class ClaudeToolsScanner {
       if (!await dir.exists()) return null;
       return (await dir.stat()).modified;
     } catch (e) {
-      developer.log('Failed to stat .claude dir for $projectPath: $e', name: 'claude_tools_scanner');
+      developer.log(
+        'Failed to stat .claude dir for $projectPath: $e',
+        name: 'claude_tools_scanner',
+      );
       return null;
     }
   }
@@ -186,11 +193,7 @@ class ClaudeToolsScanner {
     }
 
     // No SKILL.md found — use folder name as display name
-    return SkillData(
-      id: id,
-      name: id,
-      path: dirPath,
-    );
+    return SkillData(id: id, name: id, path: dirPath);
   }
 
   // ---------------------------------------------------------------------------
@@ -243,18 +246,23 @@ class ClaudeToolsScanner {
         final pluginName = _pluginNameFromSkillPath(skillsParent);
 
         final base = await _readSkillDir(skillDir, id);
-        result.add(SkillData(
-          id: base.id,
-          name: base.name,
-          description: base.description,
-          homepage: base.homepage,
-          path: base.path,
-          scope: 'plugin',
-          pluginName: pluginName,
-        ));
+        result.add(
+          SkillData(
+            id: base.id,
+            name: base.name,
+            description: base.description,
+            homepage: base.homepage,
+            path: base.path,
+            scope: 'plugin',
+            pluginName: pluginName,
+          ),
+        );
       }
     } catch (e) {
-      developer.log('Failed to scan plugin skills: $e', name: 'claude_tools_scanner');
+      developer.log(
+        'Failed to scan plugin skills: $e',
+        name: 'claude_tools_scanner',
+      );
     }
 
     result.sort((a, b) {
@@ -291,8 +299,7 @@ class ClaudeToolsScanner {
       final settings = jsonDecode(settingsRaw) as Map<String, dynamic>;
       final enabledPlugins =
           (settings['enabledPlugins'] as Map<String, dynamic>?) ?? {};
-      final pluginsMap =
-          (installed['plugins'] as Map<String, dynamic>?) ?? {};
+      final pluginsMap = (installed['plugins'] as Map<String, dynamic>?) ?? {};
 
       // Load marketplace URLs (optional — graceful if missing)
       Map<String, dynamic> marketplaces = {};
@@ -312,8 +319,7 @@ class ClaudeToolsScanner {
 
         final atIndex = key.indexOf('@');
         final name = atIndex >= 0 ? key.substring(0, atIndex) : key;
-        final marketplaceId =
-            atIndex >= 0 ? key.substring(atIndex + 1) : '';
+        final marketplaceId = atIndex >= 0 ? key.substring(atIndex + 1) : '';
 
         final installPath = first['installPath'] as String? ?? '';
         final version = first['version'] as String?;
@@ -327,36 +333,38 @@ class ClaudeToolsScanner {
           final pjRaw = await File(pjPath).readAsString();
           final pj = jsonDecode(pjRaw) as Map<String, dynamic>;
           description = pj['description'] as String?;
-          author =
-              (pj['author'] as Map<String, dynamic>?)?['name'] as String?;
+          author = (pj['author'] as Map<String, dynamic>?)?['name'] as String?;
         } catch (_) {}
 
         // Parse install/update timestamps from installed_plugins.json
-        final installedAt =
-            DateTime.tryParse(first['installedAt'] as String? ?? '');
-        final lastUpdated =
-            DateTime.tryParse(first['lastUpdated'] as String? ?? '');
+        final installedAt = DateTime.tryParse(
+          first['installedAt'] as String? ?? '',
+        );
+        final lastUpdated = DateTime.tryParse(
+          first['lastUpdated'] as String? ?? '',
+        );
 
         // Marketplace URL derived from known_marketplaces.json
         String? marketplaceUrl;
-        final mktInfo =
-            marketplaces[marketplaceId] as Map<String, dynamic>?;
+        final mktInfo = marketplaces[marketplaceId] as Map<String, dynamic>?;
         final repo =
             (mktInfo?['source'] as Map<String, dynamic>?)?['repo'] as String?;
         if (repo != null) marketplaceUrl = 'https://github.com/$repo';
 
-        result.add(PluginData(
-          key: key,
-          name: name,
-          marketplace: marketplaceId,
-          version: version,
-          enabled: enabled,
-          description: description,
-          marketplaceUrl: marketplaceUrl,
-          author: author,
-          installedAt: installedAt,
-          lastUpdated: lastUpdated,
-        ));
+        result.add(
+          PluginData(
+            key: key,
+            name: name,
+            marketplace: marketplaceId,
+            version: version,
+            enabled: enabled,
+            description: description,
+            marketplaceUrl: marketplaceUrl,
+            author: author,
+            installedAt: installedAt,
+            lastUpdated: lastUpdated,
+          ),
+        );
       }
 
       result.sort((a, b) => a.name.compareTo(b.name));
@@ -382,7 +390,9 @@ class ClaudeToolsScanner {
           (settings['mcpServers'] as Map<String, dynamic>?) ?? {};
 
       for (final entry in mcpServers.entries) {
-        result.add(_parseMcpEntry(entry.key, entry.value as Map<String, dynamic>));
+        result.add(
+          _parseMcpEntry(entry.key, entry.value as Map<String, dynamic>),
+        );
       }
     } catch (_) {}
 
@@ -394,8 +404,7 @@ class ClaudeToolsScanner {
       final installedPath = '$claudeDir/plugins/installed_plugins.json';
       final installedRaw = await File(installedPath).readAsString();
       final installed = jsonDecode(installedRaw) as Map<String, dynamic>;
-      final pluginsMap =
-          (installed['plugins'] as Map<String, dynamic>?) ?? {};
+      final pluginsMap = (installed['plugins'] as Map<String, dynamic>?) ?? {};
 
       for (final entry in pluginsMap.entries) {
         final key = entry.key;
@@ -421,8 +430,7 @@ class ClaudeToolsScanner {
           // 2) { "name": { "command": "...", "args": [...] } }
           final Map<String, dynamic> servers;
           if (mcpJson.containsKey('mcpServers')) {
-            servers =
-                (mcpJson['mcpServers'] as Map<String, dynamic>?) ?? {};
+            servers = (mcpJson['mcpServers'] as Map<String, dynamic>?) ?? {};
           } else {
             servers = mcpJson;
           }
@@ -430,12 +438,14 @@ class ClaudeToolsScanner {
           for (final sEntry in servers.entries) {
             final config = sEntry.value;
             if (config is! Map<String, dynamic>) continue;
-            result.add(_parseMcpEntry(
-              sEntry.key,
-              config,
-              source: pluginName,
-              enabled: isEnabled,
-            ));
+            result.add(
+              _parseMcpEntry(
+                sEntry.key,
+                config,
+                source: pluginName,
+                enabled: isEnabled,
+              ),
+            );
           }
         } catch (_) {}
       }
@@ -504,14 +514,16 @@ class ClaudeToolsScanner {
       if (id.startsWith('.')) continue;
 
       final skillData = await _readSkillDir(entity.path, id);
-      result.add(SkillData(
-        id: skillData.id,
-        name: skillData.name,
-        description: skillData.description,
-        homepage: skillData.homepage,
-        path: skillData.path,
-        scope: 'project',
-      ));
+      result.add(
+        SkillData(
+          id: skillData.id,
+          name: skillData.name,
+          description: skillData.description,
+          homepage: skillData.homepage,
+          path: skillData.path,
+          scope: 'project',
+        ),
+      );
     }
 
     result.sort((a, b) => a.name.compareTo(b.name));
@@ -522,8 +534,7 @@ class ClaudeToolsScanner {
   // Per-project MCP Servers
   // ---------------------------------------------------------------------------
 
-  Future<List<McpServerData>> _scanProjectMcpServers(
-      String projectPath) async {
+  Future<List<McpServerData>> _scanProjectMcpServers(String projectPath) async {
     final mcpFile = File('$projectPath/.mcp.json');
     if (!await mcpFile.exists()) return [];
 
@@ -542,20 +553,18 @@ class ClaudeToolsScanner {
       for (final entry in servers.entries) {
         final config = entry.value;
         if (config is! Map<String, dynamic>) continue;
-        final server = _parseMcpEntry(
-          entry.key,
-          config,
-          source: 'Projekt',
+        final server = _parseMcpEntry(entry.key, config, source: 'Projekt');
+        result.add(
+          McpServerData(
+            name: server.name,
+            command: server.command,
+            type: server.type,
+            source: server.source,
+            enabled: server.enabled,
+            args: server.args,
+            scope: 'project',
+          ),
         );
-        result.add(McpServerData(
-          name: server.name,
-          command: server.command,
-          type: server.type,
-          source: server.source,
-          enabled: server.enabled,
-          args: server.args,
-          scope: 'project',
-        ));
       }
 
       result.sort((a, b) => a.name.compareTo(b.name));
@@ -628,19 +637,24 @@ class ClaudeToolsScanner {
 
         final name = frontmatter['name'] ?? id;
 
-        result.add(AgentData(
-          id: id,
-          name: name,
-          description: frontmatter['description'],
-          color: frontmatter['color'] ?? 'cyan',
-          model: frontmatter['model'],
-          tools: tools,
-          path: entity.path,
-          scope: scope,
-          projectName: projectName,
-        ));
+        result.add(
+          AgentData(
+            id: id,
+            name: name,
+            description: frontmatter['description'],
+            color: frontmatter['color'] ?? 'cyan',
+            model: frontmatter['model'],
+            tools: tools,
+            path: entity.path,
+            scope: scope,
+            projectName: projectName,
+          ),
+        );
       } catch (e) {
-        developer.log('Failed to parse agent file ${entity.path}: $e', name: 'claude_tools_scanner');
+        developer.log(
+          'Failed to parse agent file ${entity.path}: $e',
+          name: 'claude_tools_scanner',
+        );
       }
     }
 

@@ -20,5 +20,5 @@ class OpenProjectDetailNotifier extends Notifier<ProjectModel?> {
 
 final openProjectDetailProvider =
     NotifierProvider<OpenProjectDetailNotifier, ProjectModel?>(
-  OpenProjectDetailNotifier.new,
-);
+      OpenProjectDetailNotifier.new,
+    );

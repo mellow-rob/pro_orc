@@ -274,7 +274,9 @@ extension AppColorsInputDecoration on AppColors {
       hintText: hintText,
       hintStyle: TextStyle(color: textDim, fontSize: 14),
       labelText: labelText,
-      labelStyle: labelText != null ? TextStyle(color: textDim, fontSize: 12) : null,
+      labelStyle: labelText != null
+          ? TextStyle(color: textDim, fontSize: 12)
+          : null,
       filled: true,
       fillColor: bgElev.withValues(alpha: 0.4),
       border: _noBorder,
@@ -282,7 +284,10 @@ extension AppColorsInputDecoration on AppColors {
       focusedBorder: accentColor != null
           ? OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(color: accentColor.withValues(alpha: 0.5), width: 1),
+              borderSide: BorderSide(
+                color: accentColor.withValues(alpha: 0.5),
+                width: 1,
+              ),
             )
           : _noBorder,
       contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),

@@ -22,8 +22,10 @@ final roadmapRepositoryProvider = Provider<RoadmapRepository>((ref) {
 /// Keyed by [ProjectModel] so each project's Roadmap tab gets its own cached
 /// result; `folderId` doubles as the Vault/Brain-facing slug (per project
 /// convention — no separate slug field exists on [ProjectModel] today).
-final roadmapProvider =
-    FutureProvider.family<RoadmapResult, ProjectModel>((ref, project) async {
+final roadmapProvider = FutureProvider.family<RoadmapResult, ProjectModel>((
+  ref,
+  project,
+) async {
   final repo = ref.read(roadmapRepositoryProvider);
   return repo.resolve(project.folderId, project.path);
 });
