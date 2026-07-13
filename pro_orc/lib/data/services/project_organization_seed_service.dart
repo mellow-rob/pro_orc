@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:pro_orc/data/db/app_database.dart';
 import 'package:pro_orc/data/models/project_model.dart';
 
@@ -9,6 +11,12 @@ class ProjectOrganizationSeedService {
   ProjectOrganizationSeedService(this._db);
 
   final AppDatabase _db;
+
+  // Serializes overlapping applyIfNeeded() calls (e.g. two rapid watcher
+  // events both racing the initial scan) — without this, both could read
+  // the seed-applied flag as false before either writes it, producing
+  // duplicate "Vodafone"/"Neural AI Produkte"/"Kundenprojekte" groups.
+  static Future<bool>? _inFlight;
 
   static const kundenprojekteFolderIds = [
     'autohaus-elflein',
@@ -29,8 +37,31 @@ class ProjectOrganizationSeedService {
     'wtv',
   ];
 
-  Future<void> applyIfNeeded(List<ProjectModel> scannedProjects) async {
-    if (await _db.isProjectOrganizationSeedApplied()) return;
+  /// Returns `true` if this call actually performed the seed (so the caller
+  /// can invalidate provider state that already loaded before the seed
+  /// wrote to the DB), `false` if it was a no-op (already applied, or an
+  /// overlapping call was already in flight).
+  Future<bool> applyIfNeeded(List<ProjectModel> scannedProjects) async {
+    // If a call is already running, wait for it instead of starting a
+    // second one — closes the race where two overlapping calls both read
+    // the flag as false before either writes it.
+    final existing = _inFlight;
+    if (existing != null) {
+      await existing;
+      return false;
+    }
+
+    final future = _applyIfNeeded(scannedProjects);
+    _inFlight = future;
+    try {
+      return await future;
+    } finally {
+      _inFlight = null;
+    }
+  }
+
+  Future<bool> _applyIfNeeded(List<ProjectModel> scannedProjects) async {
+    if (await _db.isProjectOrganizationSeedApplied()) return false;
 
     final existing = await _db.getGroups();
     await _ensureGroup(existing, 'Vodafone');
@@ -46,6 +77,7 @@ class ProjectOrganizationSeedService {
     }
 
     await _db.markProjectOrganizationSeedApplied();
+    return true;
   }
 
   Future<String> _ensureGroup(

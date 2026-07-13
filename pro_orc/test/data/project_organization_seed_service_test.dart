@@ -91,5 +91,27 @@ void main() {
       expect(archiv.name, equals('Archiv'));
       expect(await db.getCollapseState(archiv.id), isTrue);
     });
+
+    test('returns true when it actually seeds, false on a no-op', () async {
+      expect(await service.applyIfNeeded([makeProject('wtv')]), isTrue);
+      expect(await service.applyIfNeeded([makeProject('wtv')]), isFalse);
+    });
+
+    test('overlapping calls do not create duplicate groups (race guard)', () async {
+      final scanned = [makeProject('wtv')];
+
+      final results = await Future.wait([
+        service.applyIfNeeded(scanned),
+        service.applyIfNeeded(scanned),
+        service.applyIfNeeded(scanned),
+      ]);
+
+      expect(results.where((seeded) => seeded).length, equals(1));
+
+      final groups = await db.getGroups();
+      expect(groups.where((g) => g.name == 'Vodafone').length, equals(1));
+      expect(groups.where((g) => g.name == 'Neural AI Produkte').length, equals(1));
+      expect(groups.where((g) => g.name == 'Kundenprojekte').length, equals(1));
+    });
   });
 }
