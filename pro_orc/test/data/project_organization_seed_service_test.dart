@@ -29,25 +29,39 @@ void main() {
   }
 
   group('ProjectOrganizationSeedService', () {
-    test('fresh DB seeds all three groups and assigns the found subset', () async {
-      final scanned = [
-        makeProject('wtv'),
-        makeProject('bungertshof'),
-        makeProject('feldfrisch'),
-        makeProject('some-other-project'),
-      ];
+    test(
+      'fresh DB seeds all three groups and assigns the found subset',
+      () async {
+        final scanned = [
+          makeProject('wtv'),
+          makeProject('bungertshof'),
+          makeProject('feldfrisch'),
+          makeProject('some-other-project'),
+        ];
 
-      await service.applyIfNeeded(scanned);
+        await service.applyIfNeeded(scanned);
 
-      final groups = await db.getGroups();
-      expect(groups.map((g) => g.name), containsAll(['Vodafone', 'Neural AI Produkte', 'Kundenprojekte']));
+        final groups = await db.getGroups();
+        expect(
+          groups.map((g) => g.name),
+          containsAll(['Vodafone', 'Neural AI Produkte', 'Kundenprojekte']),
+        );
 
-      final kundenprojekteId = groups.firstWhere((g) => g.name == 'Kundenprojekte').id;
-      expect(await db.getProjectGroupId('wtv'), equals(kundenprojekteId));
-      expect(await db.getProjectGroupId('bungertshof'), equals(kundenprojekteId));
-      expect(await db.getProjectGroupId('feldfrisch'), equals(kundenprojekteId));
-      expect(await db.getProjectGroupId('some-other-project'), isNull);
-    });
+        final kundenprojekteId = groups
+            .firstWhere((g) => g.name == 'Kundenprojekte')
+            .id;
+        expect(await db.getProjectGroupId('wtv'), equals(kundenprojekteId));
+        expect(
+          await db.getProjectGroupId('bungertshof'),
+          equals(kundenprojekteId),
+        );
+        expect(
+          await db.getProjectGroupId('feldfrisch'),
+          equals(kundenprojekteId),
+        );
+        expect(await db.getProjectGroupId('some-other-project'), isNull);
+      },
+    );
 
     test('missing folder names are skipped without throwing', () async {
       final scanned = [makeProject('wtv')];
@@ -55,7 +69,9 @@ void main() {
       await expectLater(service.applyIfNeeded(scanned), completes);
 
       final groups = await db.getGroups();
-      final kundenprojekteId = groups.firstWhere((g) => g.name == 'Kundenprojekte').id;
+      final kundenprojekteId = groups
+          .firstWhere((g) => g.name == 'Kundenprojekte')
+          .id;
       expect(await db.getProjectGroupId('wtv'), equals(kundenprojekteId));
       expect(await db.getProjectGroupId('bungertshof'), isNull);
     });
@@ -97,21 +113,30 @@ void main() {
       expect(await service.applyIfNeeded([makeProject('wtv')]), isFalse);
     });
 
-    test('overlapping calls do not create duplicate groups (race guard)', () async {
-      final scanned = [makeProject('wtv')];
+    test(
+      'overlapping calls do not create duplicate groups (race guard)',
+      () async {
+        final scanned = [makeProject('wtv')];
 
-      final results = await Future.wait([
-        service.applyIfNeeded(scanned),
-        service.applyIfNeeded(scanned),
-        service.applyIfNeeded(scanned),
-      ]);
+        final results = await Future.wait([
+          service.applyIfNeeded(scanned),
+          service.applyIfNeeded(scanned),
+          service.applyIfNeeded(scanned),
+        ]);
 
-      expect(results.where((seeded) => seeded).length, equals(1));
+        expect(results.where((seeded) => seeded).length, equals(1));
 
-      final groups = await db.getGroups();
-      expect(groups.where((g) => g.name == 'Vodafone').length, equals(1));
-      expect(groups.where((g) => g.name == 'Neural AI Produkte').length, equals(1));
-      expect(groups.where((g) => g.name == 'Kundenprojekte').length, equals(1));
-    });
+        final groups = await db.getGroups();
+        expect(groups.where((g) => g.name == 'Vodafone').length, equals(1));
+        expect(
+          groups.where((g) => g.name == 'Neural AI Produkte').length,
+          equals(1),
+        );
+        expect(
+          groups.where((g) => g.name == 'Kundenprojekte').length,
+          equals(1),
+        );
+      },
+    );
   });
 }

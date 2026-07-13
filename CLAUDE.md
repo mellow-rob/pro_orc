@@ -44,11 +44,20 @@ ShellScreen (ConsumerStatefulWidget + NavigationRail)
 - **projectsProvider** invalidates itself via `ref.listen` on watcher events — stateless reactive pattern
 - **All services** are pure Dart (no Flutter imports) — unit-testable, isolate-safe
 - **Process.run** always uses `runInShell: true` — macOS GUI apps don't inherit Homebrew PATH
-- **Drift database** (SQLite v2) stores app config and per-project settings; `app_database.g.dart` is committed (not gitignored)
+- **Drift database** stores app config and per-project settings; `app_database.g.dart` is committed (not gitignored) — schema is currently at `schemaVersion` 5 with linear migrations, no downgrade path
 - **Tests** use real temp git repos via `createTempProject()` — no mocking
 - **Multi-directory scanning**: `WatcherService.multi()` merges FS events from multiple dirs; `ProjectScanner.scanAll()` loops through `db.getScanDirs()`
 - **Content-based type inference**: `_inferType()` checks for build files (pubspec.yaml, package.json, etc.) → `code`, otherwise → `research`. Overridable via DB `projectType` setting.
 - **Right-click context menus** on cards: move between tabs, toggle private, ignore project
+
+### Drift Schema Changes
+
+`lib/data/db/app_database.g.dart` is intentionally committed (generated code,
+not gitignored) so the app builds without a codegen step. After changing any
+table in `lib/data/db/tables/`:
+1. Run `dart run build_runner build --delete-conflicting-outputs` to regenerate `app_database.g.dart`.
+2. Bump `schemaVersion` in `app_database.dart` and add a migration step for it.
+3. There is no downgrade path — migrations are linear/forward-only; a schema bump cannot be safely reverted once released.
 
 ### State Management (Riverpod 3.x)
 

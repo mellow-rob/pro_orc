@@ -86,17 +86,16 @@ void main() {
   });
 
   group('No-duplicate-project audit (FR-017/SC-008)', () {
-    testWidgets(
-      'no "duplicate project" affordance exists in the tab body',
-      (tester) async {
-        await _pump(tester, [_project('wtv')]);
+    testWidgets('no "duplicate project" affordance exists in the tab body', (
+      tester,
+    ) async {
+      await _pump(tester, [_project('wtv')]);
 
-        expect(find.textContaining('duplizieren'), findsNothing);
-        expect(find.textContaining('Duplizieren'), findsNothing);
-        expect(find.textContaining('Duplicate'), findsNothing);
-        expect(find.textContaining('Kopie'), findsNothing);
-      },
-    );
+      expect(find.textContaining('duplizieren'), findsNothing);
+      expect(find.textContaining('Duplizieren'), findsNothing);
+      expect(find.textContaining('Duplicate'), findsNothing);
+      expect(find.textContaining('Kopie'), findsNothing);
+    });
 
     testWidgets(
       'no "duplicate project" entry exists in the card context menu',
@@ -105,10 +104,7 @@ void main() {
 
         final cardFinder = find.text('wtv');
         await tester.tap(
-          find.ancestor(
-            of: cardFinder,
-            matching: find.byType(GestureDetector),
-          ),
+          find.ancestor(of: cardFinder, matching: find.byType(GestureDetector)),
           buttons: kSecondaryButton,
         );
         await tester.pumpAndSettle();

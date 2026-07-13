@@ -123,50 +123,35 @@ void main() {
       await container.read(membershipProvider.notifier).assign('wtv', 'g1');
       await tester.pump();
 
-      await _dragTo(
-        tester,
-        find.text('wtv'),
-        find.text('Kundenprojekte'),
-      );
+      await _dragTo(tester, find.text('wtv'), find.text('Kundenprojekte'));
 
       expect(container.read(membershipProvider)['wtv'], equals('g2'));
     });
 
-    testWidgets(
-      'dropping onto the section the project already belongs to is a '
-      'silent no-op (no DB write)',
-      (tester) async {
-        const source = ProjectGroup(
-          id: 'g1',
-          name: 'Vodafone',
-          isSystem: false,
-        );
-        const target = ProjectGroup(
-          id: 'g1',
-          name: 'Vodafone',
-          isSystem: false,
-        );
-        final project = _project('wtv');
+    testWidgets('dropping onto the section the project already belongs to is a '
+        'silent no-op (no DB write)', (tester) async {
+      const source = ProjectGroup(id: 'g1', name: 'Vodafone', isSystem: false);
+      const target = ProjectGroup(id: 'g1', name: 'Vodafone', isSystem: false);
+      final project = _project('wtv');
 
-        final container = await _pumpTwoSections(
-          tester,
-          sourceGroup: source,
-          targetGroup: target,
-          dragProject: project,
-        );
-        await container.read(membershipProvider.notifier).assign('wtv', 'g1');
-        await tester.pump();
+      final container = await _pumpTwoSections(
+        tester,
+        sourceGroup: source,
+        targetGroup: target,
+        dragProject: project,
+      );
+      await container.read(membershipProvider.notifier).assign('wtv', 'g1');
+      await tester.pump();
 
-        // Drop onto the OTHER rendered instance of the same group's
-        // section header text — still group id 'g1', so this must no-op.
-        final headings = find.text('Vodafone');
-        expect(headings, findsNWidgets(2));
+      // Drop onto the OTHER rendered instance of the same group's
+      // section header text — still group id 'g1', so this must no-op.
+      final headings = find.text('Vodafone');
+      expect(headings, findsNWidgets(2));
 
-        await _dragTo(tester, find.text('wtv'), headings.last);
+      await _dragTo(tester, find.text('wtv'), headings.last);
 
-        expect(container.read(membershipProvider)['wtv'], equals('g1'));
-      },
-    );
+      expect(container.read(membershipProvider)['wtv'], equals('g1'));
+    });
 
     testWidgets('dropping onto Archiv assigns the project there', (
       tester,

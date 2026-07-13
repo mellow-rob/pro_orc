@@ -238,26 +238,45 @@ class _NetworkCanvasState extends State<_NetworkCanvas> {
 /// right, evenly spaced vertically within each column. Same column strategy as
 /// the M4 mini-graph, scaled to all projects (M7 AD-2 — no force-directed).
 class _NetworkLayout {
-  _NetworkLayout({required this.graph, required this.size}) {
-    _placeColumn(graph.agentNodes, size.width * 0.15);
-    _placeColumn(graph.projectNodes, size.width * 0.5);
-    _placeColumn(graph.skillNodes, size.width * 0.85);
+  factory _NetworkLayout({
+    required MultiCollaborationGraphData graph,
+    required Size size,
+  }) {
+    final nodeById = <String, GraphNode>{};
+    final positions = <String, Offset>{};
+    void placeColumn(List<GraphNode> nodes, double x) {
+      if (nodes.isEmpty) return;
+      final step = size.height / (nodes.length + 1);
+      for (var i = 0; i < nodes.length; i++) {
+        final node = nodes[i];
+        nodeById[node.id] = node;
+        positions[node.id] = Offset(x, step * (i + 1));
+      }
+    }
+
+    placeColumn(graph.agentNodes, size.width * 0.15);
+    placeColumn(graph.projectNodes, size.width * 0.5);
+    placeColumn(graph.skillNodes, size.width * 0.85);
+
+    return _NetworkLayout._(
+      graph: graph,
+      size: size,
+      nodeById: nodeById,
+      positions: positions,
+    );
   }
+
+  const _NetworkLayout._({
+    required this.graph,
+    required this.size,
+    required this.nodeById,
+    required this.positions,
+  });
 
   final MultiCollaborationGraphData graph;
   final Size size;
-  final Map<String, GraphNode> nodeById = {};
-  final Map<String, Offset> positions = {};
-
-  void _placeColumn(List<GraphNode> nodes, double x) {
-    if (nodes.isEmpty) return;
-    final step = size.height / (nodes.length + 1);
-    for (var i = 0; i < nodes.length; i++) {
-      final node = nodes[i];
-      nodeById[node.id] = node;
-      positions[node.id] = Offset(x, step * (i + 1));
-    }
-  }
+  final Map<String, GraphNode> nodeById;
+  final Map<String, Offset> positions;
 }
 
 /// Draws each edge as a quadratic Bezier; edges touching the highlighted node

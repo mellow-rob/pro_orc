@@ -30,13 +30,10 @@ class ProjectListRow extends ConsumerWidget {
 
   ProjectType get _type => project.projectType ?? ProjectType.code;
 
-  Color _accent(AppColors colors) =>
-      _type == ProjectType.research ? colors.fuch : colors.cyan;
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = Theme.of(context).extension<AppColors>()!;
-    final accent = _accent(colors);
+    final accent = _type.accent(colors);
     final hiddenSet = ref.watch(hiddenProjectsProvider);
     final isHidden = hiddenSet.contains(project.folderId);
     final progress = project.a1?.overallProgress;
@@ -53,9 +50,7 @@ class ProjectListRow extends ConsumerWidget {
             isHidden: isHidden,
             ref: ref,
             project: project,
-            moveTarget: _type == ProjectType.code
-                ? ProjectType.research
-                : ProjectType.code,
+            moveTarget: _type.moveTarget,
           ),
           child: Padding(
             padding: const EdgeInsets.only(bottom: 8),
@@ -68,13 +63,7 @@ class ProjectListRow extends ConsumerWidget {
                 ),
                 child: Row(
                   children: [
-                    Icon(
-                      _type == ProjectType.research
-                          ? LucideIcons.beaker100
-                          : LucideIcons.codeXml100,
-                      color: accent,
-                      size: 15,
-                    ),
+                    Icon(_type.icon, color: accent, size: 15),
                     const SizedBox(width: 8),
                     TypeBadge(type: _type),
                     const SizedBox(width: 6),
@@ -177,9 +166,7 @@ class ProjectListRow extends ConsumerWidget {
                           isHidden: isHidden,
                           ref: ref,
                           project: project,
-                          moveTarget: _type == ProjectType.code
-                              ? ProjectType.research
-                              : ProjectType.code,
+                          moveTarget: _type.moveTarget,
                         ),
                       ),
                     ),

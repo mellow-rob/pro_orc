@@ -12,6 +12,7 @@ import 'package:pro_orc/features/shared/project_context_menu.dart';
 import 'package:pro_orc/providers/database_provider.dart';
 import 'package:pro_orc/providers/groups_provider.dart';
 import 'package:pro_orc/providers/project_group_membership_provider.dart';
+import 'package:pro_orc/providers/projects_provider.dart';
 import 'package:pro_orc/theme/n3_colors.dart';
 
 void main() {
@@ -43,7 +44,13 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
 
     final container = ProviderContainer(
-      overrides: [appDatabaseProvider.overrideWithValue(db)],
+      overrides: [
+        appDatabaseProvider.overrideWithValue(db),
+        // groupsProvider/membershipProvider now await projectsProvider.future
+        // (F-007 fix) — override with an empty resolved list so tests don't
+        // hit the real ProjectScanner/filesystem via the default scan dir.
+        projectsProvider.overrideWith((ref) async => []),
+      ],
     );
     addTearDown(container.dispose);
     container.read(groupsProvider);
@@ -116,7 +123,9 @@ void main() {
       tester,
     ) async {
       final container = await pumpHost(tester, makeProject());
-      await container.read(membershipProvider.notifier).assign('wtv', kArchiveGroupId);
+      await container
+          .read(membershipProvider.notifier)
+          .assign('wtv', kArchiveGroupId);
       await tester.pump();
 
       await rightClick(tester);
@@ -124,28 +133,29 @@ void main() {
       expect(find.text('Aus Gruppe entfernen'), findsOneWidget);
     });
 
-    testWidgets('submenu lists all groups including Archiv and assigns on tap', (
-      tester,
-    ) async {
-      await db.createGroup('Vodafone');
-      final container = await pumpHost(tester, makeProject());
-      await tester.pump();
+    testWidgets(
+      'submenu lists all groups including Archiv and assigns on tap',
+      (tester) async {
+        await db.createGroup('Vodafone');
+        final container = await pumpHost(tester, makeProject());
+        await tester.pump();
 
-      await rightClick(tester);
-      await tester.tap(find.text('Gruppe zuweisen'));
-      await tester.pumpAndSettle();
+        await rightClick(tester);
+        await tester.tap(find.text('Gruppe zuweisen'));
+        await tester.pumpAndSettle();
 
-      expect(find.text('Vodafone'), findsOneWidget);
-      expect(find.text('Archiv'), findsOneWidget);
-      expect(find.text('Neue Gruppe…'), findsOneWidget);
+        expect(find.text('Vodafone'), findsOneWidget);
+        expect(find.text('Archiv'), findsOneWidget);
+        expect(find.text('Neue Gruppe…'), findsOneWidget);
 
-      await tester.tap(find.text('Vodafone'));
-      await tester.pumpAndSettle();
+        await tester.tap(find.text('Vodafone'));
+        await tester.pumpAndSettle();
 
-      final groups = container.read(groupsProvider);
-      final vodafoneId = groups.firstWhere((g) => g.name == 'Vodafone').id;
-      expect(container.read(membershipProvider)['wtv'], equals(vodafoneId));
-    });
+        final groups = container.read(groupsProvider);
+        final vodafoneId = groups.firstWhere((g) => g.name == 'Vodafone').id;
+        expect(container.read(membershipProvider)['wtv'], equals(vodafoneId));
+      },
+    );
 
     testWidgets('assigning to a new group replaces the previous one (1:1)', (
       tester,
@@ -159,7 +169,9 @@ void main() {
       final vodafoneId = groups.firstWhere((g) => g.name == 'Vodafone').id;
       final kundenId = groups.firstWhere((g) => g.name == 'Kundenprojekte').id;
 
-      await container.read(membershipProvider.notifier).assign('wtv', vodafoneId);
+      await container
+          .read(membershipProvider.notifier)
+          .assign('wtv', vodafoneId);
       await tester.pump();
 
       await rightClick(tester);
@@ -169,7 +181,10 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(container.read(membershipProvider)['wtv'], equals(kundenId));
-      expect(container.read(membershipProvider)['wtv'], isNot(equals(vodafoneId)));
+      expect(
+        container.read(membershipProvider)['wtv'],
+        isNot(equals(vodafoneId)),
+      );
     });
 
     testWidgets('"Neue Gruppe…" creates a group and assigns in one step', (
@@ -193,16 +208,16 @@ void main() {
       expect(container.read(membershipProvider)['wtv'], equals(newGroup.id));
     });
 
-    testWidgets('"Aus Gruppe entfernen" unassigns the project', (
-      tester,
-    ) async {
+    testWidgets('"Aus Gruppe entfernen" unassigns the project', (tester) async {
       await db.createGroup('Vodafone');
       final container = await pumpHost(tester, makeProject());
       await tester.pump();
 
       final groups = container.read(groupsProvider);
       final vodafoneId = groups.firstWhere((g) => g.name == 'Vodafone').id;
-      await container.read(membershipProvider.notifier).assign('wtv', vodafoneId);
+      await container
+          .read(membershipProvider.notifier)
+          .assign('wtv', vodafoneId);
       await tester.pump();
 
       await rightClick(tester);

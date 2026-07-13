@@ -101,7 +101,10 @@ void _showAt({
         child: Text(isHidden ? 'Oeffentlich' : 'Privat'),
       ),
       PopupMenuItem(value: 'move', child: Text(moveLabel)),
-      const PopupMenuItem(value: 'assign_group', child: Text('Gruppe zuweisen')),
+      const PopupMenuItem(
+        value: 'assign_group',
+        child: Text('Gruppe zuweisen'),
+      ),
       if (hasGroup)
         const PopupMenuItem(
           value: 'unassign_group',

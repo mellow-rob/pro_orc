@@ -1,3 +1,4 @@
+import 'dart:developer' as developer;
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -6,6 +7,10 @@ import 'package:path/path.dart' as path;
 import 'package:pro_orc/data/models/gitignore_template.dart';
 import 'package:pro_orc/data/models/project_type.dart';
 import 'package:pro_orc/data/services/project_creator_service.dart';
+import 'package:pro_orc/features/shared/create_project/dialog_buttons.dart';
+import 'package:pro_orc/features/shared/create_project/dialog_header.dart';
+import 'package:pro_orc/features/shared/create_project/form_fields.dart';
+import 'package:pro_orc/features/shared/create_project/toggles_section.dart';
 import 'package:pro_orc/features/shell/glass_dialog.dart';
 import 'package:pro_orc/providers/database_provider.dart';
 import 'package:pro_orc/theme/n3_colors.dart';
@@ -104,7 +109,11 @@ class _CreateProjectDialogState extends ConsumerState<CreateProjectDialog>
       testFile.writeAsStringSync('');
       testFile.deleteSync();
       return true;
-    } catch (_) {
+    } catch (e) {
+      developer.log(
+        'Directory not writable: $dirPath: $e',
+        name: 'create_project_dialog',
+      );
       return false;
     }
   }
@@ -265,29 +274,11 @@ class _CreateProjectDialogState extends ConsumerState<CreateProjectDialog>
   }
 
   Widget _buildHeader(AppColors colors, Color accent) {
-    return Row(
-      children: [
-        Expanded(
-          child: AnimatedSwitcher(
-            duration: const Duration(milliseconds: 200),
-            child: Text(
-              _dialogTitle,
-              key: ValueKey(_tabController.index),
-              style: TextStyle(
-                color: colors.textPri,
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ),
-        IconButton(
-          icon: Icon(Icons.close, color: colors.textDim, size: 20),
-          onPressed: () => Navigator.of(context).pop(),
-          splashRadius: 16,
-          tooltip: 'Schliessen',
-        ),
-      ],
+    return CreateProjectDialogHeader(
+      title: _dialogTitle,
+      tabIndex: _tabController.index,
+      colors: colors,
+      onClose: () => Navigator.of(context).pop(),
     );
   }
 
@@ -321,70 +312,34 @@ class _CreateProjectDialogState extends ConsumerState<CreateProjectDialog>
   }
 
   Widget _buildNameField(AppColors colors, Color accent) {
-    return TextField(
+    return ProjectNameField(
       controller: _nameController,
-      autofocus: true,
-      style: TextStyle(color: colors.textPri, fontSize: 14),
-      cursorColor: accent,
-      decoration: colors.glassInputDecoration(
-        hintText: 'Projektname',
-        accentColor: accent,
-      ),
+      colors: colors,
+      accent: accent,
       onChanged: _updateDerivedName,
     );
   }
 
   Widget _buildFolderPreview(AppColors colors) {
-    if (_derivedFolderName.isEmpty) {
-      return const SizedBox(height: 16);
-    }
-    if (_folderExists) {
-      return Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-        child: Text(
-          'Ordner existiert bereits',
-          style: TextStyle(color: colors.amber, fontSize: 12),
-        ),
-      );
-    }
     // Full path preview: ~/code/mein-projekt
     final fullPath = _selectedScanDir != null
         ? _abbreviatePath(path.join(_selectedScanDir!, _derivedFolderName))
         : _derivedFolderName;
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-      child: Text(
-        fullPath,
-        style: TextStyle(color: colors.textSec, fontSize: 12),
-        overflow: TextOverflow.ellipsis,
-      ),
+    return FolderPreview(
+      derivedFolderName: _derivedFolderName,
+      folderExists: _folderExists,
+      fullPathPreview: fullPath,
+      colors: colors,
     );
   }
 
   Widget _buildZielordnerDropdown(AppColors colors, Color accent) {
-    if (_scanDirs.isEmpty) return const SizedBox.shrink();
-    // Hide dropdown if only one scan dir (auto-selected)
-    if (_scanDirs.length == 1) return const SizedBox.shrink();
-
-    return DropdownButtonFormField<String>(
-      initialValue: _selectedScanDir,
-      dropdownColor: colors.bgElev,
-      style: TextStyle(color: colors.textPri, fontSize: 14),
-      iconEnabledColor: colors.textDim,
-      decoration: colors.glassInputDecoration(
-        labelText: 'Zielordner',
-        accentColor: accent,
-      ),
-      items: _scanDirs.map((dir) {
-        return DropdownMenuItem<String>(
-          value: dir,
-          child: Text(
-            _abbreviatePath(dir),
-            style: TextStyle(color: colors.textPri, fontSize: 14),
-            overflow: TextOverflow.ellipsis,
-          ),
-        );
-      }).toList(),
+    return ZielordnerDropdown(
+      scanDirs: _scanDirs,
+      selectedScanDir: _selectedScanDir,
+      colors: colors,
+      accent: accent,
+      abbreviatePath: _abbreviatePath,
       onChanged: (value) {
         setState(() {
           _selectedScanDir = value;
@@ -395,242 +350,62 @@ class _CreateProjectDialogState extends ConsumerState<CreateProjectDialog>
   }
 
   Widget _buildToggles(AppColors colors, Color accent) {
-    final isCode = _tabController.index == 0;
-
-    final codeToggles = Column(
-      key: const ValueKey('code-toggles'),
-      children: [
-        _buildToggle(
-          colors: colors,
-          accent: accent,
-          title: 'Git Repository initialisieren',
-          value: _gitInit,
-          onChanged: (v) => setState(() => _gitInit = v),
-        ),
-        _buildToggle(
-          colors: colors,
-          accent: accent,
-          title: 'CLAUDE.md erstellen',
-          value: _claudeMd,
-          onChanged: (v) => setState(() => _claudeMd = v),
-        ),
-        _buildGitignoreDropdown(colors, accent),
-        _buildToggle(
-          colors: colors,
-          accent: accent,
-          title: 'Terminal oeffnen',
-          value: _terminal,
-          onChanged: (v) {
-            setState(() {
-              _terminal = v;
-              // Switching off Terminal also switches off rem-sleep
-              if (!v) _codeRemSleep = false;
-            });
-          },
-        ),
-        _buildToggle(
-          colors: colors,
-          accent: accent,
-          title: 'rem-sleep nach Erstellung',
-          value: _codeRemSleep,
-          onChanged: (v) {
-            setState(() {
-              _codeRemSleep = v;
-              // rem-sleep ON forces Terminal ON
-              if (v) _terminal = true;
-            });
-          },
-        ),
-      ],
-    );
-
-    final researchToggles = Column(
-      key: const ValueKey('research-toggles'),
-      children: [
-        _buildToggle(
-          colors: colors,
-          accent: accent,
-          title: 'Terminal oeffnen',
-          value: _researchTerminal,
-          onChanged: (v) {
-            setState(() {
-              _researchTerminal = v;
-              // Switching off Terminal also switches off rem-sleep
-              if (!v) _researchRemSleep = false;
-            });
-          },
-        ),
-        _buildToggle(
-          colors: colors,
-          accent: accent,
-          title: 'rem-sleep nach Erstellung',
-          value: _researchRemSleep,
-          onChanged: (v) {
-            setState(() {
-              _researchRemSleep = v;
-              // rem-sleep ON forces Terminal ON
-              if (v) _researchTerminal = true;
-            });
-          },
-        ),
-      ],
-    );
-
-    return AnimatedSize(
-      duration: const Duration(milliseconds: 200),
-      curve: Curves.easeInOut,
-      alignment: Alignment.topCenter,
-      child: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 200),
-        child: isCode ? codeToggles : researchToggles,
-      ),
-    );
-  }
-
-  Widget _buildGitignoreDropdown(AppColors colors, Color accent) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2),
-      child: DropdownButtonFormField<GitignoreTemplate>(
-        initialValue: _gitignoreTemplate,
-        dropdownColor: colors.bgElev,
-        style: TextStyle(color: colors.textPri, fontSize: 13),
-        iconEnabledColor: colors.textDim,
-        isExpanded: true,
-        decoration: colors.glassInputDecoration(
-          labelText: '.gitignore Template',
-          accentColor: accent,
-          isDense: true,
-        ),
-        items: const [
-          DropdownMenuItem(
-            value: GitignoreTemplate.none,
-            child: Text('Kein .gitignore'),
-          ),
-          DropdownMenuItem(
-            value: GitignoreTemplate.flutter,
-            child: Text('Flutter'),
-          ),
-          DropdownMenuItem(
-            value: GitignoreTemplate.nodejs,
-            child: Text('Node.js'),
-          ),
-          DropdownMenuItem(
-            value: GitignoreTemplate.nextjs,
-            child: Text('HTML + Next.js'),
-          ),
-          DropdownMenuItem(
-            value: GitignoreTemplate.python,
-            child: Text('Python'),
-          ),
-          DropdownMenuItem(
-            value: GitignoreTemplate.html,
-            child: Text('HTML (statisch)'),
-          ),
-        ],
-        onChanged: (value) {
-          if (value != null) setState(() => _gitignoreTemplate = value);
-        },
-      ),
-    );
-  }
-
-  Widget _buildToggle({
-    required AppColors colors,
-    required Color accent,
-    required String title,
-    required bool value,
-    required ValueChanged<bool> onChanged,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              title,
-              style: TextStyle(color: colors.textPri, fontSize: 13),
-            ),
-          ),
-          SizedBox(
-            height: 24,
-            width: 40,
-            child: FittedBox(
-              fit: BoxFit.contain,
-              child: Switch.adaptive(
-                value: value,
-                activeThumbColor: Colors.white,
-                activeTrackColor: Colors.white.withValues(alpha: 0.4),
-                inactiveThumbColor: colors.textDim,
-                inactiveTrackColor: colors.textDim.withValues(alpha: 0.2),
-                onChanged: onChanged,
-              ),
-            ),
-          ),
-        ],
-      ),
+    return TogglesSection(
+      isCode: _tabController.index == 0,
+      colors: colors,
+      accent: accent,
+      gitInit: _gitInit,
+      onGitInitChanged: (v) => setState(() => _gitInit = v),
+      claudeMd: _claudeMd,
+      onClaudeMdChanged: (v) => setState(() => _claudeMd = v),
+      gitignoreTemplate: _gitignoreTemplate,
+      onGitignoreTemplateChanged: (v) =>
+          setState(() => _gitignoreTemplate = v),
+      terminal: _terminal,
+      onTerminalChanged: (v) {
+        setState(() {
+          _terminal = v;
+          // Switching off Terminal also switches off rem-sleep
+          if (!v) _codeRemSleep = false;
+        });
+      },
+      codeRemSleep: _codeRemSleep,
+      onCodeRemSleepChanged: (v) {
+        setState(() {
+          _codeRemSleep = v;
+          // rem-sleep ON forces Terminal ON
+          if (v) _terminal = true;
+        });
+      },
+      researchTerminal: _researchTerminal,
+      onResearchTerminalChanged: (v) {
+        setState(() {
+          _researchTerminal = v;
+          // Switching off Terminal also switches off rem-sleep
+          if (!v) _researchRemSleep = false;
+        });
+      },
+      researchRemSleep: _researchRemSleep,
+      onResearchRemSleepChanged: (v) {
+        setState(() {
+          _researchRemSleep = v;
+          // rem-sleep ON forces Terminal ON
+          if (v) _researchTerminal = true;
+        });
+      },
     );
   }
 
   Widget _buildButtons(AppColors colors, Color accent) {
-    final isDisabled = _isLoading || _isCreated;
-
-    Widget buttonChild;
-    if (_isLoading) {
-      buttonChild = SizedBox(
-        width: 20,
-        height: 20,
-        child: CircularProgressIndicator(strokeWidth: 2, color: colors.bgBase),
-      );
-    } else if (_isCreated) {
-      buttonChild = Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.check, color: colors.bgBase, size: 16),
-          const SizedBox(width: 4),
-          const Text('Erstellt!'),
-        ],
-      );
-    } else {
-      buttonChild = const Text('Erstellen');
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        // Warning/error text — shown above buttons row
-        if (_errorMessage != null)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 8),
-            child: Text(
-              _errorMessage!,
-              style: TextStyle(color: colors.amber, fontSize: 12),
-            ),
-          ),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.end,
-          children: [
-            TextButton(
-              onPressed: isDisabled ? null : () => Navigator.of(context).pop(),
-              style: TextButton.styleFrom(
-                foregroundColor: colors.textSec,
-                disabledForegroundColor: colors.textDim.withValues(alpha: 0.4),
-              ),
-              child: const Text('Abbrechen'),
-            ),
-            const SizedBox(width: 8),
-            FilledButton(
-              onPressed: _isFormValid ? _submit : null,
-              style: FilledButton.styleFrom(
-                backgroundColor: accent,
-                disabledBackgroundColor: accent.withValues(alpha: 0.3),
-                foregroundColor: colors.bgBase,
-                disabledForegroundColor: colors.bgBase.withValues(alpha: 0.5),
-              ),
-              child: buttonChild,
-            ),
-          ],
-        ),
-      ],
+    return CreateProjectDialogButtons(
+      colors: colors,
+      accent: accent,
+      isLoading: _isLoading,
+      isCreated: _isCreated,
+      isFormValid: _isFormValid,
+      errorMessage: _errorMessage,
+      onCancel: () => Navigator.of(context).pop(),
+      onSubmit: _submit,
     );
   }
 }

@@ -1,3 +1,4 @@
+import 'dart:developer' as developer;
 import 'dart:io';
 
 import 'package:path/path.dart' as p;
@@ -95,9 +96,13 @@ class ObsidianVaultRoadmapRepository implements RoadmapRepository {
         data: RoadmapData(milestones: [milestone]),
         source: RoadmapSource.vault,
       );
-    } catch (_) {
+    } catch (e) {
       // Defensive catch-all per project convention: never throw, even on
       // unexpected I/O errors (permissions, symlink loops, etc.).
+      developer.log(
+        'Failed to resolve vault roadmap for $slug: $e',
+        name: 'vault_roadmap_repository',
+      );
       return const RoadmapResult(
         data: RoadmapData.empty,
         source: RoadmapSource.vault,
@@ -132,7 +137,11 @@ class ObsidianVaultRoadmapRepository implements RoadmapRepository {
     String? content;
     try {
       content = await specFile.readAsString();
-    } catch (_) {
+    } catch (e) {
+      developer.log(
+        'Failed to read spec file ${specFile.path}: $e',
+        name: 'vault_roadmap_repository',
+      );
       return null;
     }
 

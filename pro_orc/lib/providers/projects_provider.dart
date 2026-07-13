@@ -24,7 +24,9 @@ final projectsProvider = FutureProvider<List<ProjectModel>>((ref) async {
   // One-time, idempotent seed (FR-014/015/016) — runs after every scan but
   // the seed-applied flag makes every call after the first a no-op.
   final db = ref.read(appDatabaseProvider);
-  final seeded = await ProjectOrganizationSeedService(db).applyIfNeeded(projects);
+  final seeded = await ProjectOrganizationSeedService(
+    db,
+  ).applyIfNeeded(projects);
   if (seeded) {
     // groupsProvider/membershipProvider may have already loaded their state
     // from the DB before the seed wrote to it — refresh so the seeded

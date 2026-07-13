@@ -5,6 +5,7 @@ import 'package:pro_orc/data/models/project_group.dart';
 import 'package:pro_orc/providers/database_provider.dart';
 import 'package:pro_orc/providers/group_name_validation.dart';
 import 'package:pro_orc/providers/project_group_membership_provider.dart';
+import 'package:pro_orc/providers/projects_provider.dart';
 
 /// Result of a group-mutating action that can be refused for reasons the UI
 /// (Wave 4) needs to distinguish: a name-validation failure, or an attempt
@@ -41,6 +42,13 @@ class GroupsNotifier extends Notifier<List<ProjectGroup>> {
   }
 
   Future<void> _loadFromDb() async {
+    // Wait for projectsProvider's first resolution before reading groups —
+    // it performs the one-time organization seed (F-014/015/016) and only
+    // then can this read see the seeded "Vodafone"/"Neural AI
+    // Produkte"/"Kundenprojekte" groups. Without this await, a first-launch
+    // UI that reads groupsProvider before projectsProvider settles would see
+    // an empty list even though the seed completes moments later (F-007).
+    await ref.watch(projectsProvider.future);
     final db = ref.read(appDatabaseProvider);
     final rows = await db.getGroups();
     state = rows.map(_fromRow).toList();

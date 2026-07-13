@@ -1,3 +1,4 @@
+import 'dart:developer' as developer;
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -23,7 +24,11 @@ class SpecViewer extends StatelessWidget {
       if (!file.existsSync()) return null;
       final content = file.readAsStringSync();
       return content.trim().isEmpty ? null : content;
-    } catch (_) {
+    } catch (e) {
+      developer.log(
+        'Failed to read spec at ${spec.path}: $e',
+        name: 'spec_viewer',
+      );
       return null;
     }
   }

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:developer' as developer;
 import 'dart:io';
 
 import 'package:meta/meta.dart';
@@ -10,6 +11,13 @@ import 'package:pro_orc/data/models/git_data.dart';
 /// All [Process.run] calls use [runInShell: true] because macOS GUI apps do not
 /// have Homebrew in PATH. The [gitBinary] parameter allows overriding the git
 /// binary path (default: 'git').
+///
+/// Convention (applies to every `Process.run` call in this codebase): when
+/// `runInShell: true`, never pass a single interpolated command string —
+/// always pass a fixed executable with list-form arguments. A shell-interpolated
+/// string would let a crafted project path/argument break out into arbitrary
+/// shell syntax; list-form args are passed directly to the process, not
+/// re-parsed by a shell.
 ///
 /// Returns [GitData.empty] on any error: not a git repo, timeout, no commits,
 /// nonexistent directory.
@@ -63,7 +71,11 @@ Future<GitData> readGitData(
       lastCommitMessage: subject.isNotEmpty ? subject : null,
       githubUrl: githubUrl,
     );
-  } catch (_) {
+  } catch (e) {
+    developer.log(
+      'Failed to read git data for $projectPath: $e',
+      name: 'git_reader',
+    );
     return GitData.empty;
   }
 }

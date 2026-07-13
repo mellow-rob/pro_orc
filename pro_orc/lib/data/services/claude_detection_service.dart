@@ -1,3 +1,4 @@
+import 'dart:developer' as developer;
 import 'dart:io';
 
 /// Detects whether the Claude Code CLI is installed on the system.
@@ -25,7 +26,11 @@ class ClaudeDetectionService {
         _claudeCommand,
       ], runInShell: true);
       return result.exitCode == 0;
-    } catch (_) {
+    } catch (e) {
+      developer.log(
+        'Failed to check Claude CLI installation: $e',
+        name: 'claude_detection_service',
+      );
       return false;
     }
   }
@@ -39,7 +44,11 @@ class ClaudeDetectionService {
       if (result.exitCode != 0) return null;
       final output = (result.stdout as String).trim();
       return output.isEmpty ? null : output;
-    } catch (_) {
+    } catch (e) {
+      developer.log(
+        'Failed to get Claude CLI version: $e',
+        name: 'claude_detection_service',
+      );
       return null;
     }
   }
