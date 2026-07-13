@@ -1,3 +1,4 @@
+import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,7 +9,6 @@ import 'package:pro_orc/data/models/project_type.dart';
 import 'package:pro_orc/features/projects/projects_tab.dart';
 import 'package:pro_orc/providers/database_provider.dart';
 import 'package:pro_orc/providers/groups_provider.dart';
-import 'package:pro_orc/providers/hidden_projects_provider.dart';
 import 'package:pro_orc/providers/project_group_membership_provider.dart';
 import 'package:pro_orc/providers/projects_provider.dart';
 import 'package:pro_orc/providers/view_mode_provider.dart';
@@ -27,14 +27,15 @@ ProjectModel _project(String folderId, {ProjectType? type = ProjectType.code}) {
 
 Future<ProviderContainer> _pump(
   WidgetTester tester,
-  List<ProjectModel> projects,
-) async {
-  final db = AppDatabase(NativeDatabase.memory());
-  addTearDown(db.close);
+  List<ProjectModel> projects, {
+  AppDatabase? db,
+}) async {
+  final database = db ?? AppDatabase(NativeDatabase.memory());
+  if (db == null) addTearDown(database.close);
 
   final container = ProviderContainer(
     overrides: [
-      appDatabaseProvider.overrideWithValue(db),
+      appDatabaseProvider.overrideWithValue(database),
       projectsProvider.overrideWith((ref) async => projects),
       watcherProvider.overrideWith((ref) => const Stream<WatchEvent>.empty()),
     ],
@@ -43,7 +44,6 @@ Future<ProviderContainer> _pump(
 
   await container.read(projectsProvider.future);
   container.read(groupsProvider);
-  container.read(hiddenProjectsProvider);
   container.read(membershipProvider);
   container.read(viewModeProvider);
 
@@ -134,22 +134,25 @@ void main() {
     });
 
     testWidgets(
-      'hidden project is excluded until the hidden banner is expanded',
+      'a project flagged is_hidden=1 in the DB is still shown (Privat '
+      'feature removed — the UI no longer hides any project)',
       (tester) async {
-        final container = await _pump(tester, [
+        final db = AppDatabase(NativeDatabase.memory());
+        addTearDown(db.close);
+        await db.upsertProjectSettings(
+          ProjectSettingsTableCompanion(
+            folderId: const Value('secret-project'),
+            isHidden: const Value(true),
+          ),
+        );
+
+        await _pump(tester, [
           _project('wtv'),
           _project('secret-project'),
-        ]);
+        ], db: db);
 
-        await container
-            .read(hiddenProjectsProvider.notifier)
-            .toggle('secret-project');
-        await tester.pump();
-
-        expect(find.text('secret-project'), findsNothing);
-        // Actual banner copy is "$n private Projekt(e)" (see
-        // HiddenProjectsBanner in hidden_projects_banner.dart), not "privates".
-        expect(find.textContaining('private Projekt'), findsOneWidget);
+        expect(find.text('secret-project'), findsOneWidget);
+        expect(find.text('wtv'), findsOneWidget);
       },
     );
 

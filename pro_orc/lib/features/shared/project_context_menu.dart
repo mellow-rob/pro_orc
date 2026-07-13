@@ -9,7 +9,6 @@ import 'package:pro_orc/features/shared/group_assignment_menu.dart';
 import 'package:pro_orc/features/shared/rename_project_dialog.dart';
 import 'package:pro_orc/providers/database_provider.dart';
 import 'package:pro_orc/data/services/quick_actions_service.dart';
-import 'package:pro_orc/providers/hidden_projects_provider.dart';
 import 'package:pro_orc/providers/project_group_membership_provider.dart';
 import 'package:pro_orc/providers/projects_provider.dart';
 
@@ -24,7 +23,6 @@ import 'package:pro_orc/providers/projects_provider.dart';
 void showProjectContextMenu({
   required BuildContext context,
   required TapUpDetails details,
-  required bool isHidden,
   required WidgetRef ref,
   required ProjectModel project,
   required ProjectType moveTarget,
@@ -38,7 +36,6 @@ void showProjectContextMenu({
   _showAt(
     context: context,
     position: position,
-    isHidden: isHidden,
     ref: ref,
     project: project,
     moveTarget: moveTarget,
@@ -51,7 +48,6 @@ void showProjectContextMenu({
 void showProjectContextMenuAt({
   required BuildContext context,
   required Offset position,
-  required bool isHidden,
   required WidgetRef ref,
   required ProjectModel project,
   required ProjectType moveTarget,
@@ -66,7 +62,6 @@ void showProjectContextMenuAt({
   _showAt(
     context: context,
     position: rect,
-    isHidden: isHidden,
     ref: ref,
     project: project,
     moveTarget: moveTarget,
@@ -81,7 +76,6 @@ Size _overlaySize(BuildContext context) {
 void _showAt({
   required BuildContext context,
   required RelativeRect position,
-  required bool isHidden,
   required WidgetRef ref,
   required ProjectModel project,
   required ProjectType moveTarget,
@@ -96,10 +90,6 @@ void _showAt({
     context: context,
     position: position,
     items: [
-      PopupMenuItem(
-        value: 'toggle_hidden',
-        child: Text(isHidden ? 'Oeffentlich' : 'Privat'),
-      ),
       PopupMenuItem(value: 'move', child: Text(moveLabel)),
       const PopupMenuItem(
         value: 'assign_group',
@@ -119,8 +109,6 @@ void _showAt({
   ).then((value) async {
     if (!context.mounted) return;
     switch (value) {
-      case 'toggle_hidden':
-        ref.read(hiddenProjectsProvider.notifier).toggle(project.folderId);
       case 'move':
         final db = ref.read(appDatabaseProvider);
         await db.upsertProjectSettings(

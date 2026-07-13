@@ -9,7 +9,6 @@ import 'package:pro_orc/data/models/project_type.dart';
 import 'package:pro_orc/features/projects/projects_tab.dart';
 import 'package:pro_orc/providers/database_provider.dart';
 import 'package:pro_orc/providers/groups_provider.dart';
-import 'package:pro_orc/providers/hidden_projects_provider.dart';
 import 'package:pro_orc/providers/project_group_membership_provider.dart';
 import 'package:pro_orc/providers/projects_provider.dart';
 import 'package:pro_orc/providers/view_mode_provider.dart';
@@ -48,7 +47,6 @@ Future<ProviderContainer> _pump(
 
   await container.read(projectsProvider.future);
   container.read(groupsProvider);
-  container.read(hiddenProjectsProvider);
   container.read(membershipProvider);
   container.read(viewModeProvider);
 

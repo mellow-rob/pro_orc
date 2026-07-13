@@ -1,3 +1,4 @@
+import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:test/test.dart';
@@ -8,7 +9,6 @@ import 'package:pro_orc/data/models/project_model.dart';
 import 'package:pro_orc/providers/database_provider.dart';
 import 'package:pro_orc/providers/grouped_projects_provider.dart';
 import 'package:pro_orc/providers/groups_provider.dart';
-import 'package:pro_orc/providers/hidden_projects_provider.dart';
 import 'package:pro_orc/providers/project_group_membership_provider.dart';
 import 'package:pro_orc/providers/projects_provider.dart';
 
@@ -33,11 +33,10 @@ Future<ProviderContainer> _containerWithProjects(
   addTearDown(container.dispose);
   addTearDown(db.close);
   // Settle projectsProvider (FutureProvider — needs to resolve to `data`)
-  // plus groupsProvider / hiddenProjectsProvider async build() calls,
-  // mirroring the Wave 1/2 test pattern.
+  // plus groupsProvider async build() call, mirroring the Wave 1/2 test
+  // pattern.
   await container.read(projectsProvider.future);
   container.read(groupsProvider);
-  container.read(hiddenProjectsProvider);
   await Future<void>.delayed(Duration.zero);
   await Future<void>.delayed(Duration.zero);
   return container;
@@ -127,18 +126,25 @@ void main() {
       },
     );
 
-    test('hidden projects are excluded from all sections', () async {
+    test('projects flagged is_hidden=1 in the DB still appear (UI no longer '
+        'hides projects, per removal of the Privat feature)', () async {
       final container = await _containerWithProjects([
         _project('alpha'),
         _project('beta'),
       ]);
 
-      await container.read(hiddenProjectsProvider.notifier).toggle('alpha');
+      final db = container.read(appDatabaseProvider);
+      await db.upsertProjectSettings(
+        ProjectSettingsTableCompanion(
+          folderId: const Value('alpha'),
+          isHidden: const Value(true),
+        ),
+      );
 
       final sections = container.read(groupedProjectsProvider);
       final allMembers = sections.expand((s) => s.members).toList();
 
-      expect(allMembers.map((p) => p.folderId), isNot(contains('alpha')));
+      expect(allMembers.map((p) => p.folderId), contains('alpha'));
       expect(allMembers.map((p) => p.folderId), contains('beta'));
     });
 

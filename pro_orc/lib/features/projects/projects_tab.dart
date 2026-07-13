@@ -11,16 +11,13 @@ import 'package:pro_orc/data/services/project_creator_service.dart';
 import 'package:pro_orc/data/services/project_importer_service.dart';
 import 'package:pro_orc/data/services/quick_actions_service.dart';
 import 'package:pro_orc/features/projects/group_section.dart';
-import 'package:pro_orc/features/projects/hidden_projects_section.dart';
 import 'package:pro_orc/features/projects/projects_tab_header.dart';
 import 'package:pro_orc/features/projects/projects_type_filter.dart';
 import 'package:pro_orc/features/shared/create_project_dialog.dart';
 import 'package:pro_orc/features/shared/empty_state.dart';
-import 'package:pro_orc/features/shared/hidden_projects_banner.dart';
 import 'package:pro_orc/features/shared/import_project_dialog.dart';
 import 'package:pro_orc/providers/database_provider.dart';
 import 'package:pro_orc/providers/grouped_projects_provider.dart';
-import 'package:pro_orc/providers/hidden_projects_provider.dart';
 import 'package:pro_orc/providers/projects_provider.dart';
 import 'package:pro_orc/providers/view_mode_provider.dart';
 import 'package:pro_orc/theme/n3_colors.dart';
@@ -39,7 +36,6 @@ class ProjectsTab extends ConsumerStatefulWidget {
 
 class _ProjectsTabState extends ConsumerState<ProjectsTab> {
   ProjectsTypeFilter _filter = ProjectsTypeFilter.all;
-  bool _showHidden = false;
 
   @override
   Widget build(BuildContext context) {
@@ -88,11 +84,6 @@ class _ProjectsTabState extends ConsumerState<ProjectsTab> {
       );
     }
 
-    final hiddenSet = ref.watch(hiddenProjectsProvider);
-    final hiddenProjects =
-        allProjects.where((p) => hiddenSet.contains(p.folderId)).toList()
-          ..sort((a, b) => a.displayName.compareTo(b.displayName));
-
     final sections = ref.watch(groupedProjectsProvider);
     final filteredSections = _applyTypeFilter(sections);
     final viewMode = ref.watch(viewModeProvider);
@@ -114,15 +105,6 @@ class _ProjectsTabState extends ConsumerState<ProjectsTab> {
             ],
           ),
         ),
-        if (hiddenProjects.isNotEmpty)
-          HiddenProjectsBanner(
-            hiddenCount: hiddenProjects.length,
-            isExpanded: _showHidden,
-            onToggle: () => setState(() => _showHidden = !_showHidden),
-            accentColor: colors.cyan,
-          ),
-        if (_showHidden && hiddenProjects.isNotEmpty)
-          HiddenProjectsSection(projects: hiddenProjects, viewMode: viewMode),
       ],
     );
   }
