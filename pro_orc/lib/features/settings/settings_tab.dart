@@ -372,29 +372,10 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
             icon: Icons.terminal_outlined,
             title: 'Git-Pfad',
             subtitle: 'Pfad zum Git-Binary (Standard: git)',
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _gitController,
-                    style: TextStyle(
-                      color: colors.textPri,
-                      fontSize: 13,
-                      fontFamily: 'SF Mono',
-                    ),
-                    decoration: colors.glassInputDecoration(isDense: true),
-                    onSubmitted: (_) => _saveGitBinary(),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                TextButton(
-                  onPressed: _saveGitBinary,
-                  child: Text(
-                    'Speichern',
-                    style: TextStyle(color: colors.cyan, fontSize: 13),
-                  ),
-                ),
-              ],
+            child: _buildTextSettingRow(
+              colors: colors,
+              controller: _gitController,
+              onSave: _saveGitBinary,
             ),
           ),
 
@@ -408,32 +389,11 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
             subtitle:
                 'Pfad zum Vault für die Learning-Ansicht '
                 '(Standard: ~/N3URAL-Vault)',
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _vaultController,
-                    style: TextStyle(
-                      color: colors.textPri,
-                      fontSize: 13,
-                      fontFamily: 'SF Mono',
-                    ),
-                    decoration: colors.glassInputDecoration(
-                      hintText: '~/N3URAL-Vault',
-                      isDense: true,
-                    ),
-                    onSubmitted: (_) => _saveVaultDir(),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                TextButton(
-                  onPressed: _saveVaultDir,
-                  child: Text(
-                    'Speichern',
-                    style: TextStyle(color: colors.cyan, fontSize: 13),
-                  ),
-                ),
-              ],
+            child: _buildTextSettingRow(
+              colors: colors,
+              controller: _vaultController,
+              hintText: '~/N3URAL-Vault',
+              onSave: _saveVaultDir,
             ),
           ),
 
@@ -575,6 +535,43 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
           ],
         ),
       ),
+    );
+  }
+
+  /// Shared row for a single text-setting field + "Speichern" button, used
+  /// by both the Git-Pfad and Obsidian-Vault sections.
+  Widget _buildTextSettingRow({
+    required AppColors colors,
+    required TextEditingController controller,
+    String? hintText,
+    required VoidCallback onSave,
+  }) {
+    return Row(
+      children: [
+        Expanded(
+          child: TextField(
+            controller: controller,
+            style: TextStyle(
+              color: colors.textPri,
+              fontSize: 13,
+              fontFamily: 'SF Mono',
+            ),
+            decoration: colors.glassInputDecoration(
+              hintText: hintText,
+              isDense: true,
+            ),
+            onSubmitted: (_) => onSave(),
+          ),
+        ),
+        const SizedBox(width: 8),
+        TextButton(
+          onPressed: onSave,
+          child: Text(
+            'Speichern',
+            style: TextStyle(color: colors.cyan, fontSize: 13),
+          ),
+        ),
+      ],
     );
   }
 

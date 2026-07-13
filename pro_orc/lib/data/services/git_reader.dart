@@ -12,6 +12,13 @@ import 'package:pro_orc/data/models/git_data.dart';
 /// have Homebrew in PATH. The [gitBinary] parameter allows overriding the git
 /// binary path (default: 'git').
 ///
+/// Convention (applies to every `Process.run` call in this codebase): when
+/// `runInShell: true`, never pass a single interpolated command string —
+/// always pass a fixed executable with list-form arguments. A shell-interpolated
+/// string would let a crafted project path/argument break out into arbitrary
+/// shell syntax; list-form args are passed directly to the process, not
+/// re-parsed by a shell.
+///
 /// Returns [GitData.empty] on any error: not a git repo, timeout, no commits,
 /// nonexistent directory.
 Future<GitData> readGitData(

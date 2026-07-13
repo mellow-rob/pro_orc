@@ -32,60 +32,7 @@ class ScanDirectoryNotFoundError implements Exception {
 }
 
 // ---------------------------------------------------------------------------
-// File cache
-// ---------------------------------------------------------------------------
-
-/// Caches project metadata (displayName/description) keyed by project path +
-/// PROJECT.md/CLAUDE.md mtime.
-///
-/// On repeated [ProjectScanner.scanAll] calls, projects whose files have not
-/// changed are returned from cache without re-parsing.
-class _FileCache {
-  /// Map from "path:mtime" → cached [ProjectMetadata].
-  final Map<String, ProjectMetadata> _cache = {};
-
-  /// Returns the cache key for a project path and its signature mtime.
-  String _key(String projectPath, DateTime mtime) =>
-      '$projectPath:${mtime.microsecondsSinceEpoch}';
-
-  /// Returns the cached result for [projectPath] if its signature matches.
-  /// Returns null if not cached or if mtime has changed.
-  ProjectMetadata? get(String projectPath, DateTime? mtime) {
-    if (mtime == null) return null;
-    return _cache[_key(projectPath, mtime)];
-  }
-
-  /// Stores a parse result for [projectPath] with the given signature mtime.
-  void put(String projectPath, DateTime mtime, ProjectMetadata result) {
-    _cache[_key(projectPath, mtime)] = result;
-  }
-
-  /// Returns the latest mtime of .planning/PROJECT.md, PROJECT.md, or
-  /// CLAUDE.md in [projectPath], or null if none exist.
-  Future<DateTime?> metadataMtime(String projectPath) async {
-    DateTime? latest;
-    for (final name in const [
-      '.planning/PROJECT.md',
-      'PROJECT.md',
-      'CLAUDE.md',
-    ]) {
-      final filePath = p.join(projectPath, name);
-      try {
-        final stat = await FileStat.stat(filePath);
-        if (stat.type == FileSystemEntityType.notFound) continue;
-        if (latest == null || stat.modified.isAfter(latest)) {
-          latest = stat.modified;
-        }
-      } catch (e) {
-        developer.log('Failed to stat $filePath: $e', name: 'project_scanner');
-      }
-    }
-    return latest;
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Scan result cache (git / memory / used-agents)
+// Scan result cache (metadata / git / memory / used-agents / a1)
 // ---------------------------------------------------------------------------
 
 /// Caches arbitrary per-project scan results keyed by a "signature" mtime.
@@ -115,12 +62,56 @@ class _ScanResultCache<T> {
   void put(String projectPath, DateTime signature, T result) {
     _cache[_key(projectPath, signature)] = _Box(result);
   }
+
+  /// Computes [sig] once, returns the cached result if it matches the stored
+  /// signature, otherwise runs [compute] and caches the result (when [sig]
+  /// resolved to a non-null signature). Collapses the
+  /// getBoxed→hit?→compute→put shape shared by every `_read*WithCache`
+  /// method in [ProjectScanner].
+  Future<T> getOrCompute(
+    String projectPath,
+    Future<DateTime?> Function() sig,
+    Future<T> Function() compute,
+  ) async {
+    final signature = await sig();
+    final cached = getBoxed(projectPath, signature);
+    if (cached != null) return cached.value;
+
+    final result = await compute();
+    if (signature != null) {
+      put(projectPath, signature, result);
+    }
+    return result;
+  }
 }
 
 /// Simple box so a cached `null` value is distinguishable from "not cached".
 class _Box<T> {
   final T value;
   const _Box(this.value);
+}
+
+/// Returns the latest mtime of .planning/PROJECT.md, PROJECT.md, or
+/// CLAUDE.md in [projectPath], or null if none exist.
+Future<DateTime?> _metadataMtime(String projectPath) async {
+  DateTime? latest;
+  for (final name in const [
+    '.planning/PROJECT.md',
+    'PROJECT.md',
+    'CLAUDE.md',
+  ]) {
+    final filePath = p.join(projectPath, name);
+    try {
+      final stat = await FileStat.stat(filePath);
+      if (stat.type == FileSystemEntityType.notFound) continue;
+      if (latest == null || stat.modified.isAfter(latest)) {
+        latest = stat.modified;
+      }
+    } catch (e) {
+      developer.log('Failed to stat $filePath: $e', name: 'project_scanner');
+    }
+  }
+  return latest;
 }
 
 /// Computes a combined "signature" mtime for a project's git state.
@@ -218,7 +209,8 @@ Future<DateTime?> _a1Signature(String projectPath) async {
 /// [ProjectModel] objects sorted by [ProjectModel.displayName].
 class ProjectScanner {
   final AppDatabase _db;
-  final _FileCache _cache = _FileCache();
+  final _ScanResultCache<ProjectMetadata> _metadataCache =
+      _ScanResultCache<ProjectMetadata>();
   final _ScanResultCache<GitData> _gitCache = _ScanResultCache<GitData>();
   final _ScanResultCache<MemoryData> _memoryCache =
       _ScanResultCache<MemoryData>();
@@ -244,18 +236,9 @@ class ProjectScanner {
   /// exist or is configured as an empty string.
   Future<List<ProjectModel>> scanAll({String? scanDirOverride}) async {
     // --- 1. Resolve scan directories ---
-    List<String> scanDirs;
-    String gitBinary = 'git';
-    List<String> ignorePatterns = [];
-
-    if (scanDirOverride != null) {
-      scanDirs = [scanDirOverride];
-    } else {
-      scanDirs = await _db.getScanDirs();
-      final config = await _db.getConfig();
-      gitBinary = config.gitBinaryPath;
-      ignorePatterns = _parseIgnoreList(config.ignoreListJson);
-    }
+    final scanDirs = scanDirOverride != null
+        ? [scanDirOverride]
+        : await _db.getScanDirs();
 
     if (scanDirs.isEmpty) {
       throw ScanDirectoryNotFoundError(
@@ -264,19 +247,20 @@ class ProjectScanner {
       );
     }
 
-    // If using override, still read ignore patterns from DB
-    if (scanDirOverride != null) {
-      try {
-        final config = await _db.getConfig();
-        gitBinary = config.gitBinaryPath;
-        ignorePatterns = _parseIgnoreList(config.ignoreListJson);
-      } catch (e) {
-        // If DB read fails, proceed with empty ignore list
-        developer.log(
-          'Failed to read DB config for ignore list: $e',
-          name: 'project_scanner',
-        );
-      }
+    // Read git binary + ignore patterns from DB regardless of whether
+    // scanDirs came from an override (used by tests) or DB config.
+    String gitBinary = 'git';
+    List<String> ignorePatterns = [];
+    try {
+      final config = await _db.getConfig();
+      gitBinary = config.gitBinaryPath;
+      ignorePatterns = _parseIgnoreList(config.ignoreListJson);
+    } catch (e) {
+      // If DB read fails, proceed with defaults (git binary + empty ignore list)
+      developer.log(
+        'Failed to read DB config for git binary/ignore list: $e',
+        name: 'project_scanner',
+      );
     }
 
     // --- 2. List project directories from all scan dirs ---
@@ -461,34 +445,21 @@ class ProjectScanner {
 
   /// Reads project metadata (displayName/description) using the cache to
   /// avoid re-parsing unchanged files.
-  Future<ProjectMetadata> _readMetadataWithCache(String projectPath) async {
-    final mtime = await _cache.metadataMtime(projectPath);
-    final cached = _cache.get(projectPath, mtime);
-    if (cached != null) return cached;
-
-    final result = await readProjectMetadata(projectPath);
-    if (mtime != null) {
-      _cache.put(projectPath, mtime, result);
-    }
-    return result;
-  }
+  Future<ProjectMetadata> _readMetadataWithCache(String projectPath) =>
+      _metadataCache.getOrCompute(
+        projectPath,
+        () => _metadataMtime(projectPath),
+        () => readProjectMetadata(projectPath),
+      );
 
   /// Reads git data using the cache to avoid spawning a git subprocess for
   /// projects whose `.git/HEAD`/refs have not changed since the last scan.
-  Future<GitData> _readGitWithCache(
-    String projectPath,
-    String gitBinary,
-  ) async {
-    final signature = await _gitSignature(projectPath);
-    final cached = _gitCache.getBoxed(projectPath, signature);
-    if (cached != null) return cached.value;
-
-    final result = await readGitData(projectPath, gitBinary: gitBinary);
-    if (signature != null) {
-      _gitCache.put(projectPath, signature, result);
-    }
-    return result;
-  }
+  Future<GitData> _readGitWithCache(String projectPath, String gitBinary) =>
+      _gitCache.getOrCompute(
+        projectPath,
+        () => _gitSignature(projectPath),
+        () => readGitData(projectPath, gitBinary: gitBinary),
+      );
 
   /// Reads memory data using the cache to avoid the fuzzy-match directory
   /// scan under `~/.claude/projects/` for projects whose memory has not
@@ -502,52 +473,36 @@ class ProjectScanner {
   /// the signature meant the cache never invalidated after a real memory
   /// update — the indicator stayed stale until an unrelated project file
   /// changed. (Fixed per code review MAJOR finding.)
-  Future<MemoryData> _readMemoryWithCache(String projectPath) async {
-    final signature = await memoryFileSignature(
-      projectPath,
-      claudeHomeDirOverride: _claudeHomeDirOverride,
-    );
-    final cached = _memoryCache.getBoxed(projectPath, signature);
-    if (cached != null) return cached.value;
-
-    final result = await readMemoryData(
-      projectPath,
-      claudeHomeDirOverride: _claudeHomeDirOverride,
-    );
-    if (signature != null) {
-      _memoryCache.put(projectPath, signature, result);
-    }
-    return result;
-  }
+  Future<MemoryData> _readMemoryWithCache(String projectPath) =>
+      _memoryCache.getOrCompute(
+        projectPath,
+        () => memoryFileSignature(
+          projectPath,
+          claudeHomeDirOverride: _claudeHomeDirOverride,
+        ),
+        () => readMemoryData(
+          projectPath,
+          claudeHomeDirOverride: _claudeHomeDirOverride,
+        ),
+      );
 
   /// Reads a1 roadmap/phase data using the cache to avoid re-parsing `.a1/`
   /// for projects whose roadmap/phases have not changed since the last scan.
-  Future<A1Data> _readA1WithCache(String projectPath) async {
-    final signature = await _a1Signature(projectPath);
-    final cached = _a1Cache.getBoxed(projectPath, signature);
-    if (cached != null) return cached.value;
-
-    final result = await _a1Reader.read(projectPath);
-    if (signature != null) {
-      _a1Cache.put(projectPath, signature, result);
-    }
-    return result;
-  }
+  Future<A1Data> _readA1WithCache(String projectPath) => _a1Cache.getOrCompute(
+    projectPath,
+    () => _a1Signature(projectPath),
+    () => _a1Reader.read(projectPath),
+  );
 
   /// Extracts used agents using the cache to avoid re-walking
   /// `.planning/phases/` recursively for projects whose phases directory has
   /// not changed since the last scan.
-  Future<List<String>?> _extractUsedAgentsWithCache(String projectPath) async {
-    final signature = await _phasesSignature(projectPath);
-    final cached = _usedAgentsCache.getBoxed(projectPath, signature);
-    if (cached != null) return cached.value;
-
-    final result = await _extractUsedAgents(projectPath);
-    if (signature != null) {
-      _usedAgentsCache.put(projectPath, signature, result);
-    }
-    return result;
-  }
+  Future<List<String>?> _extractUsedAgentsWithCache(String projectPath) =>
+      _usedAgentsCache.getOrCompute(
+        projectPath,
+        () => _phasesSignature(projectPath),
+        () => _extractUsedAgents(projectPath),
+      );
 
   /// Computes whether a project is stale (>30 days since last activity).
   ///

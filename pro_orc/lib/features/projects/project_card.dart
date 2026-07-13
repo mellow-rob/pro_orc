@@ -47,13 +47,10 @@ class _ProjectCardState extends ConsumerState<ProjectCard> {
 
   ProjectType get _type => widget.project.projectType ?? ProjectType.code;
 
-  Color _accent(AppColors colors) =>
-      _type == ProjectType.research ? colors.fuch : colors.cyan;
-
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).extension<AppColors>()!;
-    final accent = _accent(colors);
+    final accent = _type.accent(colors);
     final hiddenSet = ref.watch(hiddenProjectsProvider);
     final isHidden = hiddenSet.contains(widget.project.folderId);
 
@@ -69,9 +66,7 @@ class _ProjectCardState extends ConsumerState<ProjectCard> {
             isHidden: isHidden,
             ref: ref,
             project: widget.project,
-            moveTarget: _type == ProjectType.code
-                ? ProjectType.research
-                : ProjectType.code,
+            moveTarget: _type.moveTarget,
           ),
           child: MouseRegion(
             onEnter: (_) => setState(() => _isHovered = true),
@@ -165,13 +160,10 @@ class _ProjectCardState extends ConsumerState<ProjectCard> {
       projectSessionsProvider(widget.project.path),
     );
     final hasActiveSession = sessionsAsync.value?.hasActiveSession ?? false;
-    final icon = _type == ProjectType.research
-        ? LucideIcons.beaker100
-        : LucideIcons.codeXml100;
 
     return Row(
       children: [
-        Icon(icon, color: accent, size: 15),
+        Icon(_type.icon, color: accent, size: 15),
         const SizedBox(width: 6),
         Expanded(
           child: Row(
@@ -226,9 +218,7 @@ class _ProjectCardState extends ConsumerState<ProjectCard> {
               isHidden: isHidden,
               ref: ref,
               project: widget.project,
-              moveTarget: _type == ProjectType.code
-                  ? ProjectType.research
-                  : ProjectType.code,
+              moveTarget: _type.moveTarget,
             ),
           ),
         ),
