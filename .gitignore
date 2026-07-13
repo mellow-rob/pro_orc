@@ -47,3 +47,13 @@ dist/
 # ============================================================
 firebase-debug.log
 .vercel
+# Added by code-review-graph
+.code-review-graph/
+
+# ============================================================
+# Local / machine-specific state (not shared)
+# ============================================================
+.a1/                          # a1-framework analysis/fix artifacts + learning store
+.claude/settings.local.json   # per-machine Claude Code settings
+.claude/scheduled_tasks.lock  # local scheduler lock
+homebrew-tap/                 # separate git repo (n3urala1-rob/homebrew-tap), not a submodule
