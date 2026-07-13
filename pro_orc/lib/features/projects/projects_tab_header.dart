@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:pro_orc/features/projects/create_group_dialog.dart';
 import 'package:pro_orc/features/projects/projects_type_filter.dart';
 import 'package:pro_orc/providers/view_mode_provider.dart';
 import 'package:pro_orc/theme/n3_colors.dart';
@@ -50,17 +51,20 @@ class ProjectsTabHeader extends StatelessWidget {
                 onTap: () => onFilterChanged(ProjectsTypeFilter.research),
               ),
               const Spacer(),
-              // Wave 4 wires up group creation behind this button.
               TextButton.icon(
-                onPressed: null,
+                onPressed: () => showDialog<String>(
+                  context: context,
+                  barrierDismissible: false,
+                  builder: (_) => const CreateGroupDialog(),
+                ),
                 icon: Icon(
                   LucideIcons.folderPlus100,
                   size: 16,
-                  color: colors.textDim,
+                  color: colors.textSec,
                 ),
                 label: Text(
                   '+ Gruppe',
-                  style: TextStyle(color: colors.textDim, fontSize: 13),
+                  style: TextStyle(color: colors.textSec, fontSize: 13),
                 ),
               ),
               const SizedBox(width: 8),

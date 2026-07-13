@@ -4,8 +4,11 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:pro_orc/data/models/group_section_data.dart';
 import 'package:pro_orc/features/projects/project_card.dart';
 import 'package:pro_orc/features/projects/project_list_row.dart';
+import 'package:pro_orc/features/projects/rename_group_dialog.dart';
 import 'package:pro_orc/features/shared/project_detail_panel.dart';
 import 'package:pro_orc/providers/group_collapse_provider.dart';
+import 'package:pro_orc/providers/groups_provider.dart';
+import 'package:pro_orc/providers/project_group_membership_provider.dart';
 import 'package:pro_orc/providers/view_mode_provider.dart';
 import 'package:pro_orc/theme/n3_colors.dart';
 
@@ -13,37 +16,94 @@ import 'package:pro_orc/theme/n3_colors.dart';
 /// merged Projekte tab.
 ///
 /// - User groups: folder icon, name, member-count pill, and a "..." menu
-///   button (placeholder only in Wave 3 — group actions ship in Wave 4).
+///   button (rename/dissolve — FR-019).
 /// - The system-owned "Archiv" group: archive-box icon instead of folder,
 ///   no "..." button at all (not just disabled — absent from the tree),
 ///   and its members render at 60% opacity.
+/// - The synthetic "Ohne Gruppe" section behaves like a user group for drop
+///   purposes (assigns to `null`) but has no rename/dissolve menu either,
+///   since it has no backing DB row.
+///
+/// The whole section (header + body) is a `DragTarget<String>` (FR-007):
+/// dropping a project already in this section is a silent no-op (no DB
+/// write, no flicker); dropping a project from elsewhere assigns it here.
 ///
 /// Collapse state is read/toggled via [groupCollapseProvider] with no
 /// animation (instant show/hide), per the Wave 3 spec.
-class GroupSection extends ConsumerWidget {
+class GroupSection extends ConsumerStatefulWidget {
   const GroupSection({super.key, required this.data});
 
   final GroupSectionData data;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<GroupSection> createState() => _GroupSectionState();
+}
+
+class _GroupSectionState extends ConsumerState<GroupSection> {
+  bool _dragHover = false;
+
+  GroupSectionData get data => widget.data;
+
+  /// The groupId a drop on this section should assign to: `null` for "Ohne
+  /// Gruppe" (its synthetic id is not a real DB row), otherwise the group's
+  /// own id — including the Archiv sentinel, which is a normal drop target
+  /// with no special-casing (KERNENTSCHEIDUNG 4/1).
+  String? get _dropTargetGroupId =>
+      data.isUngrouped ? null : data.group.id;
+
+  bool _isNoOpDrop(String folderId) {
+    final currentGroupId = ref.read(membershipProvider)[folderId];
+    return currentGroupId == _dropTargetGroupId;
+  }
+
+  Future<void> _handleDrop(String folderId) async {
+    setState(() => _dragHover = false);
+    if (_isNoOpDrop(folderId)) return;
+
+    final targetGroupId = _dropTargetGroupId;
+    final notifier = ref.read(membershipProvider.notifier);
+    if (targetGroupId == null) {
+      await notifier.unassign(folderId);
+    } else {
+      await notifier.assign(folderId, targetGroupId);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final colors = Theme.of(context).extension<AppColors>()!;
     final collapseState = ref.watch(groupCollapseProvider);
     final collapsed = collapseState[data.group.id] ?? false;
     final viewMode = ref.watch(viewModeProvider);
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildHeader(context, ref, colors, collapsed),
-          if (!collapsed) ...[
-            const SizedBox(height: 10),
-            _buildBody(context, colors, viewMode),
-          ],
-        ],
-      ),
+    return DragTarget<String>(
+      onWillAcceptWithDetails: (details) => true,
+      onMove: (_) {
+        if (!_dragHover) setState(() => _dragHover = true);
+      },
+      onLeave: (_) => setState(() => _dragHover = false),
+      onAcceptWithDetails: (details) => _handleDrop(details.data),
+      builder: (context, candidateData, rejectedData) {
+        return Container(
+          decoration: BoxDecoration(
+            color: _dragHover
+                ? colors.cyan.withValues(alpha: 0.06)
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildHeader(context, ref, colors, collapsed),
+              if (!collapsed) ...[
+                const SizedBox(height: 10),
+                _buildBody(context, colors, viewMode),
+              ],
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -54,10 +114,14 @@ class GroupSection extends ConsumerWidget {
     bool collapsed,
   ) {
     final isArchive = data.group.isSystem;
+    final showMenuButton = !isArchive && !data.isUngrouped;
 
     return InkWell(
       onTap: () =>
           ref.read(groupCollapseProvider.notifier).toggle(data.group.id),
+      onSecondaryTapUp: showMenuButton
+          ? (details) => _showHeaderMenu(context, details.globalPosition)
+          : null,
       borderRadius: BorderRadius.circular(8),
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
@@ -69,12 +133,18 @@ class GroupSection extends ConsumerWidget {
               size: 16,
             ),
             const SizedBox(width: 8),
-            Text(
-              data.group.name,
-              style: TextStyle(
-                color: colors.textPri,
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
+            Flexible(
+              child: Tooltip(
+                message: data.group.name,
+                child: Text(
+                  data.group.name,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: colors.textPri,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ),
             ),
             const SizedBox(width: 8),
@@ -87,20 +157,57 @@ class GroupSection extends ConsumerWidget {
               color: colors.textDim,
               size: 16,
             ),
-            if (!isArchive) ...[
+            if (showMenuButton) ...[
               const SizedBox(width: 4),
-              // Wave 4 wires rename/dissolve behind this button — placeholder only.
               IconButton(
                 padding: EdgeInsets.zero,
                 iconSize: 16,
                 icon: Icon(LucideIcons.ellipsis100, color: colors.textDim),
-                onPressed: null,
+                tooltip: 'Gruppen-Optionen',
+                onPressed: () => _showHeaderMenu(
+                  context,
+                  _iconButtonAnchor(context),
+                ),
               ),
             ],
           ],
         ),
       ),
     );
+  }
+
+  Offset _iconButtonAnchor(BuildContext context) {
+    final box = context.findRenderObject() as RenderBox;
+    return box.localToGlobal(Offset(box.size.width, box.size.height));
+  }
+
+  Future<void> _showHeaderMenu(BuildContext context, Offset position) async {
+    final overlay = Overlay.of(context).context.findRenderObject() as RenderBox;
+    final result = await showMenu<String>(
+      context: context,
+      position: RelativeRect.fromLTRB(
+        position.dx,
+        position.dy,
+        overlay.size.width - position.dx,
+        overlay.size.height - position.dy,
+      ),
+      items: const [
+        PopupMenuItem(value: 'rename', child: Text('Umbenennen…')),
+        PopupMenuItem(value: 'dissolve', child: Text('Aufloesen')),
+      ],
+    );
+
+    if (!context.mounted || result == null) return;
+
+    if (result == 'rename') {
+      await showDialog<bool>(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => RenameGroupDialog(group: data.group),
+      );
+    } else if (result == 'dissolve') {
+      await ref.read(groupsProvider.notifier).dissolve(data.group.id);
+    }
   }
 
   Widget _buildCountPill(AppColors colors) {
@@ -172,6 +279,9 @@ class GroupSection extends ConsumerWidget {
   }
 }
 
+/// Placeholder button shown in an empty group's body, opening the create
+/// dialog is not applicable here — kept purely informational; assignment
+/// happens by dragging a card or via the context menu.
 class _EmptyGroupCallToAction extends StatelessWidget {
   const _EmptyGroupCallToAction({required this.colors});
 

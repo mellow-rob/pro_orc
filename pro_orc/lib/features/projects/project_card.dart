@@ -4,6 +4,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:pro_orc/data/models/project_model.dart';
 import 'package:pro_orc/data/models/project_type.dart';
 import 'package:pro_orc/features/projects/a1_badge.dart';
+import 'package:pro_orc/features/projects/draggable_project.dart';
 import 'package:pro_orc/features/projects/type_badge.dart';
 import 'package:pro_orc/features/shared/memory_indicator.dart';
 import 'package:pro_orc/features/shared/project_context_menu.dart';
@@ -56,41 +57,44 @@ class _ProjectCardState extends ConsumerState<ProjectCard> {
     final hiddenSet = ref.watch(hiddenProjectsProvider);
     final isHidden = hiddenSet.contains(widget.project.folderId);
 
-    return Opacity(
-      opacity: widget.isHiddenCard ? 0.45 : 1.0,
-      child: GestureDetector(
-        onTap: widget.onTap,
-        onSecondaryTapUp: (details) => showProjectContextMenu(
-          context: context,
-          details: details,
-          isHidden: isHidden,
-          ref: ref,
-          project: widget.project,
-          moveTarget: _type == ProjectType.code
-              ? ProjectType.research
-              : ProjectType.code,
-        ),
-        child: MouseRegion(
-          onEnter: (_) => setState(() => _isHovered = true),
-          onExit: (_) => setState(() => _isHovered = false),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 180),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(14),
-              boxShadow: _isHovered
-                  ? [
-                      BoxShadow(
-                        color: accent.withValues(alpha: 0.15),
-                        blurRadius: 16,
-                        spreadRadius: 2,
-                      ),
-                    ]
-                  : [],
-            ),
-            child: GlassCard(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: _buildContent(context, colors, accent, isHidden),
+    return DraggableProject(
+      folderId: widget.project.folderId,
+      child: Opacity(
+        opacity: widget.isHiddenCard ? 0.45 : 1.0,
+        child: GestureDetector(
+          onTap: widget.onTap,
+          onSecondaryTapUp: (details) => showProjectContextMenu(
+            context: context,
+            details: details,
+            isHidden: isHidden,
+            ref: ref,
+            project: widget.project,
+            moveTarget: _type == ProjectType.code
+                ? ProjectType.research
+                : ProjectType.code,
+          ),
+          child: MouseRegion(
+            onEnter: (_) => setState(() => _isHovered = true),
+            onExit: (_) => setState(() => _isHovered = false),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: _isHovered
+                    ? [
+                        BoxShadow(
+                          color: accent.withValues(alpha: 0.15),
+                          blurRadius: 16,
+                          spreadRadius: 2,
+                        ),
+                      ]
+                    : [],
+              ),
+              child: GlassCard(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: _buildContent(context, colors, accent, isHidden),
+                ),
               ),
             ),
           ),
@@ -208,8 +212,35 @@ class _ProjectCardState extends ConsumerState<ProjectCard> {
             },
           ),
         ),
+        SizedBox(
+          width: 28,
+          height: 28,
+          child: IconButton(
+            padding: EdgeInsets.zero,
+            iconSize: 16,
+            icon: Icon(LucideIcons.ellipsis100, color: colors.textDim),
+            tooltip: 'Optionen',
+            onPressed: () => showProjectContextMenuAt(
+              context: context,
+              position: _menuAnchor(context),
+              isHidden: isHidden,
+              ref: ref,
+              project: widget.project,
+              moveTarget: _type == ProjectType.code
+                  ? ProjectType.research
+                  : ProjectType.code,
+            ),
+          ),
+        ),
       ],
     );
+  }
+
+  /// Anchors the "..." menu near the card's top-right, mirroring how
+  /// right-click positions the menu at the pointer.
+  Offset _menuAnchor(BuildContext context) {
+    final box = context.findRenderObject() as RenderBox;
+    return box.localToGlobal(Offset(box.size.width - 8, 8));
   }
 
   /// Aggregate a1 phase progress (0-100), or null when the project has no
