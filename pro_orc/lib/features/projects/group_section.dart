@@ -48,8 +48,7 @@ class _GroupSectionState extends ConsumerState<GroupSection> {
   /// Gruppe" (its synthetic id is not a real DB row), otherwise the group's
   /// own id — including the Archiv sentinel, which is a normal drop target
   /// with no special-casing (KERNENTSCHEIDUNG 4/1).
-  String? get _dropTargetGroupId =>
-      data.isUngrouped ? null : data.group.id;
+  String? get _dropTargetGroupId => data.isUngrouped ? null : data.group.id;
 
   bool _isNoOpDrop(String folderId) {
     final currentGroupId = ref.read(membershipProvider)[folderId];
@@ -164,10 +163,8 @@ class _GroupSectionState extends ConsumerState<GroupSection> {
                 iconSize: 16,
                 icon: Icon(LucideIcons.ellipsis100, color: colors.textDim),
                 tooltip: 'Gruppen-Optionen',
-                onPressed: () => _showHeaderMenu(
-                  context,
-                  _iconButtonAnchor(context),
-                ),
+                onPressed: () =>
+                    _showHeaderMenu(context, _iconButtonAnchor(context)),
               ),
             ],
           ],

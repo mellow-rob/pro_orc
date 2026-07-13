@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:developer' as developer;
 
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
@@ -62,12 +63,22 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
       if (decoded is List) {
         patterns = decoded.whereType<String>().toList();
       }
-    } catch (_) {}
+    } catch (e) {
+      developer.log(
+        'Failed to decode ignoreListJson: $e',
+        name: 'settings_tab',
+      );
+    }
 
     bool launchEnabled = false;
     try {
       launchEnabled = await launchAtStartup.isEnabled();
-    } catch (_) {}
+    } catch (e) {
+      developer.log(
+        'Failed to read launchAtStartup.isEnabled: $e',
+        name: 'settings_tab',
+      );
+    }
 
     if (mounted) {
       setState(() {
@@ -159,8 +170,12 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
       } else {
         await launchAtStartup.disable();
       }
-    } catch (_) {
+    } catch (e) {
       // May fail in debug mode
+      developer.log(
+        'Failed to toggle launchAtStartup (value=$value): $e',
+        name: 'settings_tab',
+      );
     }
   }
 

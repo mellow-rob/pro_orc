@@ -52,7 +52,11 @@ class ClaudeToolsScanner {
         mcpServers: mcpServers,
         agents: agents,
       );
-    } catch (_) {
+    } catch (e) {
+      developer.log(
+        'Failed to scan claude tools: $e',
+        name: 'claude_tools_scanner',
+      );
       return const ClaudeToolsData(
         skills: [],
         plugins: [],
@@ -109,7 +113,11 @@ class ClaudeToolsScanner {
         mcpServers: mcpServers,
         agents: agents,
       );
-    } catch (_) {
+    } catch (e) {
+      developer.log(
+        'Failed to scan project tools for $projectPath: $e',
+        name: 'claude_tools_scanner',
+      );
       return ClaudeToolsData.empty;
     }
   }
@@ -187,8 +195,12 @@ class ClaudeToolsScanner {
           homepage: frontmatter['homepage'],
           path: dirPath,
         );
-      } catch (_) {
+      } catch (e) {
         // File does not exist or is not readable — try next
+        developer.log(
+          'Failed to read $filename in $dirPath: $e',
+          name: 'claude_tools_scanner',
+        );
       }
     }
 
@@ -306,7 +318,12 @@ class ClaudeToolsScanner {
       try {
         final mRaw = await File(marketplacesPath).readAsString();
         marketplaces = jsonDecode(mRaw) as Map<String, dynamic>;
-      } catch (_) {}
+      } catch (e) {
+        developer.log(
+          'Failed to read known_marketplaces.json: $e',
+          name: 'claude_tools_scanner',
+        );
+      }
 
       final result = <PluginData>[];
 
@@ -334,7 +351,12 @@ class ClaudeToolsScanner {
           final pj = jsonDecode(pjRaw) as Map<String, dynamic>;
           description = pj['description'] as String?;
           author = (pj['author'] as Map<String, dynamic>?)?['name'] as String?;
-        } catch (_) {}
+        } catch (e) {
+          developer.log(
+            'Failed to read plugin.json for $key: $e',
+            name: 'claude_tools_scanner',
+          );
+        }
 
         // Parse install/update timestamps from installed_plugins.json
         final installedAt = DateTime.tryParse(
@@ -369,7 +391,8 @@ class ClaudeToolsScanner {
 
       result.sort((a, b) => a.name.compareTo(b.name));
       return result;
-    } catch (_) {
+    } catch (e) {
+      developer.log('Failed to scan plugins: $e', name: 'claude_tools_scanner');
       return [];
     }
   }
@@ -394,7 +417,12 @@ class ClaudeToolsScanner {
           _parseMcpEntry(entry.key, entry.value as Map<String, dynamic>),
         );
       }
-    } catch (_) {}
+    } catch (e) {
+      developer.log(
+        'Failed to read global settings.json mcpServers: $e',
+        name: 'claude_tools_scanner',
+      );
+    }
 
     // --- Source 2: Plugin-provided MCP servers from .mcp.json files ---
     final enabledPlugins =
@@ -447,9 +475,19 @@ class ClaudeToolsScanner {
               ),
             );
           }
-        } catch (_) {}
+        } catch (e) {
+          developer.log(
+            'Failed to read .mcp.json for plugin $key: $e',
+            name: 'claude_tools_scanner',
+          );
+        }
       }
-    } catch (_) {}
+    } catch (e) {
+      developer.log(
+        'Failed to scan plugin MCP servers: $e',
+        name: 'claude_tools_scanner',
+      );
+    }
 
     result.sort((a, b) => a.name.compareTo(b.name));
     return result;
@@ -569,7 +607,11 @@ class ClaudeToolsScanner {
 
       result.sort((a, b) => a.name.compareTo(b.name));
       return result;
-    } catch (_) {
+    } catch (e) {
+      developer.log(
+        'Failed to scan project MCP servers: $e',
+        name: 'claude_tools_scanner',
+      );
       return [];
     }
   }

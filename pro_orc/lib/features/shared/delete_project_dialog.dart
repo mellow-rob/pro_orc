@@ -1,3 +1,5 @@
+import 'dart:developer' as developer;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pro_orc/data/models/external_resource.dart';
@@ -52,7 +54,11 @@ class _DeleteProjectDialogState extends ConsumerState<DeleteProjectDialog> {
     try {
       final resources = await detectExternalResources(widget.project);
       if (mounted) setState(() => _resources = resources);
-    } catch (_) {
+    } catch (e) {
+      developer.log(
+        'Failed to detect external resources for ${widget.project.path}: $e',
+        name: 'delete_project_dialog',
+      );
       if (mounted) setState(() => _resources = []);
     }
   }

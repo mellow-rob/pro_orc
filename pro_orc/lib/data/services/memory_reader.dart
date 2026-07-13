@@ -1,3 +1,4 @@
+import 'dart:developer' as developer;
 import 'dart:io';
 
 import 'package:path/path.dart' as p;
@@ -78,7 +79,11 @@ Future<DateTime?> memoryFileSignature(
     }
 
     return latest;
-  } catch (_) {
+  } catch (e) {
+    developer.log(
+      'Failed to compute memory file signature for $projectPath: $e',
+      name: 'memory_reader',
+    );
     return null;
   }
 }
@@ -148,7 +153,11 @@ Future<MemoryData> readMemoryData(
     }
 
     return bestMatch ?? MemoryData.empty;
-  } catch (_) {
+  } catch (e) {
+    developer.log(
+      'Failed to read memory data for $projectPath: $e',
+      name: 'memory_reader',
+    );
     return MemoryData.empty;
   }
 }

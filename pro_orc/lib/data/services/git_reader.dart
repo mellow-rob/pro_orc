@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:developer' as developer;
 import 'dart:io';
 
 import 'package:meta/meta.dart';
@@ -63,7 +64,11 @@ Future<GitData> readGitData(
       lastCommitMessage: subject.isNotEmpty ? subject : null,
       githubUrl: githubUrl,
     );
-  } catch (_) {
+  } catch (e) {
+    developer.log(
+      'Failed to read git data for $projectPath: $e',
+      name: 'git_reader',
+    );
     return GitData.empty;
   }
 }

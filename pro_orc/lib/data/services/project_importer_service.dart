@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:developer' as developer;
 import 'dart:io';
 
 import 'package:path/path.dart' as p;
@@ -70,8 +71,12 @@ Future<ProjectType> inferProjectType(String projectPath) async {
         }
       }
     }
-  } catch (_) {
+  } catch (e) {
     // Ignore errors — fall through to research
+    developer.log(
+      'Failed to scan subdirectories of $projectPath for code markers: $e',
+      name: 'project_importer_service',
+    );
   }
 
   return ProjectType.research;

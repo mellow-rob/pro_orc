@@ -1,3 +1,4 @@
+import 'dart:developer' as developer;
 import 'dart:io';
 
 /// Result of reading a project's display name + description from its root
@@ -65,7 +66,8 @@ Future<ProjectMetadata> readProjectMetadata(String projectPath) async {
 Future<String?> _safeRead(String path) async {
   try {
     return await File(path).readAsString();
-  } catch (_) {
+  } catch (e) {
+    developer.log('Failed to read $path: $e', name: 'project_metadata_reader');
     return null;
   }
 }

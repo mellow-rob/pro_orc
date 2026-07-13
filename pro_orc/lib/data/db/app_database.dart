@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:developer' as developer;
 import 'dart:io';
 import 'dart:math';
 
@@ -112,8 +113,12 @@ class AppDatabase extends _$AppDatabase {
               .toList();
           return dirs.isEmpty ? [_defaultScanDir] : dirs;
         }
-      } catch (_) {
+      } catch (e) {
         // Fall through to single path
+        developer.log(
+          'Failed to decode scanDir JSON array: $e',
+          name: 'app_database',
+        );
       }
     }
 
@@ -196,7 +201,12 @@ class AppDatabase extends _$AppDatabase {
       if (decoded is List) {
         patterns = decoded.whereType<String>().toList();
       }
-    } catch (_) {}
+    } catch (e) {
+      developer.log(
+        'Failed to decode ignoreListJson: $e',
+        name: 'app_database',
+      );
+    }
     if (!patterns.contains(pattern)) {
       patterns.add(pattern);
       await updateConfig(ignoreListJson: jsonEncode(patterns));

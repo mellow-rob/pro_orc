@@ -1,3 +1,5 @@
+import 'dart:developer' as developer;
+
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -110,7 +112,11 @@ class _OnboardingWizardState extends ConsumerState<OnboardingWizard> {
           _isScanning = false;
         });
       }
-    } catch (_) {
+    } catch (e) {
+      developer.log(
+        'Failed to scan projects during onboarding: $e',
+        name: 'onboarding_wizard',
+      );
       if (mounted) {
         setState(() {
           _projectNames = [];
@@ -159,8 +165,12 @@ class _OnboardingWizardState extends ConsumerState<OnboardingWizard> {
       } else {
         await launchAtStartup.disable();
       }
-    } catch (_) {
+    } catch (e) {
       // launch_at_startup may fail in debug mode
+      developer.log(
+        'Failed to set launchAtStartup (autostart=$_autostart): $e',
+        name: 'onboarding_wizard',
+      );
     }
 
     widget.onComplete();

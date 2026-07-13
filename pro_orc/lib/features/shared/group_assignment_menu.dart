@@ -22,10 +22,11 @@ Future<void> showGroupAssignmentMenu({
   required ProjectModel project,
 }) async {
   final groups = ref.read(groupsProvider);
-  final sorted = [...groups]..sort((a, b) {
-    if (a.isSystem != b.isSystem) return a.isSystem ? 1 : -1;
-    return a.name.compareTo(b.name);
-  });
+  final sorted = [...groups]
+    ..sort((a, b) {
+      if (a.isSystem != b.isSystem) return a.isSystem ? 1 : -1;
+      return a.name.compareTo(b.name);
+    });
 
   final value = await showMenu<String>(
     context: context,
@@ -60,9 +61,10 @@ Future<void> showGroupAssignmentMenu({
 /// Re-exported for callers that need to render the group list without
 /// opening the menu (e.g. tests asserting item order).
 List<ProjectGroup> sortedGroupsForAssignment(List<ProjectGroup> groups) {
-  final sorted = [...groups]..sort((a, b) {
-    if (a.isSystem != b.isSystem) return a.isSystem ? 1 : -1;
-    return a.name.compareTo(b.name);
-  });
+  final sorted = [...groups]
+    ..sort((a, b) {
+      if (a.isSystem != b.isSystem) return a.isSystem ? 1 : -1;
+      return a.name.compareTo(b.name);
+    });
   return sorted;
 }

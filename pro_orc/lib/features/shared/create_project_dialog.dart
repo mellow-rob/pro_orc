@@ -1,3 +1,4 @@
+import 'dart:developer' as developer;
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -104,7 +105,11 @@ class _CreateProjectDialogState extends ConsumerState<CreateProjectDialog>
       testFile.writeAsStringSync('');
       testFile.deleteSync();
       return true;
-    } catch (_) {
+    } catch (e) {
+      developer.log(
+        'Directory not writable: $dirPath: $e',
+        name: 'create_project_dialog',
+      );
       return false;
     }
   }
