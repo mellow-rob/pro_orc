@@ -4,7 +4,7 @@ project: pro-orc
 milestone: m8-project-organization
 title: "Project Hub: list/grid toggle, custom groups, archive, a1-badge"
 status: in-flight
-stage: complete
+stage: origin-cleanup
 depends_on: []
 started: 2026-07-12
 finished: null

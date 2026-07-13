@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated": "2026-07-13T06:35:39.641Z",
+  "generated": "2026-07-13T06:45:12.887Z",
   "project": {
     "id": "pro-orc",
     "title": "Pro Orc",
@@ -62,7 +62,7 @@
       "milestone": "m8-project-organization",
       "title": "Project Hub: list/grid toggle, custom groups, archive, a1-badge",
       "status": "in-flight",
-      "stage": "complete",
+      "stage": "origin-cleanup",
       "depends_on": [],
       "started": "2026-07-12",
       "finished": null,
