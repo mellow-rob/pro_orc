@@ -48,7 +48,17 @@ class GroupsNotifier extends Notifier<List<ProjectGroup>> {
     // Produkte"/"Kundenprojekte" groups. Without this await, a first-launch
     // UI that reads groupsProvider before projectsProvider settles would see
     // an empty list even though the seed completes moments later (F-007).
-    await ref.watch(projectsProvider.future);
+    //
+    // `ref.read` (not `ref.watch`): this only needs to await the current/
+    // first resolution once, not resubscribe to every future re-emission.
+    // projectsProvider re-emits on every watcher/filesystem tick; watching
+    // it here would rebuild this notifier on every tick, resetting `state`
+    // to `const []` for the length of the DB re-read — a visible flicker
+    // where projects briefly fall back into "Ohne Gruppe" and snap back.
+    // The seed-completion case is still covered: projectsProvider explicitly
+    // calls `ref.invalidate(groupsProvider)` after a successful seed, which
+    // is what actually needs to trigger a reload — not every re-emission.
+    await ref.read(projectsProvider.future);
     final db = ref.read(appDatabaseProvider);
     final rows = await db.getGroups();
     state = rows.map(_fromRow).toList();

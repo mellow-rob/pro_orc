@@ -28,7 +28,17 @@ class ProjectGroupMembershipNotifier extends Notifier<Map<String, String?>> {
     // "Kundenprojekte" assignments this read depends on. Without this await,
     // a first-launch UI that reads membershipProvider before projectsProvider
     // settles would see every project as unassigned (F-007).
-    await ref.watch(projectsProvider.future);
+    //
+    // `ref.read` (not `ref.watch`): only the current/first resolution needs
+    // to be awaited, not every future re-emission. projectsProvider re-emits
+    // on every watcher/filesystem tick; watching it here would rebuild this
+    // notifier each tick, resetting `state` to `const {}` for the length of
+    // the DB re-read — every project would transiently flicker into "Ohne
+    // Gruppe" and snap back. The seed-completion case is still covered:
+    // projectsProvider explicitly calls `ref.invalidate(membershipProvider)`
+    // after a successful seed, which is what actually needs to trigger a
+    // reload — not every re-emission.
+    await ref.read(projectsProvider.future);
     final db = ref.read(appDatabaseProvider);
     final all = await db.getAllProjectGroupIds();
     state = all;
