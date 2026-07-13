@@ -132,12 +132,12 @@ The parser (`gsd_parser.dart`) extracts data from `.planning/` with multi-level 
 - **Status normalization** (`_deriveStatus`): maps keywords to research|planning|building|paused|done|archived. Recognizes: shipped, complete, finish, done, build, progress, etc.
 - **Phase info**: `### Phase N: Name` headings from ROADMAP, or `N of N` pattern from currentPhase string
 
-## Current State (v3.1.0 — Released 2026-07-13)
+## Current State (v3.1.1 — Released 2026-07-13)
 
-v1.0–v3.0 shipped. v3.1.0 integrates the Projekt-Hub (merged Code/Research tabs, groups, archive, drag&drop) and the Roadmap & Backlog Dashboard, plus a security/quality sweep (18 analysis findings fixed, incl. 2 osascript command-injection BLOCKERs). ~34,000 LOC Dart.
+v1.0–v3.0 shipped. v3.1.0 integrated the Projekt-Hub (merged Code/Research tabs, groups, archive, drag&drop) and the Roadmap & Backlog Dashboard, plus a security/quality sweep (18 analysis findings fixed, incl. 2 osascript command-injection BLOCKERs). v3.1.1 fixes a group-ordering flicker (providers used ref.watch instead of ref.read on the watcher-driven projectsProvider). ~34,000 LOC Dart.
 
 ### Build Baseline
-- `flutter test`: 430 tests, 0 failures
+- `flutter test`: 432 tests, 0 failures
 - `flutter analyze`: 0 issues
 - Distribution: `scripts/build-dmg.sh` builds DMG installer, GitHub Actions release on tag push
 
