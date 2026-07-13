@@ -15,7 +15,7 @@ class QuickActionsService {
   /// Opens Terminal.app and cd's into the project directory.
   /// Uses osascript for reliable directory navigation.
   Future<void> openInTerminal(String projectPath) async {
-    final script = _terminalScript('cd "$projectPath"');
+    final script = _terminalScript(_buildCdCommand(projectPath));
     await Process.run('osascript', ['-e', script], runInShell: true);
     await Process.run('open', ['-a', 'Terminal'], runInShell: true);
   }
@@ -25,13 +25,24 @@ class QuickActionsService {
     await Process.run('open', [projectPath], runInShell: true);
   }
 
+  /// Builds the shell command that cd's into [projectPath] and runs Claude
+  /// Code with [prompt] as its argument — `claude "<prompt>"`. Pure and
+  /// exposed for testing so the escaping of both the path and the prompt is
+  /// verifiable without spawning a process.
+  ///
+  /// Both the path and the prompt sit inside double quotes for the shell
+  /// layer, so both are escaped via [_shellEscapeDoubleQuoted] to prevent
+  /// either one from breaking out of its quoting.
+  String buildClaudePromptCommand(String projectPath, String prompt) {
+    final escapedPrompt = _shellEscapeDoubleQuoted(prompt);
+    return _buildCdCommand(projectPath, 'claude "$escapedPrompt"');
+  }
+
   /// Opens Terminal.app, cd's into the project directory, and runs
   /// Claude Code with the given prompt string.
   Future<void> openClaudeWithPrompt(String projectPath, String prompt) async {
-    // Escape single quotes in prompt for shell safety
-    final escapedPrompt = prompt.replaceAll("'", "'\\''");
     final script = _terminalScript(
-      "cd \"$projectPath\" && claude '$escapedPrompt'",
+      buildClaudePromptCommand(projectPath, prompt),
     );
     await Process.run('osascript', ['-e', script], runInShell: true);
     await Process.run('open', ['-a', 'Terminal'], runInShell: true);
@@ -40,7 +51,9 @@ class QuickActionsService {
   /// Opens Terminal.app, cd's into the project directory, and runs
   /// `claude /rem-sleep` to trigger memory consolidation.
   Future<void> openRemSleep(String projectPath) async {
-    final script = _terminalScript('cd "$projectPath" && claude /rem-sleep');
+    final script = _terminalScript(
+      _buildCdCommand(projectPath, 'claude /rem-sleep'),
+    );
     await Process.run('osascript', ['-e', script], runInShell: true);
     await Process.run('open', ['-a', 'Terminal'], runInShell: true);
   }
@@ -56,7 +69,7 @@ class QuickActionsService {
   /// Builds the AppleScript command to open Claude in the given directory.
   /// Exposed for testability.
   String buildClaudeScript(String projectPath) {
-    return _terminalScript('cd "$projectPath" && claude');
+    return _terminalScript(_buildCdCommand(projectPath, 'claude'));
   }
 
   /// Builds the shell command that launches Claude Code in [projectPath] with
@@ -70,10 +83,9 @@ class QuickActionsService {
   /// The leading slash of the slash command is added here — pass the bare
   /// skill name (e.g. `a1-fix`), with or without a leading slash.
   String buildSkillLaunchCommand(String projectPath, String skillName) {
-    final path = _shellEscapeDoubleQuoted(projectPath);
     final skill = skillName.startsWith('/') ? skillName : '/$skillName';
     final skillArg = _shellEscapeDoubleQuoted(skill);
-    return 'cd "$path" && claude "$skillArg"';
+    return _buildCdCommand(projectPath, 'claude "$skillArg"');
   }
 
   /// Opens Terminal.app, cd's into [projectPath], and starts Claude Code with
@@ -97,6 +109,15 @@ class QuickActionsService {
   /// Escapes a value to sit safely inside a double-quoted shell string.
   String _shellEscapeDoubleQuoted(String value) {
     return value.replaceAll('\\', '\\\\').replaceAll('"', '\\"');
+  }
+
+  /// Builds `cd "<escaped path>"[ && <suffix>]` — the shared shell-command
+  /// shape used by every quick action that navigates into [projectPath]
+  /// before optionally running another command. The path always goes
+  /// through [_shellEscapeDoubleQuoted] so it cannot break out of its quotes.
+  String _buildCdCommand(String projectPath, [String? suffix]) {
+    final path = _shellEscapeDoubleQuoted(projectPath);
+    return suffix == null ? 'cd "$path"' : 'cd "$path" && $suffix';
   }
 
   /// Opens Terminal.app, cd's into the project directory, and starts Claude Code.

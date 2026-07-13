@@ -1,6 +1,21 @@
 import 'dart:developer' as developer;
 import 'dart:io';
 
+/// Escapes a value to sit safely inside a double-quoted AppleScript string
+/// literal: backslashes first (so the later quote-escape isn't doubled),
+/// then double quotes.
+String _appleScriptEscape(String value) {
+  return value.replaceAll('\\', '\\\\').replaceAll('"', '\\"');
+}
+
+/// Builds the AppleScript command that tells Finder to move [projectPath] to
+/// the Trash. Pure and exposed for testing so the escaping of the path is
+/// verifiable without spawning a process.
+String buildFinderDeleteScript(String projectPath) {
+  final escaped = _appleScriptEscape(projectPath);
+  return 'tell application "Finder" to delete POSIX file "$escaped"';
+}
+
 /// Moves a project directory to the macOS Trash (Papierkorb) instead of
 /// permanently deleting it. Returns true if the move succeeded, false if the
 /// directory was not found or the move failed.
@@ -17,7 +32,7 @@ Future<bool> deleteProject(String projectPath) async {
   try {
     final result = await Process.run('osascript', [
       '-e',
-      'tell application "Finder" to delete POSIX file "$projectPath"',
+      buildFinderDeleteScript(projectPath),
     ], runInShell: true);
 
     if (result.exitCode != 0) {
