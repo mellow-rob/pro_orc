@@ -25,24 +25,20 @@ void main() {
       );
     });
 
-    test(
-      'a path containing AppleScript-breaking metacharacters cannot '
-      'inject an additional Finder command',
-      () {
-        final malicious =
-            '/tmp/x" & (do shell script "rm -rf ~") & "';
-        final script = buildFinderDeleteScript(malicious);
+    test('a path containing AppleScript-breaking metacharacters cannot '
+        'inject an additional Finder command', () {
+      final malicious = '/tmp/x" & (do shell script "rm -rf ~") & "';
+      final script = buildFinderDeleteScript(malicious);
 
-        // The raw unescaped payload must never appear verbatim — the
-        // quotes inside it are escaped so it stays inert data.
-        expect(script, isNot(contains(malicious)));
-        expect(
-          script,
-          r'tell application "Finder" to delete POSIX file '
-          r'"/tmp/x\" & (do shell script \"rm -rf ~\") & \""',
-        );
-      },
-    );
+      // The raw unescaped payload must never appear verbatim — the
+      // quotes inside it are escaped so it stays inert data.
+      expect(script, isNot(contains(malicious)));
+      expect(
+        script,
+        r'tell application "Finder" to delete POSIX file '
+        r'"/tmp/x\" & (do shell script \"rm -rf ~\") & \""',
+      );
+    });
 
     test('escapes backslashes before quotes', () {
       final script = buildFinderDeleteScript(r'/tmp/a\b"c');

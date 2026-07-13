@@ -25,23 +25,17 @@ void main() {
         expect(script, contains(r'cd \"/my project/folder\" && claude'));
       });
 
-      test(
-        'escapes shell metacharacters in the path so they cannot break out '
-        'of the shell layer (double-escaped again for AppleScript)',
-        () {
-          final script = service.buildClaudeScript(
-            '/tmp/"; rm -rf ~; echo "pwned',
-          );
+      test('escapes shell metacharacters in the path so they cannot break out '
+          'of the shell layer (double-escaped again for AppleScript)', () {
+        final script = service.buildClaudeScript(
+          '/tmp/"; rm -rf ~; echo "pwned',
+        );
 
-          // Shell layer: " -> \" ; AppleScript layer: \" -> \\\"
-          expect(
-            script,
-            contains(r'cd \"/tmp/\\\"; rm -rf ~; echo \\\"pwned\"'),
-          );
-          // The raw unescaped payload must never appear verbatim.
-          expect(script, isNot(contains('/tmp/"; rm -rf ~; echo "pwned')));
-        },
-      );
+        // Shell layer: " -> \" ; AppleScript layer: \" -> \\\"
+        expect(script, contains(r'cd \"/tmp/\\\"; rm -rf ~; echo \\\"pwned\"'));
+        // The raw unescaped payload must never appear verbatim.
+        expect(script, isNot(contains('/tmp/"; rm -rf ~; echo "pwned')));
+      });
     });
 
     group('buildClaudePromptCommand', () {
@@ -60,21 +54,15 @@ void main() {
           'say "hi" `whoami`',
         );
 
-        expect(
-          cmd,
-          r'cd "/some/path" && claude "say \"hi\" `whoami`"',
-        );
+        expect(cmd, r'cd "/some/path" && claude "say \"hi\" `whoami`"');
       });
 
-      test(
-        'escapes double quotes in the path so it cannot break out of its '
-        'quotes',
-        () {
-          final cmd = service.buildClaudePromptCommand('/a"b/c', 'prompt');
+      test('escapes double quotes in the path so it cannot break out of its '
+          'quotes', () {
+        final cmd = service.buildClaudePromptCommand('/a"b/c', 'prompt');
 
-          expect(cmd, r'cd "/a\"b/c" && claude "prompt"');
-        },
-      );
+        expect(cmd, r'cd "/a\"b/c" && claude "prompt"');
+      });
 
       test(
         'a prompt containing a double quote and semicolons is fully '
@@ -85,10 +73,7 @@ void main() {
             '"; touch /tmp/pwned; echo "',
           );
 
-          expect(
-            cmd,
-            r'cd "/proj" && claude "\"; touch /tmp/pwned; echo \""',
-          );
+          expect(cmd, r'cd "/proj" && claude "\"; touch /tmp/pwned; echo \""');
           // The raw unescaped payload must never appear verbatim.
           expect(cmd, isNot(contains('"; touch /tmp/pwned; echo "')));
         },

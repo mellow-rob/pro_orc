@@ -99,13 +99,13 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
   Future<void> _addScanDir() async {
     final dir = await getDirectoryPath();
     if (dir != null && !_scanDirs.contains(dir)) {
-      setState(() => _scanDirs.add(dir));
+      setState(() => _scanDirs = [..._scanDirs, dir]);
       await _saveScanDirs();
     }
   }
 
   Future<void> _removeScanDir(int index) async {
-    setState(() => _scanDirs.removeAt(index));
+    setState(() => _scanDirs = [..._scanDirs]..removeAt(index));
     await _saveScanDirs();
   }
 
@@ -113,6 +113,11 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
     final db = ref.read(appDatabaseProvider);
     await db.setScanDirs(_scanDirs);
     ref.invalidate(projectsProvider);
+    // New/removed scan dirs must be picked up by the watcher immediately —
+    // watcherProvider is keepAlive() and only reads scan dirs once at init
+    // (see watcher_provider.dart), so without this invalidation newly added
+    // directories are silently unwatched until the app restarts (F-011).
+    ref.invalidate(watcherProvider);
   }
 
   // --- Ignore Patterns ---

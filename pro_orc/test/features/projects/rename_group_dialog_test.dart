@@ -8,6 +8,7 @@ import 'package:pro_orc/data/models/project_group.dart';
 import 'package:pro_orc/features/projects/rename_group_dialog.dart';
 import 'package:pro_orc/providers/database_provider.dart';
 import 'package:pro_orc/providers/groups_provider.dart';
+import 'package:pro_orc/providers/projects_provider.dart';
 import 'package:pro_orc/theme/n3_colors.dart';
 
 void main() {
@@ -30,7 +31,13 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
 
     final container = ProviderContainer(
-      overrides: [appDatabaseProvider.overrideWithValue(db)],
+      overrides: [
+        appDatabaseProvider.overrideWithValue(db),
+        // groupsProvider now awaits projectsProvider.future (F-007 fix) —
+        // override with an empty resolved list so tests don't hit the real
+        // ProjectScanner/filesystem via the default scan dir.
+        projectsProvider.overrideWith((ref) async => []),
+      ],
     );
     addTearDown(container.dispose);
     // Let groupsProvider load the DB-seeded groups before the dialog reads
@@ -153,7 +160,10 @@ void main() {
       await tester.pumpAndSettle();
 
       final updated = container.read(groupsProvider);
-      expect(updated.any((g) => g.id == group.id && g.name == 'Vodafone'), isTrue);
+      expect(
+        updated.any((g) => g.id == group.id && g.name == 'Vodafone'),
+        isTrue,
+      );
     });
   });
 }

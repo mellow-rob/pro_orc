@@ -6,11 +6,18 @@ import 'package:pro_orc/data/db/app_database.dart';
 import 'package:pro_orc/data/db/tables/project_groups_table.dart';
 import 'package:pro_orc/providers/database_provider.dart';
 import 'package:pro_orc/providers/project_group_membership_provider.dart';
+import 'package:pro_orc/providers/projects_provider.dart';
 
 Future<ProviderContainer> _containerWithInMemoryDb() async {
   final db = AppDatabase(NativeDatabase.memory());
   final container = ProviderContainer(
-    overrides: [appDatabaseProvider.overrideWithValue(db)],
+    overrides: [
+      appDatabaseProvider.overrideWithValue(db),
+      // membershipProvider now awaits projectsProvider.future (F-007 fix) —
+      // override with an empty resolved list so tests don't hit the real
+      // ProjectScanner/filesystem via the default scan dir.
+      projectsProvider.overrideWith((ref) async => []),
+    ],
   );
   addTearDown(container.dispose);
   addTearDown(db.close);
@@ -38,7 +45,10 @@ void main() {
         await db.setProjectGroup('vf-tk-deck', null);
 
         final container = ProviderContainer(
-          overrides: [appDatabaseProvider.overrideWithValue(db)],
+          overrides: [
+            appDatabaseProvider.overrideWithValue(db),
+            projectsProvider.overrideWith((ref) async => []),
+          ],
         );
         addTearDown(container.dispose);
 

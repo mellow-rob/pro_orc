@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:pro_orc/providers/database_provider.dart';
+import 'package:pro_orc/providers/projects_provider.dart';
 
 /// Per-project group membership: `folderId -> groupId` (`null` = "Ohne
 /// Gruppe"). Membership is strictly 1:1 — [assign] replaces any previous
@@ -22,6 +23,12 @@ class ProjectGroupMembershipNotifier extends Notifier<Map<String, String?>> {
   }
 
   Future<void> _loadFromDb() async {
+    // Wait for projectsProvider's first resolution before reading — it
+    // performs the one-time organization seed (F-014/015/016), which writes
+    // "Kundenprojekte" assignments this read depends on. Without this await,
+    // a first-launch UI that reads membershipProvider before projectsProvider
+    // settles would see every project as unassigned (F-007).
+    await ref.watch(projectsProvider.future);
     final db = ref.read(appDatabaseProvider);
     final all = await db.getAllProjectGroupIds();
     state = all;

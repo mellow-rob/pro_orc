@@ -857,14 +857,32 @@ class _QuickActionButtonState extends State<_QuickActionButton> {
 }
 
 /// Tree node holding files at this directory level and child directories.
+/// Immutable — built once by [_buildFileTree] via [_FileTreeNodeBuilder] and
+/// consumed read-only by [_FolderNode].
 class _FileTreeNode {
+  const _FileTreeNode({required this.files, required this.children});
+
+  final List<MdFileInfo> files;
+  final Map<String, _FileTreeNode> children;
+}
+
+/// Mutable accumulator used only while assembling the tree in
+/// [_buildFileTree] — never exposed outside that function.
+class _FileTreeNodeBuilder {
   final List<MdFileInfo> files = [];
-  final Map<String, _FileTreeNode> children = {};
+  final Map<String, _FileTreeNodeBuilder> children = {};
+
+  _FileTreeNode toNode() {
+    return _FileTreeNode(
+      files: files,
+      children: children.map((seg, child) => MapEntry(seg, child.toNode())),
+    );
+  }
 }
 
 /// Builds a nested tree from a flat list of [MdFileInfo].
 _FileTreeNode _buildFileTree(List<MdFileInfo> files) {
-  final root = _FileTreeNode();
+  final root = _FileTreeNodeBuilder();
   for (final file in files) {
     final dir = p.dirname(file.relativePath);
     if (dir == '.') {
@@ -873,12 +891,12 @@ _FileTreeNode _buildFileTree(List<MdFileInfo> files) {
       final segments = p.split(dir);
       var node = root;
       for (final seg in segments) {
-        node = node.children.putIfAbsent(seg, _FileTreeNode.new);
+        node = node.children.putIfAbsent(seg, _FileTreeNodeBuilder.new);
       }
       node.files.add(file);
     }
   }
-  return root;
+  return root.toNode();
 }
 
 /// Collapsible folder node that renders its files and nested subfolders.

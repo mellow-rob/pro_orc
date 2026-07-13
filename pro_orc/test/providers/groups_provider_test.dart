@@ -8,11 +8,18 @@ import 'package:pro_orc/providers/database_provider.dart';
 import 'package:pro_orc/providers/group_name_validation.dart';
 import 'package:pro_orc/providers/groups_provider.dart';
 import 'package:pro_orc/providers/project_group_membership_provider.dart';
+import 'package:pro_orc/providers/projects_provider.dart';
 
 Future<ProviderContainer> _containerWithInMemoryDb() async {
   final db = AppDatabase(NativeDatabase.memory());
   final container = ProviderContainer(
-    overrides: [appDatabaseProvider.overrideWithValue(db)],
+    overrides: [
+      appDatabaseProvider.overrideWithValue(db),
+      // groupsProvider now awaits projectsProvider.future (F-007 fix) —
+      // override with an empty resolved list so tests don't hit the real
+      // ProjectScanner/filesystem via the default scan dir.
+      projectsProvider.overrideWith((ref) async => []),
+    ],
   );
   addTearDown(container.dispose);
   addTearDown(db.close);

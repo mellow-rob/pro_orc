@@ -7,6 +7,7 @@ import 'package:pro_orc/data/db/app_database.dart';
 import 'package:pro_orc/features/projects/create_group_dialog.dart';
 import 'package:pro_orc/providers/database_provider.dart';
 import 'package:pro_orc/providers/groups_provider.dart';
+import 'package:pro_orc/providers/projects_provider.dart';
 import 'package:pro_orc/theme/n3_colors.dart';
 
 void main() {
@@ -26,7 +27,13 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
 
     final container = ProviderContainer(
-      overrides: [appDatabaseProvider.overrideWithValue(db)],
+      overrides: [
+        appDatabaseProvider.overrideWithValue(db),
+        // groupsProvider now awaits projectsProvider.future (F-007 fix) —
+        // override with an empty resolved list so tests don't hit the real
+        // ProjectScanner/filesystem via the default scan dir.
+        projectsProvider.overrideWith((ref) async => []),
+      ],
     );
     addTearDown(container.dispose);
     // Force groupsProvider.build() to run and its async _loadFromDb() to
@@ -64,9 +71,7 @@ void main() {
   }
 
   group('CreateGroupDialog', () {
-    testWidgets('creates a new group and closes on valid name', (
-      tester,
-    ) async {
+    testWidgets('creates a new group and closes on valid name', (tester) async {
       final container = await pumpHost(tester);
 
       await tester.enterText(find.byType(TextField), 'Launch Partners');
