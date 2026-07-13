@@ -12,7 +12,6 @@ import 'package:pro_orc/features/shared/quick_actions.dart';
 import 'package:pro_orc/features/shared/session_live_indicator.dart';
 import 'package:pro_orc/features/shell/glass_card.dart';
 import 'package:pro_orc/providers/database_provider.dart';
-import 'package:pro_orc/providers/hidden_projects_provider.dart';
 import 'package:pro_orc/providers/session_provider.dart';
 import 'package:pro_orc/theme/n3_colors.dart';
 
@@ -25,18 +24,10 @@ import 'package:pro_orc/theme/n3_colors.dart';
 /// color (title icon, hover glow, Claude button) still follows the
 /// project's [ProjectType] to preserve visual continuity with the old tabs.
 class ProjectCard extends ConsumerStatefulWidget {
-  const ProjectCard({
-    super.key,
-    required this.project,
-    this.onTap,
-    this.isHiddenCard = false,
-  });
+  const ProjectCard({super.key, required this.project, this.onTap});
 
   final ProjectModel project;
   final VoidCallback? onTap;
-
-  /// When true, the card is rendered with reduced opacity to indicate it's hidden.
-  final bool isHiddenCard;
 
   @override
   ConsumerState<ProjectCard> createState() => _ProjectCardState();
@@ -51,45 +42,39 @@ class _ProjectCardState extends ConsumerState<ProjectCard> {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).extension<AppColors>()!;
     final accent = _type.accent(colors);
-    final hiddenSet = ref.watch(hiddenProjectsProvider);
-    final isHidden = hiddenSet.contains(widget.project.folderId);
 
     return DraggableProject(
       folderId: widget.project.folderId,
-      child: Opacity(
-        opacity: widget.isHiddenCard ? 0.45 : 1.0,
-        child: GestureDetector(
-          onTap: widget.onTap,
-          onSecondaryTapUp: (details) => showProjectContextMenu(
-            context: context,
-            details: details,
-            isHidden: isHidden,
-            ref: ref,
-            project: widget.project,
-            moveTarget: _type.moveTarget,
-          ),
-          child: MouseRegion(
-            onEnter: (_) => setState(() => _isHovered = true),
-            onExit: (_) => setState(() => _isHovered = false),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 180),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(14),
-                boxShadow: _isHovered
-                    ? [
-                        BoxShadow(
-                          color: accent.withValues(alpha: 0.15),
-                          blurRadius: 16,
-                          spreadRadius: 2,
-                        ),
-                      ]
-                    : [],
-              ),
-              child: GlassCard(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: _buildContent(context, colors, accent, isHidden),
-                ),
+      child: GestureDetector(
+        onTap: widget.onTap,
+        onSecondaryTapUp: (details) => showProjectContextMenu(
+          context: context,
+          details: details,
+          ref: ref,
+          project: widget.project,
+          moveTarget: _type.moveTarget,
+        ),
+        child: MouseRegion(
+          onEnter: (_) => setState(() => _isHovered = true),
+          onExit: (_) => setState(() => _isHovered = false),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(14),
+              boxShadow: _isHovered
+                  ? [
+                      BoxShadow(
+                        color: accent.withValues(alpha: 0.15),
+                        blurRadius: 16,
+                        spreadRadius: 2,
+                      ),
+                    ]
+                  : [],
+            ),
+            child: GlassCard(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: _buildContent(context, colors, accent),
               ),
             ),
           ),
@@ -98,18 +83,13 @@ class _ProjectCardState extends ConsumerState<ProjectCard> {
     );
   }
 
-  Widget _buildContent(
-    BuildContext context,
-    AppColors colors,
-    Color accent,
-    bool isHidden,
-  ) {
+  Widget _buildContent(BuildContext context, AppColors colors, Color accent) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _buildBadgeRow(),
         const SizedBox(height: 8),
-        _buildTitleRow(colors, accent, isHidden),
+        _buildTitleRow(colors, accent),
         const SizedBox(height: 10),
         if (_a1Progress != null) ...[
           _buildA1Block(colors, accent, _a1Progress!),
@@ -155,7 +135,7 @@ class _ProjectCardState extends ConsumerState<ProjectCard> {
     );
   }
 
-  Widget _buildTitleRow(AppColors colors, Color accent, bool isHidden) {
+  Widget _buildTitleRow(AppColors colors, Color accent) {
     final sessionsAsync = ref.watch(
       projectSessionsProvider(widget.project.path),
     );
@@ -192,30 +172,11 @@ class _ProjectCardState extends ConsumerState<ProjectCard> {
           child: IconButton(
             padding: EdgeInsets.zero,
             iconSize: 16,
-            icon: Icon(
-              isHidden ? LucideIcons.eyeOff100 : LucideIcons.eye100,
-              color: colors.textDim,
-            ),
-            tooltip: isHidden ? 'Oeffentlich' : 'Privat',
-            onPressed: () {
-              ref
-                  .read(hiddenProjectsProvider.notifier)
-                  .toggle(widget.project.folderId);
-            },
-          ),
-        ),
-        SizedBox(
-          width: 28,
-          height: 28,
-          child: IconButton(
-            padding: EdgeInsets.zero,
-            iconSize: 16,
             icon: Icon(LucideIcons.ellipsis100, color: colors.textDim),
             tooltip: 'Optionen',
             onPressed: () => showProjectContextMenuAt(
               context: context,
               position: _menuAnchor(context),
-              isHidden: isHidden,
               ref: ref,
               project: widget.project,
               moveTarget: _type.moveTarget,

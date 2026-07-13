@@ -6,7 +6,6 @@ import 'package:pro_orc/data/models/group_section_data.dart';
 import 'package:pro_orc/data/models/project_group.dart';
 import 'package:pro_orc/data/models/project_model.dart';
 import 'package:pro_orc/providers/groups_provider.dart';
-import 'package:pro_orc/providers/hidden_projects_provider.dart';
 import 'package:pro_orc/providers/project_group_membership_provider.dart';
 import 'package:pro_orc/providers/projects_provider.dart';
 
@@ -20,22 +19,18 @@ import 'package:pro_orc/providers/projects_provider.dart';
 /// section's `members` list — never dropping a section outright, since
 /// FR-021 requires section headings to stay visible even at zero visible
 /// members under a filter. Keeping this provider filter-agnostic means its
-/// output (grouping + ordering + hidden-project exclusion) is identical
-/// regardless of which chip is active, and both the grid and the list view
-/// share that single source of truth.
+/// output (grouping + ordering) is identical regardless of which chip is
+/// active, and both the grid and the list view share that single source
+/// of truth.
 final groupedProjectsProvider = Provider<List<GroupSectionData>>((ref) {
   final projectsAsync = ref.watch(projectsProvider);
   final groups = ref.watch(groupsProvider);
   final membership = ref.watch(membershipProvider);
-  final hidden = ref.watch(hiddenProjectsProvider);
 
   final allProjects = projectsAsync.value ?? const <ProjectModel>[];
-  final visibleProjects = allProjects
-      .where((p) => !hidden.contains(p.folderId))
-      .toList();
 
   final byGroupId = <String?, List<ProjectModel>>{};
-  for (final project in visibleProjects) {
+  for (final project in allProjects) {
     final groupId = membership[project.folderId];
     (byGroupId[groupId] ??= []).add(project);
   }

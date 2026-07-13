@@ -68,7 +68,6 @@ void main() {
                   onSecondaryTapUp: (details) => showProjectContextMenu(
                     context: context,
                     details: details,
-                    isHidden: false,
                     ref: ref,
                     project: project,
                     moveTarget: ProjectType.research,
