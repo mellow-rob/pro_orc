@@ -13,9 +13,7 @@ import 'package:pro_orc/features/shared/roadmap/milestone_lane.dart';
 import 'package:pro_orc/features/shared/roadmap/offline_fallback_badge.dart';
 import 'package:pro_orc/features/shared/roadmap/roadmap_hero.dart';
 import 'package:pro_orc/features/shared/roadmap/roadmap_tab.dart';
-import 'package:pro_orc/features/shared/roadmap/roadmap_timeline_view.dart';
 import 'package:pro_orc/features/shared/roadmap/roadmap_tree.dart';
-import 'package:pro_orc/features/shared/roadmap/roadmap_view_toggle.dart';
 import 'package:pro_orc/providers/roadmap_provider.dart';
 import 'package:pro_orc/theme/n3_colors.dart';
 
@@ -490,13 +488,35 @@ void main() {
       testWidgets(
         'tapping a milestone lane reveals its features as cards (FR-016)',
         (tester) async {
-          await pumpTab(
-            tester,
-            result: RoadmapResult(
-              data: productStoreData,
-              source: RoadmapSource.productStore,
+          // Selection is now a controlled value (feature 002, Wave 1) rather
+          // than local state inside RoadmapTab, so the test host must supply
+          // its own setState-backed callback for a tap to actually change
+          // what's selected — a no-op onMilestoneSelected (as pumpTab's
+          // default provides) would leave selectedMilestone null forever.
+          await tester.pumpWidget(
+            ProviderScope(
+              overrides: [
+                roadmapProvider(project).overrideWith(
+                  (ref) async => RoadmapResult(
+                    data: productStoreData,
+                    source: RoadmapSource.productStore,
+                  ),
+                ),
+              ],
+              child: MaterialApp(
+                theme: ThemeData.dark().copyWith(
+                  extensions: const [AppColors.dark],
+                ),
+                home: Scaffold(
+                  body: _ControlledRoadmapTabHost(
+                    project: project,
+                    accent: AppColors.dark.cyan,
+                  ),
+                ),
+              ),
             ),
           );
+          await tester.pumpAndSettle();
 
           expect(find.byType(FeatureCard), findsNothing);
 
@@ -513,13 +533,30 @@ void main() {
         'tapping a milestone lane with zero features shows the explicit '
         'German empty state (FR-014)',
         (tester) async {
-          await pumpTab(
-            tester,
-            result: RoadmapResult(
-              data: productStoreData,
-              source: RoadmapSource.productStore,
+          await tester.pumpWidget(
+            ProviderScope(
+              overrides: [
+                roadmapProvider(project).overrideWith(
+                  (ref) async => RoadmapResult(
+                    data: productStoreData,
+                    source: RoadmapSource.productStore,
+                  ),
+                ),
+              ],
+              child: MaterialApp(
+                theme: ThemeData.dark().copyWith(
+                  extensions: const [AppColors.dark],
+                ),
+                home: Scaffold(
+                  body: _ControlledRoadmapTabHost(
+                    project: project,
+                    accent: AppColors.dark.cyan,
+                  ),
+                ),
+              ),
             ),
           );
+          await tester.pumpAndSettle();
 
           await tester.tap(find.text('M10 — Leerer Meilenstein'));
           await tester.pumpAndSettle();
@@ -533,7 +570,17 @@ void main() {
     },
   );
 
-  group('RoadmapTab — Wave 7 FR-022 view toggle', () {
+  group('RoadmapTab — feature 002 Wave 1: controlled milestone selection', () {
+    // Zeitstrahl is no longer an in-tab view toggle owned by RoadmapTab
+    // (that's what the old "Wave 7 FR-022 view toggle" group tested,
+    // against a RoadmapViewToggle/RoadmapTimelineView pair that lived
+    // inside this widget). It is now a sibling top-level tab in
+    // ProjectDetailPanel, and the milestone selection is hoisted there —
+    // RoadmapTab only renders the lanes view and forwards taps via the
+    // controlled `selectedMilestone`/`onMilestoneSelected` props. The
+    // selection-survives-tab-switch contract (FR-009) is exercised at the
+    // ProjectDetailPanel level instead — see
+    // project_detail_panel_roadmap_tab_test.dart.
     final productStoreData = RoadmapData(
       nextMdContent: '# Aktueller Stand\n\nWir bauen M9.',
       milestones: [
@@ -558,48 +605,8 @@ void main() {
       ],
     );
 
-    testWidgets('starts in the lanes view with the toggle present', (
-      tester,
-    ) async {
-      await pumpTab(
-        tester,
-        result: RoadmapResult(
-          data: productStoreData,
-          source: RoadmapSource.productStore,
-        ),
-      );
-
-      expect(find.byType(RoadmapViewToggle), findsOneWidget);
-      expect(find.byType(MilestoneLane), findsNWidgets(2));
-      expect(find.byType(RoadmapTimelineView), findsNothing);
-    });
-
-    testWidgets('tapping "Zeitstrahl" switches the visible view from lanes to '
-        'timeline', (tester) async {
-      await pumpTab(
-        tester,
-        result: RoadmapResult(
-          data: productStoreData,
-          source: RoadmapSource.productStore,
-        ),
-      );
-
-      await tester.tap(find.text('Zeitstrahl'));
-      await tester.pumpAndSettle();
-
-      expect(find.byType(RoadmapTimelineView), findsOneWidget);
-      expect(find.byType(MilestoneLane), findsNothing);
-
-      await tester.tap(find.text('Übersicht'));
-      await tester.pumpAndSettle();
-
-      expect(find.byType(MilestoneLane), findsNWidgets(2));
-      expect(find.byType(RoadmapTimelineView), findsNothing);
-    });
-
     testWidgets(
-      'selecting a milestone in lanes, switching to timeline and back '
-      'preserves the selection (FR-023)',
+      'with no selection supplied, renders lanes with nothing selected',
       (tester) async {
         await pumpTab(
           tester,
@@ -609,27 +616,83 @@ void main() {
           ),
         );
 
-        // Select the milestone with features -> its feature cards show up.
+        expect(find.byType(MilestoneLane), findsNWidgets(2));
+        expect(find.byType(FeatureCard), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'tapping a milestone lane invokes onMilestoneSelected with that '
+      'milestone',
+      (tester) async {
+        RoadmapMilestone? tapped;
+
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              roadmapProvider(project).overrideWith(
+                (ref) async => RoadmapResult(
+                  data: productStoreData,
+                  source: RoadmapSource.productStore,
+                ),
+              ),
+            ],
+            child: MaterialApp(
+              theme: ThemeData.dark().copyWith(
+                extensions: const [AppColors.dark],
+              ),
+              home: Scaffold(
+                body: RoadmapTab(
+                  project: project,
+                  accent: AppColors.dark.cyan,
+                  onMilestoneSelected: (m) => tapped = m,
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
         await tester.tap(find.text('M9 — Detail Roadmap Redesign'));
         await tester.pumpAndSettle();
-        expect(find.byType(FeatureCard), findsOneWidget);
-        expect(find.text('Wave 4 — Hero + Lanes'), findsOneWidget);
 
-        // Switch to the timeline view — lanes (and the selection UI) leave
-        // the tree entirely.
-        await tester.tap(find.text('Zeitstrahl'));
+        expect(tapped?.name, 'M9 — Detail Roadmap Redesign');
+      },
+    );
+
+    testWidgets(
+      'a milestone passed in via selectedMilestone renders as already '
+      'selected (its feature cards show without an extra tap)',
+      (tester) async {
+        final preselected = productStoreData.milestones.first;
+
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              roadmapProvider(project).overrideWith(
+                (ref) async => RoadmapResult(
+                  data: productStoreData,
+                  source: RoadmapSource.productStore,
+                ),
+              ),
+            ],
+            child: MaterialApp(
+              theme: ThemeData.dark().copyWith(
+                extensions: const [AppColors.dark],
+              ),
+              home: Scaffold(
+                body: RoadmapTab(
+                  project: project,
+                  accent: AppColors.dark.cyan,
+                  selectedMilestone: preselected,
+                  onMilestoneSelected: (_) {},
+                ),
+              ),
+            ),
+          ),
+        );
         await tester.pumpAndSettle();
-        expect(find.byType(MilestoneLane), findsNothing);
-        expect(find.byType(FeatureCard), findsNothing);
-        expect(find.byType(RoadmapTimelineView), findsOneWidget);
 
-        // Switch back to lanes: the previously-selected milestone's feature
-        // cards must reappear without needing to tap the lane again — proof
-        // the selection survived the round-trip (FR-023).
-        await tester.tap(find.text('Übersicht'));
-        await tester.pumpAndSettle();
-
-        expect(find.byType(MilestoneLane), findsNWidgets(2));
         expect(find.byType(FeatureCard), findsOneWidget);
         expect(find.text('Wave 4 — Hero + Lanes'), findsOneWidget);
       },
@@ -667,4 +730,38 @@ extension _ProjectModelTestX on ProjectModel {
     path: path,
     projectType: projectType,
   );
+}
+
+/// Test-only host that owns `selectedMilestone` as real `setState`-backed
+/// widget state, mirroring how `ProjectDetailPanel` hoists the selection in
+/// production (feature 002, Wave 1: `RoadmapTab`'s milestone selection is a
+/// controlled value, not internal state). Lets tests exercise "tap a lane ->
+/// selection actually changes -> feature cards appear" without needing the
+/// full `ProjectDetailPanel`.
+class _ControlledRoadmapTabHost extends StatefulWidget {
+  const _ControlledRoadmapTabHost({
+    required this.project,
+    required this.accent,
+  });
+
+  final ProjectModel project;
+  final Color accent;
+
+  @override
+  State<_ControlledRoadmapTabHost> createState() =>
+      _ControlledRoadmapTabHostState();
+}
+
+class _ControlledRoadmapTabHostState extends State<_ControlledRoadmapTabHost> {
+  RoadmapMilestone? _selected;
+
+  @override
+  Widget build(BuildContext context) {
+    return RoadmapTab(
+      project: widget.project,
+      accent: widget.accent,
+      selectedMilestone: _selected,
+      onMilestoneSelected: (m) => setState(() => _selected = m),
+    );
+  }
 }

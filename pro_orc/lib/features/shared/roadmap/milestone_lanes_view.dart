@@ -13,11 +13,11 @@ import 'package:pro_orc/theme/n3_colors.dart';
 /// explicit "keine Features" message when the milestone has zero features.
 ///
 /// Selection is a controlled value ([selectedMilestone]/[onMilestoneSelected])
-/// rather than local widget state: the Wave 7 view toggle
-/// (`roadmap_view_toggle.dart`) needs the selection to survive switching to
-/// the timeline view and back, so the selection is hoisted into
-/// `_RoadmapHeroView`'s state (the parent that also owns `viewMode`) instead
-/// of living inside this widget, which would reset it on rebuild/remount.
+/// rather than local widget state: the Zeitstrahl tab (feature 002, Wave 1)
+/// needs the selection to survive switching to that sibling top-level tab
+/// and back, so the selection is hoisted all the way up to
+/// `ProjectDetailPanel`'s state instead of living inside this widget, which
+/// would reset it on rebuild/remount.
 class MilestoneLanesView extends StatelessWidget {
   const MilestoneLanesView({
     super.key,

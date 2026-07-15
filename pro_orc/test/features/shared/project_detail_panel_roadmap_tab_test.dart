@@ -7,10 +7,17 @@ import 'package:pro_orc/data/db/app_database.dart';
 import 'package:pro_orc/data/models/project_model.dart';
 import 'package:pro_orc/data/models/project_type.dart';
 import 'package:pro_orc/data/models/roadmap_data.dart';
+import 'package:pro_orc/data/models/vision_data.dart';
 import 'package:pro_orc/data/services/roadmap/roadmap_repository.dart';
 import 'package:pro_orc/features/shared/project_detail_panel.dart';
+import 'package:pro_orc/features/shared/roadmap/feature_card.dart';
+import 'package:pro_orc/features/shared/roadmap/milestone_lane.dart';
+import 'package:pro_orc/features/shared/vision/vision_hero.dart';
+import 'package:pro_orc/features/shared/vision/vision_scorecard.dart';
+import 'package:pro_orc/features/shared/vision/vision_section.dart';
 import 'package:pro_orc/providers/database_provider.dart';
 import 'package:pro_orc/providers/roadmap_provider.dart';
+import 'package:pro_orc/providers/vision_provider.dart';
 import 'package:pro_orc/theme/n3_colors.dart';
 
 /// FR-001: ProjectDetailPanel gains an "Übersicht"/"Roadmap" tab switch, with
@@ -42,7 +49,11 @@ void main() {
     description: 'A test project description.',
   );
 
-  Future<void> pumpPanel(WidgetTester tester) async {
+  Future<void> pumpPanel(
+    WidgetTester tester, {
+    RoadmapResult? roadmapResult,
+    VisionData? vision,
+  }) async {
     tester.view.physicalSize = const Size(1200, 1400);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.resetPhysicalSize);
@@ -52,19 +63,22 @@ void main() {
         overrides: [
           appDatabaseProvider.overrideWithValue(db),
           roadmapProvider(project).overrideWith(
-            (ref) async => const RoadmapResult(
-              data: RoadmapData(
-                milestones: [
-                  RoadmapMilestone(
-                    name: 'M1 — Fundament',
-                    status: 'done',
-                    phases: [RoadmapPhase(name: 'Phase 1', status: 'done')],
+            (ref) async =>
+                roadmapResult ??
+                const RoadmapResult(
+                  data: RoadmapData(
+                    milestones: [
+                      RoadmapMilestone(
+                        name: 'M1 — Fundament',
+                        status: 'done',
+                        phases: [RoadmapPhase(name: 'Phase 1', status: 'done')],
+                      ),
+                    ],
                   ),
-                ],
-              ),
-              source: RoadmapSource.local,
-            ),
+                  source: RoadmapSource.local,
+                ),
           ),
+          visionProvider(project).overrideWith((ref) async => vision),
         ],
         child: MaterialApp(
           theme: ThemeData.dark().copyWith(extensions: const [AppColors.dark]),
@@ -134,6 +148,163 @@ void main() {
 
     expect(find.text('Phase auswaehlen, um Details zu sehen'), findsNothing);
     expect(find.text('Keine Specs fuer diese Phase vorhanden'), findsOneWidget);
+  });
+
+  group('ProjectDetailPanel — feature 002 Wave 1: tab gating', () {
+    const vision = VisionData(
+      title: 'Pro Orc — Vision',
+      lead: 'Der Ueberblick ueber alle Projekte.',
+      pillars: [VisionPillar(name: 'Pillar A', description: 'Beschreibung A.')],
+    );
+
+    const tier0Result = RoadmapResult(
+      data: RoadmapData(
+        nextMdContent: '# Stand',
+        milestones: [RoadmapMilestone(name: 'M9', status: 'in-progress')],
+      ),
+      source: RoadmapSource.productStore,
+    );
+
+    const legacyResult = RoadmapResult(
+      data: RoadmapData(
+        milestones: [
+          RoadmapMilestone(
+            name: 'M1 — Fundament',
+            status: 'done',
+            phases: [RoadmapPhase(name: 'Phase 1', status: 'done')],
+          ),
+        ],
+      ),
+      source: RoadmapSource.local,
+    );
+
+    testWidgets('Vision tab button is hidden when there is no VISION.md '
+        'fixture', (tester) async {
+      await pumpPanel(tester, roadmapResult: legacyResult, vision: null);
+
+      expect(find.text('Vision'), findsNothing);
+    });
+
+    testWidgets('Vision tab button appears when a VISION.md fixture '
+        'resolves', (tester) async {
+      await pumpPanel(tester, roadmapResult: legacyResult, vision: vision);
+
+      expect(find.text('Vision'), findsOneWidget);
+    });
+
+    testWidgets(
+      'Zeitstrahl tab button is hidden for a non-productStore roadmap '
+      'source',
+      (tester) async {
+        await pumpPanel(tester, roadmapResult: legacyResult, vision: null);
+
+        expect(find.text('Zeitstrahl'), findsNothing);
+      },
+    );
+
+    testWidgets('Zeitstrahl tab button appears only when the roadmap source is '
+        'productStore (tier-0)', (tester) async {
+      await pumpPanel(tester, roadmapResult: tier0Result, vision: null);
+
+      expect(find.text('Zeitstrahl'), findsOneWidget);
+    });
+  });
+
+  group('ProjectDetailPanel — Vision tab rendering', () {
+    const vision = VisionData(
+      title: 'Pro Orc — Vision',
+      lead: 'Der Ueberblick ueber alle Projekte.',
+      pillars: [
+        VisionPillar(name: 'Pillar A', description: 'Beschreibung A.'),
+        VisionPillar(name: 'Pillar B', description: 'Beschreibung B.'),
+      ],
+    );
+
+    const legacyResult = RoadmapResult(
+      data: RoadmapData(
+        milestones: [
+          RoadmapMilestone(
+            name: 'M1 — Fundament',
+            status: 'done',
+            phases: [RoadmapPhase(name: 'Phase 1', status: 'done')],
+          ),
+        ],
+      ),
+      source: RoadmapSource.local,
+    );
+
+    testWidgets(
+      'selecting the Vision tab renders hero, scorecard, and pillars from '
+      'the fixture',
+      (tester) async {
+        await pumpPanel(tester, roadmapResult: legacyResult, vision: vision);
+
+        await tester.tap(find.text('Vision'));
+        await _pumpIgnoringOverflow(tester);
+
+        expect(find.byType(VisionHero), findsOneWidget);
+        expect(find.byType(VisionScorecard), findsOneWidget);
+        expect(find.byType(VisionSection), findsOneWidget);
+        expect(find.text('Pro Orc — Vision'), findsOneWidget);
+        expect(find.text('Pillar A'), findsOneWidget);
+        expect(find.text('Pillar B'), findsOneWidget);
+      },
+    );
+  });
+
+  group('ProjectDetailPanel — feature 002 FR-009: milestone selection survives '
+      'Roadmap <-> Zeitstrahl tab switches', () {
+    const tier0Result = RoadmapResult(
+      data: RoadmapData(
+        nextMdContent: '# Stand',
+        milestones: [
+          RoadmapMilestone(
+            name: 'M9 — Detail Roadmap Redesign',
+            status: 'in-progress',
+            phases: [
+              RoadmapPhase(name: 'Wave 4 — Hero + Lanes', status: 'done'),
+            ],
+          ),
+        ],
+      ),
+      source: RoadmapSource.productStore,
+    );
+
+    testWidgets(
+      'selecting a milestone in Roadmap, switching to Zeitstrahl and back '
+      'keeps the milestone selected',
+      (tester) async {
+        await pumpPanel(tester, roadmapResult: tier0Result, vision: null);
+
+        await tester.tap(find.text('Roadmap'));
+        await _pumpIgnoringOverflow(tester);
+
+        // Select the milestone -> its feature cards appear.
+        await tester.tap(find.text('M9 — Detail Roadmap Redesign'));
+        await _pumpIgnoringOverflow(tester);
+
+        expect(find.byType(MilestoneLane), findsOneWidget);
+        expect(find.byType(FeatureCard), findsOneWidget);
+        expect(find.text('Wave 4 — Hero + Lanes'), findsOneWidget);
+
+        // Switch to Zeitstrahl — the Roadmap lanes/cards leave the tree.
+        await tester.tap(find.text('Zeitstrahl'));
+        await _pumpIgnoringOverflow(tester);
+
+        expect(find.byType(MilestoneLane), findsNothing);
+        expect(find.byType(FeatureCard), findsNothing);
+
+        // Switch back to Roadmap: the previously-selected milestone's
+        // feature cards must reappear without tapping the lane again —
+        // proof the selection survived the round-trip (FR-009).
+        await tester.tap(find.text('Roadmap'));
+        await _pumpIgnoringOverflow(tester);
+
+        expect(find.byType(MilestoneLane), findsOneWidget);
+        expect(find.byType(FeatureCard), findsOneWidget);
+        expect(find.text('Wave 4 — Hero + Lanes'), findsOneWidget);
+      },
+    );
   });
 }
 
