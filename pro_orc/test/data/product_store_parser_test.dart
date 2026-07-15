@@ -82,10 +82,11 @@ void main() {
         expect(feature.stage, 'done');
         expect(feature.started, DateTime(2026, 7, 12));
         expect(feature.finished, DateTime(2026, 7, 15));
-        expect(
-          feature.specPath,
-          'projects/pro-orc/spec/002-project-organization.md',
-        );
+        // spec_path in index.json is relative to the a1-learnings root, not
+        // to `project.path` — no such file exists in this temp project, so
+        // it must resolve to null rather than the unusable raw string (see
+        // the dedicated resolution tests below for the positive case).
+        expect(feature.specPath, isNull);
       },
     );
 
@@ -199,21 +200,75 @@ void main() {
       expect(result.isEmpty, isTrue);
     });
 
-    test(
-      'tolerates a feature whose spec_path/plan_path files are missing on disk',
-      () async {
-        final project = await _createTempProject();
-        addTearDown(() => project.delete(recursive: true));
-        await _writeIndex(project, _validIndex);
-        // spec_path/plan_path point at files that don't exist anywhere —
-        // parser must not fail; existence checking happens in Wave 5 when
-        // content is actually read.
-        final parser = ProductStoreParser();
-        final result = await parser.parse(project.path);
+    test('tolerates a feature whose spec_path/plan_path files are missing on '
+        'disk — resolves to null rather than an unusable raw path', () async {
+      final project = await _createTempProject();
+      addTearDown(() => project.delete(recursive: true));
+      await _writeIndex(project, _validIndex);
+      // spec_path/plan_path point at files that don't exist anywhere —
+      // parser must not fail, and must not hand back the raw relative
+      // string either (a relative path resolves against the process CWD,
+      // not anything meaningful — see structured_spec_renderer.dart's
+      // "Spec/Plan nicht verfügbar" fallback).
+      final parser = ProductStoreParser();
+      final result = await parser.parse(project.path);
 
-        expect(result.isEmpty, isFalse);
-        expect(result.features.single.specPath, isNotNull);
-      },
-    );
+      expect(result.isEmpty, isFalse);
+      expect(result.features.single.specPath, isNull);
+    });
+
+    group('spec_path/plan_path resolution against the a1-learnings root', () {
+      test(
+        'resolves a repo-local .a1/learnings/<spec_path> into an absolute, '
+        'existing path whose content matches what was written to disk',
+        () async {
+          final project = await _createTempProject();
+          addTearDown(() => project.delete(recursive: true));
+
+          const relativeSpecPath = 'projects/test-proj/spec/001-foo.md';
+          const specContent = '# 001 Foo\n\nSpec body for the resolution test.';
+          final specFile = File(
+            p.join(project.path, '.a1', 'learnings', relativeSpecPath),
+          );
+          await specFile.create(recursive: true);
+          await specFile.writeAsString(specContent);
+
+          await _writeIndex(project, {
+            ..._validIndex,
+            'features': [
+              {
+                'id': '001-foo',
+                'milestone': 'm8-project-organization',
+                'title': 'Foo',
+                'status': 'in-flight',
+                'stage': 'started',
+                'depends_on': <String>[],
+                'started': '2026-07-12',
+                'finished': null,
+                'spec_path': relativeSpecPath,
+                'plan_path': null,
+              },
+            ],
+          });
+
+          final parser = ProductStoreParser();
+          final result = await parser.parse(project.path);
+
+          final feature = result.features.single;
+          expect(feature.specPath, isNotNull);
+          expect(p.isAbsolute(feature.specPath!), isTrue);
+          expect(File(feature.specPath!).existsSync(), isTrue);
+          expect(File(feature.specPath!).readAsStringSync(), specContent);
+        },
+      );
+
+      // The A1_VAULT_ROOT fallback tier (env var > repo-local miss) is not
+      // covered by an isolated test here: Platform.environment is read
+      // process-wide and cannot be scoped per-test without a subprocess,
+      // which would be disproportionate for this code path. The repo-local
+      // tier above exercises the same `_resolveStorePath` logic end-to-end
+      // (existence check + p.join), and the "missing on disk" test above
+      // exercises the not-found branch that the vault tier shares.
+    });
   });
 }

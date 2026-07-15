@@ -156,44 +156,89 @@ void main() {
       expect(phase.dependsOn, isEmpty);
     });
 
-    test(
-      'Wave 5: passes spec_path/plan_path through onto RoadmapPhase '
-      'unchanged (structured_spec_renderer.dart reads these lazily)',
-      () async {
-        final project = await _createTempProject();
-        addTearDown(() => project.delete(recursive: true));
-        await _writeIndex(project, {
-          ..._validIndex,
-          'features': [
-            {
-              'id': '002-project-organization',
-              'milestone': 'm8-project-organization',
-              'title': 'Project Hub',
-              'status': 'done',
-              'stage': 'done',
-              'depends_on': <String>[],
-              'started': '2026-07-12',
-              'finished': '2026-07-15',
-              'spec_path': 'projects/pro-orc/spec/002-project-organization.md',
-              'plan_path': 'projects/pro-orc/plans/002-project-organization.md',
-            },
-          ],
-        });
+    test('Wave 5: passes the resolved absolute spec_path/plan_path through '
+        'onto RoadmapPhase unchanged (structured_spec_renderer.dart reads '
+        'these lazily) — spec_path/plan_path in index.json are relative to '
+        'the a1-learnings root, resolved to absolute paths by '
+        'ProductStoreParser before reaching this repository', () async {
+      final project = await _createTempProject();
+      addTearDown(() => project.delete(recursive: true));
 
-        final repo = ProductStoreRoadmapRepository();
-        final result = await repo.resolve('pro-orc', project.path);
+      const relativeSpecPath =
+          'projects/pro-orc/spec/002-project-organization.md';
+      const relativePlanPath =
+          'projects/pro-orc/plans/002-project-organization.md';
+      final specFile = File(
+        p.join(project.path, '.a1', 'learnings', relativeSpecPath),
+      );
+      await specFile.create(recursive: true);
+      await specFile.writeAsString('# Spec');
+      final planFile = File(
+        p.join(project.path, '.a1', 'learnings', relativePlanPath),
+      );
+      await planFile.create(recursive: true);
+      await planFile.writeAsString('# Plan');
 
-        final phase = result.data.milestones.single.phases.single;
-        expect(
-          phase.specPath,
-          'projects/pro-orc/spec/002-project-organization.md',
-        );
-        expect(
-          phase.planPath,
-          'projects/pro-orc/plans/002-project-organization.md',
-        );
-      },
-    );
+      await _writeIndex(project, {
+        ..._validIndex,
+        'features': [
+          {
+            'id': '002-project-organization',
+            'milestone': 'm8-project-organization',
+            'title': 'Project Hub',
+            'status': 'done',
+            'stage': 'done',
+            'depends_on': <String>[],
+            'started': '2026-07-12',
+            'finished': '2026-07-15',
+            'spec_path': relativeSpecPath,
+            'plan_path': relativePlanPath,
+          },
+        ],
+      });
+
+      final repo = ProductStoreRoadmapRepository();
+      final result = await repo.resolve('pro-orc', project.path);
+
+      final phase = result.data.milestones.single.phases.single;
+      expect(phase.specPath, isNotNull);
+      expect(phase.specPath, endsWith(relativeSpecPath));
+      expect(File(phase.specPath!).existsSync(), isTrue);
+      expect(phase.planPath, isNotNull);
+      expect(phase.planPath, endsWith(relativePlanPath));
+      expect(File(phase.planPath!).existsSync(), isTrue);
+    });
+
+    test('Wave 5: spec_path/plan_path resolve to null on RoadmapPhase when the '
+        'referenced file does not exist under .a1/learnings/ (raw relative '
+        'string from index.json is never passed through unresolved)', () async {
+      final project = await _createTempProject();
+      addTearDown(() => project.delete(recursive: true));
+      await _writeIndex(project, {
+        ..._validIndex,
+        'features': [
+          {
+            'id': '002-project-organization',
+            'milestone': 'm8-project-organization',
+            'title': 'Project Hub',
+            'status': 'done',
+            'stage': 'done',
+            'depends_on': <String>[],
+            'started': '2026-07-12',
+            'finished': '2026-07-15',
+            'spec_path': 'projects/pro-orc/spec/002-project-organization.md',
+            'plan_path': 'projects/pro-orc/plans/002-project-organization.md',
+          },
+        ],
+      });
+
+      final repo = ProductStoreRoadmapRepository();
+      final result = await repo.resolve('pro-orc', project.path);
+
+      final phase = result.data.milestones.single.phases.single;
+      expect(phase.specPath, isNull);
+      expect(phase.planPath, isNull);
+    });
 
     test(
       'Wave 5: specPath/planPath are null when absent in index.json',
