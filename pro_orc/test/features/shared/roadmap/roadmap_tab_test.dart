@@ -13,7 +13,9 @@ import 'package:pro_orc/features/shared/roadmap/milestone_lane.dart';
 import 'package:pro_orc/features/shared/roadmap/offline_fallback_badge.dart';
 import 'package:pro_orc/features/shared/roadmap/roadmap_hero.dart';
 import 'package:pro_orc/features/shared/roadmap/roadmap_tab.dart';
+import 'package:pro_orc/features/shared/roadmap/roadmap_timeline_view.dart';
 import 'package:pro_orc/features/shared/roadmap/roadmap_tree.dart';
+import 'package:pro_orc/features/shared/roadmap/roadmap_view_toggle.dart';
 import 'package:pro_orc/providers/roadmap_provider.dart';
 import 'package:pro_orc/theme/n3_colors.dart';
 
@@ -530,6 +532,109 @@ void main() {
       );
     },
   );
+
+  group('RoadmapTab — Wave 7 FR-022 view toggle', () {
+    final productStoreData = RoadmapData(
+      nextMdContent: '# Aktueller Stand\n\nWir bauen M9.',
+      milestones: [
+        RoadmapMilestone(
+          name: 'M9 — Detail Roadmap Redesign',
+          status: 'in-progress',
+          start: DateTime(2026, 7),
+          target: DateTime(2026, 8),
+          phases: [
+            RoadmapPhase(
+              name: 'Wave 4 — Hero + Lanes',
+              status: 'done',
+              start: DateTime(2026, 7, 1),
+              finished: DateTime(2026, 7, 15),
+            ),
+          ],
+        ),
+        const RoadmapMilestone(
+          name: 'M10 — Leerer Meilenstein',
+          status: 'planned',
+        ),
+      ],
+    );
+
+    testWidgets('starts in the lanes view with the toggle present', (
+      tester,
+    ) async {
+      await pumpTab(
+        tester,
+        result: RoadmapResult(
+          data: productStoreData,
+          source: RoadmapSource.productStore,
+        ),
+      );
+
+      expect(find.byType(RoadmapViewToggle), findsOneWidget);
+      expect(find.byType(MilestoneLane), findsNWidgets(2));
+      expect(find.byType(RoadmapTimelineView), findsNothing);
+    });
+
+    testWidgets('tapping "Zeitstrahl" switches the visible view from lanes to '
+        'timeline', (tester) async {
+      await pumpTab(
+        tester,
+        result: RoadmapResult(
+          data: productStoreData,
+          source: RoadmapSource.productStore,
+        ),
+      );
+
+      await tester.tap(find.text('Zeitstrahl'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(RoadmapTimelineView), findsOneWidget);
+      expect(find.byType(MilestoneLane), findsNothing);
+
+      await tester.tap(find.text('Übersicht'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(MilestoneLane), findsNWidgets(2));
+      expect(find.byType(RoadmapTimelineView), findsNothing);
+    });
+
+    testWidgets(
+      'selecting a milestone in lanes, switching to timeline and back '
+      'preserves the selection (FR-023)',
+      (tester) async {
+        await pumpTab(
+          tester,
+          result: RoadmapResult(
+            data: productStoreData,
+            source: RoadmapSource.productStore,
+          ),
+        );
+
+        // Select the milestone with features -> its feature cards show up.
+        await tester.tap(find.text('M9 — Detail Roadmap Redesign'));
+        await tester.pumpAndSettle();
+        expect(find.byType(FeatureCard), findsOneWidget);
+        expect(find.text('Wave 4 — Hero + Lanes'), findsOneWidget);
+
+        // Switch to the timeline view — lanes (and the selection UI) leave
+        // the tree entirely.
+        await tester.tap(find.text('Zeitstrahl'));
+        await tester.pumpAndSettle();
+        expect(find.byType(MilestoneLane), findsNothing);
+        expect(find.byType(FeatureCard), findsNothing);
+        expect(find.byType(RoadmapTimelineView), findsOneWidget);
+
+        // Switch back to lanes: the previously-selected milestone's feature
+        // cards must reappear without needing to tap the lane again — proof
+        // the selection survived the round-trip (FR-023).
+        await tester.tap(find.text('Übersicht'));
+        await tester.pumpAndSettle();
+
+        expect(find.byType(MilestoneLane), findsNWidgets(2));
+        expect(find.byType(FeatureCard), findsOneWidget);
+        expect(find.text('Wave 4 — Hero + Lanes'), findsOneWidget);
+      },
+    );
+  });
 
   group('RoadmapTab — FR-011 "What\'s next" indicator', () {
     // Note: RoadmapTab no longer has a source for "current phase" (the GSD

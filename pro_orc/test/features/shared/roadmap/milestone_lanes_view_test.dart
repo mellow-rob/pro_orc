@@ -9,6 +9,12 @@ import 'package:pro_orc/features/shared/roadmap/structured_spec_renderer.dart';
 import 'package:pro_orc/theme/n3_colors.dart';
 
 void main() {
+  // `MilestoneLanesView` no longer owns its selection internally (Wave 7 —
+  // the selection is hoisted to the parent so it survives a lanes<->timeline
+  // view switch, see `roadmap_tab.dart`). `_SelectionHost` below stands in
+  // for that parent: it holds `selectedMilestone` in real widget state and
+  // rebuilds on `onMilestoneSelected`, so the original tap-to-select
+  // behavior is exercised exactly as before.
   Future<void> pumpView(
     WidgetTester tester, {
     required List<RoadmapMilestone> milestones,
@@ -16,13 +22,7 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         theme: ThemeData.dark().copyWith(extensions: const [AppColors.dark]),
-        home: Scaffold(
-          body: MilestoneLanesView(
-            milestones: milestones,
-            colors: AppColors.dark,
-            accent: AppColors.dark.cyan,
-          ),
-        ),
+        home: Scaffold(body: _SelectionHost(milestones: milestones)),
       ),
     );
     await tester.pumpAndSettle();
@@ -134,4 +134,33 @@ void main() {
       },
     );
   });
+}
+
+/// Test double for the real parent (`_RoadmapHeroView` in `roadmap_tab.dart`)
+/// that now owns the milestone selection as hoisted state (Wave 7,
+/// FR-023). Holds `selectedMilestone` across rebuilds so
+/// `MilestoneLanesView`'s tap-to-select contract is exercised the same way
+/// production code drives it.
+class _SelectionHost extends StatefulWidget {
+  const _SelectionHost({required this.milestones});
+
+  final List<RoadmapMilestone> milestones;
+
+  @override
+  State<_SelectionHost> createState() => _SelectionHostState();
+}
+
+class _SelectionHostState extends State<_SelectionHost> {
+  RoadmapMilestone? _selected;
+
+  @override
+  Widget build(BuildContext context) {
+    return MilestoneLanesView(
+      milestones: widget.milestones,
+      colors: AppColors.dark,
+      accent: AppColors.dark.cyan,
+      selectedMilestone: _selected,
+      onMilestoneSelected: (m) => setState(() => _selected = m),
+    );
+  }
 }

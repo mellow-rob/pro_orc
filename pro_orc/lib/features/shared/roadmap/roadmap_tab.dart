@@ -5,7 +5,9 @@ import 'package:pro_orc/data/models/roadmap_data.dart';
 import 'package:pro_orc/features/shared/roadmap/milestone_lanes_view.dart';
 import 'package:pro_orc/features/shared/roadmap/offline_fallback_badge.dart';
 import 'package:pro_orc/features/shared/roadmap/roadmap_hero.dart';
+import 'package:pro_orc/features/shared/roadmap/roadmap_timeline_view.dart';
 import 'package:pro_orc/features/shared/roadmap/roadmap_tree.dart';
+import 'package:pro_orc/features/shared/roadmap/roadmap_view_toggle.dart';
 import 'package:pro_orc/features/shared/roadmap/spec_list.dart';
 import 'package:pro_orc/features/shared/roadmap/spec_viewer.dart';
 import 'package:pro_orc/features/shared/roadmap/whats_next_indicator.dart';
@@ -70,12 +72,20 @@ class RoadmapTab extends ConsumerWidget {
 }
 
 /// Tier-0 (docs/product/) Roadmap view (Wave 4): hero ("Wo stehen wir" from
-/// NEXT.md) + milestone lanes with click-to-drill-down feature cards.
+/// NEXT.md) + a [RoadmapViewToggle] (Wave 7, FR-022) switching between
+/// milestone lanes (click-to-drill-down feature cards) and the
+/// timeline/Gantt view.
 ///
 /// Kept as its own top-level widget (not nested inside `_RoadmapSplitView`)
-/// so a later `viewMode` toggle (Wave 7, lanes|timeline) can wrap
-/// [MilestoneLanesView] without touching the legacy tree/spec-list path.
-class _RoadmapHeroView extends StatelessWidget {
+/// so the view toggle only touches this tier-0 path, never the legacy
+/// tree/spec-list split-view.
+///
+/// A `StatefulWidget` because it owns both the [RoadmapViewMode] and the
+/// selected milestone (FR-023): the selection is hoisted here — one level
+/// above [MilestoneLanesView] — specifically so it survives a round-trip
+/// through the timeline view and back, rather than resetting when
+/// [MilestoneLanesView] is removed from the tree on `lanes` -> `timeline`.
+class _RoadmapHeroView extends StatefulWidget {
   const _RoadmapHeroView({
     required this.data,
     required this.colors,
@@ -87,7 +97,30 @@ class _RoadmapHeroView extends StatelessWidget {
   final Color accent;
 
   @override
+  State<_RoadmapHeroView> createState() => _RoadmapHeroViewState();
+}
+
+class _RoadmapHeroViewState extends State<_RoadmapHeroView> {
+  RoadmapViewMode _viewMode = RoadmapViewMode.lanes;
+  RoadmapMilestone? _selectedMilestone;
+
+  void _onViewModeChanged(RoadmapViewMode mode) {
+    // Only the view mode changes here — the selection is deliberately left
+    // untouched so it is still there when the user switches back to
+    // `lanes` (FR-023).
+    setState(() => _viewMode = mode);
+  }
+
+  void _onMilestoneSelected(RoadmapMilestone milestone) {
+    setState(() => _selectedMilestone = milestone);
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final colors = widget.colors;
+    final accent = widget.accent;
+    final data = widget.data;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -97,12 +130,26 @@ class _RoadmapHeroView extends StatelessWidget {
           accent: accent,
         ),
         const SizedBox(height: 12),
+        RoadmapViewToggle(
+          mode: _viewMode,
+          colors: colors,
+          accent: accent,
+          onChanged: _onViewModeChanged,
+        ),
+        const SizedBox(height: 12),
         Expanded(
-          child: MilestoneLanesView(
-            milestones: data.milestones,
-            colors: colors,
-            accent: accent,
-          ),
+          child: switch (_viewMode) {
+            RoadmapViewMode.lanes => MilestoneLanesView(
+              milestones: data.milestones,
+              colors: colors,
+              accent: accent,
+              selectedMilestone: _selectedMilestone,
+              onMilestoneSelected: _onMilestoneSelected,
+            ),
+            RoadmapViewMode.timeline => SingleChildScrollView(
+              child: RoadmapTimelineView(milestones: data.milestones),
+            ),
+          },
         ),
       ],
     );

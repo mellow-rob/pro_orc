@@ -12,50 +12,47 @@ import 'package:pro_orc/theme/n3_colors.dart';
 /// shows that milestone's features as [FeatureCard]s below the lanes, or an
 /// explicit "keine Features" message when the milestone has zero features.
 ///
-/// Selection lives in local widget state (matching the existing
-/// `_RoadmapSplitViewState` convention) — kept as a single nullable
-/// `_selectedMilestone` field so a later `viewMode` toggle (Wave 7,
-/// lanes|timeline) can sit alongside it without disturbing the selection.
-class MilestoneLanesView extends StatefulWidget {
+/// Selection is a controlled value ([selectedMilestone]/[onMilestoneSelected])
+/// rather than local widget state: the Wave 7 view toggle
+/// (`roadmap_view_toggle.dart`) needs the selection to survive switching to
+/// the timeline view and back, so the selection is hoisted into
+/// `_RoadmapHeroView`'s state (the parent that also owns `viewMode`) instead
+/// of living inside this widget, which would reset it on rebuild/remount.
+class MilestoneLanesView extends StatelessWidget {
   const MilestoneLanesView({
     super.key,
     required this.milestones,
     required this.colors,
     required this.accent,
+    required this.selectedMilestone,
+    required this.onMilestoneSelected,
   });
 
   final List<RoadmapMilestone> milestones;
   final AppColors colors;
   final Color accent;
 
-  @override
-  State<MilestoneLanesView> createState() => _MilestoneLanesViewState();
-}
+  /// Currently selected milestone, owned by the parent so it survives a
+  /// Wave 7 view-mode switch (lanes <-> timeline).
+  final RoadmapMilestone? selectedMilestone;
 
-class _MilestoneLanesViewState extends State<MilestoneLanesView> {
-  RoadmapMilestone? _selectedMilestone;
-
-  void _selectMilestone(RoadmapMilestone milestone) {
-    setState(() => _selectedMilestone = milestone);
-  }
+  final ValueChanged<RoadmapMilestone> onMilestoneSelected;
 
   @override
   Widget build(BuildContext context) {
-    final colors = widget.colors;
-    final accent = widget.accent;
-    final selected = _selectedMilestone;
+    final selected = selectedMilestone;
 
     return SingleChildScrollView(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          for (final milestone in widget.milestones) ...[
+          for (final milestone in milestones) ...[
             MilestoneLane(
               milestone: milestone,
               colors: colors,
               accent: accent,
               selected: identical(milestone, selected),
-              onTap: () => _selectMilestone(milestone),
+              onTap: () => onMilestoneSelected(milestone),
             ),
             const SizedBox(height: 8),
           ],
