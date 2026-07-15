@@ -15,6 +15,10 @@ library;
 /// `local` → `brain` → `vault`. A tier is only consulted when every prior
 /// tier returned no usable data (usable = non-empty per [RoadmapData.isEmpty]).
 enum RoadmapSource {
+  /// Resolved from the project's `docs/product/index.json` schema-v1 layout
+  /// (Wave 3, tier-0 — tried ahead of every other tier).
+  productStore,
+
   /// Resolved from the project's local `.a1/roadmap.md` + `.a1/phases/`.
   local,
 
@@ -60,10 +64,43 @@ class RoadmapPhase {
   /// empty-list message rather than a blank pane (FR-005).
   final List<RoadmapSpecRef> specs;
 
+  /// Optional start date (Wave 3, for the Wave 6 timeline/Gantt view). Null
+  /// when the source tier does not carry date information (e.g. the legacy
+  /// `.a1/roadmap.md` tier never populates this).
+  final DateTime? start;
+
+  /// Optional target/due date (Wave 3, for the Wave 6 timeline/Gantt view).
+  final DateTime? target;
+
+  /// Optional completion date (Wave 3, for the Wave 6 timeline/Gantt view).
+  final DateTime? finished;
+
+  /// Human-readable titles of phases/features this one depends on (Wave 4,
+  /// for the `feature_card.dart` dependency chips). Empty list (not null)
+  /// when the source tier does not carry dependency information or the
+  /// phase has no dependencies.
+  final List<String> dependsOn;
+
+  /// Repo-relative or absolute path to this feature's spec document (Wave 5,
+  /// `structured_spec_renderer.dart`), or null when the source tier does not
+  /// carry a spec path (e.g. the legacy `.a1/roadmap.md` tier, which uses
+  /// [specs] instead).
+  final String? specPath;
+
+  /// Repo-relative or absolute path to this feature's wave-plan document
+  /// (Wave 5), or null when the source tier does not carry a plan path.
+  final String? planPath;
+
   const RoadmapPhase({
     required this.name,
     required this.status,
     this.specs = const [],
+    this.start,
+    this.target,
+    this.finished,
+    this.dependsOn = const [],
+    this.specPath,
+    this.planPath,
   });
 }
 
@@ -78,10 +115,23 @@ class RoadmapMilestone {
   /// Phases belonging to this milestone, in file/definition order.
   final List<RoadmapPhase> phases;
 
+  /// Optional start date (Wave 3, for the Wave 6 timeline/Gantt view). Null
+  /// when the source tier does not carry date information.
+  final DateTime? start;
+
+  /// Optional target/due date (Wave 3, for the Wave 6 timeline/Gantt view).
+  final DateTime? target;
+
+  /// Optional completion date (Wave 3, for the Wave 6 timeline/Gantt view).
+  final DateTime? finished;
+
   const RoadmapMilestone({
     required this.name,
     required this.status,
     this.phases = const [],
+    this.start,
+    this.target,
+    this.finished,
   });
 }
 
@@ -93,7 +143,13 @@ class RoadmapData {
   /// Milestones in file/definition order.
   final List<RoadmapMilestone> milestones;
 
-  const RoadmapData({this.milestones = const []});
+  /// Raw content of the source tier's "you are here" / next-step summary
+  /// (e.g. tier-0's `NEXT.md`), or null when the tier does not supply one.
+  /// Rendered as-is by `roadmap_hero.dart` (Wave 4) — no further parsing
+  /// performed here.
+  final String? nextMdContent;
+
+  const RoadmapData({this.milestones = const [], this.nextMdContent});
 
   static const empty = RoadmapData();
 

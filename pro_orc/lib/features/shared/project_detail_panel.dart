@@ -3,14 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:pro_orc/data/models/project_model.dart';
 import 'package:pro_orc/data/models/project_type.dart';
-import 'package:pro_orc/features/shared/detail/agents_section.dart';
-import 'package:pro_orc/features/shared/detail/collaboration_graph_section.dart';
 import 'package:pro_orc/features/shared/detail/description_section.dart';
 import 'package:pro_orc/features/shared/detail/file_preview_section.dart';
 import 'package:pro_orc/features/shared/detail/links_section.dart';
 import 'package:pro_orc/features/shared/detail/quick_actions_section.dart';
 import 'package:pro_orc/features/shared/detail/section_card.dart';
-import 'package:pro_orc/features/shared/detail/sessions_section.dart';
+import 'package:pro_orc/features/shared/detail/token_scorecard_section.dart';
 import 'package:pro_orc/features/shared/rename_project_dialog.dart';
 import 'package:pro_orc/features/shared/roadmap/roadmap_tab.dart';
 import 'package:pro_orc/features/shell/glass_card.dart';
@@ -255,26 +253,12 @@ class _ProjectDetailPanelState extends ConsumerState<ProjectDetailPanel> {
             ),
           ),
 
-        // --- Agents ---
-        if (project.usedAgents != null && project.usedAgents!.isNotEmpty)
-          AgentsSection(
-            usedAgents: project.usedAgents!,
-            colors: colors,
-            accent: accent,
-          ),
-
-        // --- Zusammenarbeits-Graph (Projekt + lokale Agents/Skills) ---
-        CollaborationGraphSection(
-          projectFolderId: project.folderId,
-          projectDisplayName: project.displayName,
+        // --- Token-Nutzung (Scorecard) ---
+        TokenScorecardSection(
           projectPath: project.path,
-          usedAgents: project.usedAgents ?? const [],
           colors: colors,
           accent: accent,
         ),
-
-        // --- Sessions ---
-        SessionsSection(projectPath: project.path, colors: colors, accent: accent),
 
         // --- Git & Links ---
         if (git != null)
