@@ -4,20 +4,21 @@
 
 # Pro Orc
 
-updated: 2026-07-13
+updated: 2026-07-15
 
 ## You are here
 
 - **m8-project-organization** — Project organization (target: unset)
+- **m9-detail-roadmap-redesign** — Detail view and roadmap redesign (target: unset)
 
 ## In-flight features
 
-- **002-project-organization** — Project Hub: list/grid toggle, custom groups, archive, a1-badge (milestone: m8-project-organization, stage: origin-cleanup) — scope: projects/pro-orc/spec/002-project-organization.md, projects/pro-orc/plans/002-project-organization-wave-plan.md
+None.
 
 ## Next cursor
 
-**002-project-organization** — recommended next feature (no unmet dependencies, first eligible feature in roadmap order).
+None — no eligible feature (all done/cancelled, or blocked by unmet dependencies).
 
 ## How to continue
 
-Run `a1-plan` to create an executable plan for the next-cursor feature, or `a1-execute` if a plan already exists.
+Run `a1-progress` to review overall project state and decide the next milestone.

@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated": "2026-07-13T06:45:12.887Z",
+  "generated": "2026-07-15T07:01:04.976Z",
   "project": {
     "id": "pro-orc",
     "title": "Pro Orc",
@@ -54,6 +54,12 @@
       "title": "Project organization",
       "status": "in-progress",
       "target": null
+    },
+    {
+      "id": "m9-detail-roadmap-redesign",
+      "title": "Detail view and roadmap redesign",
+      "status": "in-progress",
+      "target": null
     }
   ],
   "features": [
@@ -61,15 +67,15 @@
       "id": "002-project-organization",
       "milestone": "m8-project-organization",
       "title": "Project Hub: list/grid toggle, custom groups, archive, a1-badge",
-      "status": "in-flight",
-      "stage": "origin-cleanup",
+      "status": "done",
+      "stage": "done",
       "depends_on": [],
       "started": "2026-07-12",
-      "finished": null,
+      "finished": "2026-07-15",
       "spec_path": "projects/pro-orc/spec/002-project-organization.md",
       "plan_path": "projects/pro-orc/plans/002-project-organization-wave-plan.md"
     }
   ],
   "next": null,
-  "cursor": "002-project-organization"
+  "cursor": null
 }
