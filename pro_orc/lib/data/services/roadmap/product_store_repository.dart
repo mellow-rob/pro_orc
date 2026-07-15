@@ -43,6 +43,9 @@ class ProductStoreRoadmapRepository implements RoadmapRepository {
     if (storeData.isEmpty) return RoadmapData.empty;
 
     final featuresByMilestone = <String, List<ProductStoreFeature>>{};
+    final titleById = <String, String>{
+      for (final f in storeData.features) f.id: f.title,
+    };
     for (final feature in storeData.features) {
       featuresByMilestone
           .putIfAbsent(feature.milestoneId, () => [])
@@ -57,18 +60,32 @@ class ProductStoreRoadmapRepository implements RoadmapRepository {
           target: m.target,
           phases: [
             for (final f in featuresByMilestone[m.id] ?? const [])
-              _toRoadmapPhase(f),
+              _toRoadmapPhase(f, titleById),
           ],
         ),
     ];
 
-    return RoadmapData(milestones: milestones);
+    return RoadmapData(
+      milestones: milestones,
+      nextMdContent: storeData.nextMdContent,
+    );
   }
 
-  RoadmapPhase _toRoadmapPhase(ProductStoreFeature f) => RoadmapPhase(
+  RoadmapPhase _toRoadmapPhase(
+    ProductStoreFeature f,
+    Map<String, String> titleById,
+  ) => RoadmapPhase(
     name: f.title,
     status: f.status,
     start: f.started,
     finished: f.finished,
+    // Dependency ids are resolved to human-readable titles here so the UI
+    // (feature_card.dart, Wave 4) never has to know about feature ids — an
+    // id with no matching feature (e.g. a stale/removed dependency) is
+    // dropped rather than shown as a raw id.
+    dependsOn: [
+      for (final id in f.dependsOn)
+        if (titleById[id] != null) titleById[id]!,
+    ],
   );
 }

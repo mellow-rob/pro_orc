@@ -8,8 +8,12 @@ import 'package:pro_orc/data/models/project_model.dart';
 import 'package:pro_orc/data/models/project_type.dart';
 import 'package:pro_orc/data/models/roadmap_data.dart';
 import 'package:pro_orc/data/services/roadmap/roadmap_repository.dart';
+import 'package:pro_orc/features/shared/roadmap/feature_card.dart';
+import 'package:pro_orc/features/shared/roadmap/milestone_lane.dart';
 import 'package:pro_orc/features/shared/roadmap/offline_fallback_badge.dart';
+import 'package:pro_orc/features/shared/roadmap/roadmap_hero.dart';
 import 'package:pro_orc/features/shared/roadmap/roadmap_tab.dart';
+import 'package:pro_orc/features/shared/roadmap/roadmap_tree.dart';
 import 'package:pro_orc/providers/roadmap_provider.dart';
 import 'package:pro_orc/theme/n3_colors.dart';
 
@@ -424,6 +428,108 @@ void main() {
       },
     );
   });
+
+  group(
+    'RoadmapTab — FR-012/FR-013/FR-014/FR-016 tier-0 hero + lanes path',
+    () {
+      final productStoreData = RoadmapData(
+        nextMdContent: '# Aktueller Stand\n\nWir bauen M9.',
+        milestones: [
+          RoadmapMilestone(
+            name: 'M9 — Detail Roadmap Redesign',
+            status: 'in-progress',
+            target: DateTime(2026, 8),
+            phases: [
+              RoadmapPhase(
+                name: 'Wave 4 — Hero + Lanes',
+                status: 'done',
+                start: DateTime(2026, 7, 1),
+                finished: DateTime(2026, 7, 15),
+                dependsOn: const ['Wave 3 — Tier-0 Reader'],
+              ),
+            ],
+          ),
+          const RoadmapMilestone(
+            name: 'M10 — Leerer Meilenstein',
+            status: 'planned',
+          ),
+        ],
+      );
+
+      testWidgets('renders the hero section with NEXT.md content', (
+        tester,
+      ) async {
+        await pumpTab(
+          tester,
+          result: RoadmapResult(
+            data: productStoreData,
+            source: RoadmapSource.productStore,
+          ),
+        );
+
+        expect(find.byType(RoadmapHero), findsOneWidget);
+        expect(find.textContaining('Aktueller Stand'), findsOneWidget);
+        // Legacy tree path must NOT render for the tier-0 source.
+        expect(find.byType(RoadmapTree), findsNothing);
+      });
+
+      testWidgets('renders one MilestoneLane per milestone', (tester) async {
+        await pumpTab(
+          tester,
+          result: RoadmapResult(
+            data: productStoreData,
+            source: RoadmapSource.productStore,
+          ),
+        );
+
+        expect(find.byType(MilestoneLane), findsNWidgets(2));
+      });
+
+      testWidgets(
+        'tapping a milestone lane reveals its features as cards (FR-016)',
+        (tester) async {
+          await pumpTab(
+            tester,
+            result: RoadmapResult(
+              data: productStoreData,
+              source: RoadmapSource.productStore,
+            ),
+          );
+
+          expect(find.byType(FeatureCard), findsNothing);
+
+          await tester.tap(find.text('M9 — Detail Roadmap Redesign'));
+          await tester.pumpAndSettle();
+
+          expect(find.byType(FeatureCard), findsOneWidget);
+          expect(find.text('Wave 4 — Hero + Lanes'), findsOneWidget);
+          expect(find.text('Wave 3 — Tier-0 Reader'), findsOneWidget);
+        },
+      );
+
+      testWidgets(
+        'tapping a milestone lane with zero features shows the explicit '
+        'German empty state (FR-014)',
+        (tester) async {
+          await pumpTab(
+            tester,
+            result: RoadmapResult(
+              data: productStoreData,
+              source: RoadmapSource.productStore,
+            ),
+          );
+
+          await tester.tap(find.text('M10 — Leerer Meilenstein'));
+          await tester.pumpAndSettle();
+
+          expect(
+            find.text('Keine Features fuer diesen Meilenstein'),
+            findsOneWidget,
+          );
+        },
+      );
+    },
+  );
 
   group('RoadmapTab — FR-011 "What\'s next" indicator', () {
     // Note: RoadmapTab no longer has a source for "current phase" (the GSD

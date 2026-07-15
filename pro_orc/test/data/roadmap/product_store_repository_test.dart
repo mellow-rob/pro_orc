@@ -79,6 +79,84 @@ void main() {
     );
 
     test(
+      'Wave 4: adapts NEXT.md content into RoadmapData.nextMdContent',
+      () async {
+        final project = await _createTempProject();
+        addTearDown(() => project.delete(recursive: true));
+        await _writeIndex(project, _validIndex);
+        await File(
+          p.join(project.path, 'docs', 'product', 'NEXT.md'),
+        ).writeAsString('# Aktueller Stand\n\nWir bauen M9.');
+
+        final repo = ProductStoreRoadmapRepository();
+        final result = await repo.resolve('pro-orc', project.path);
+
+        expect(result.data.nextMdContent, '# Aktueller Stand\n\nWir bauen M9.');
+      },
+    );
+
+    test('Wave 4: NEXT.md absent resolves to nextMdContent == null', () async {
+      final project = await _createTempProject();
+      addTearDown(() => project.delete(recursive: true));
+      await _writeIndex(project, _validIndex);
+
+      final repo = ProductStoreRoadmapRepository();
+      final result = await repo.resolve('pro-orc', project.path);
+
+      expect(result.data.nextMdContent, isNull);
+    });
+
+    test(
+      'Wave 4: resolves depends_on feature ids into human-readable titles',
+      () async {
+        final project = await _createTempProject();
+        addTearDown(() => project.delete(recursive: true));
+        await _writeIndex(project, {
+          ..._validIndex,
+          'features': [
+            ..._validIndex['features'] as List,
+            {
+              'id': '003-dependent-feature',
+              'milestone': 'm8-project-organization',
+              'title': 'Dependent Feature',
+              'status': 'planned',
+              'stage': null,
+              'depends_on': ['002-project-organization', '999-unknown'],
+              'started': null,
+              'finished': null,
+              'spec_path': null,
+              'plan_path': null,
+            },
+          ],
+        });
+
+        final repo = ProductStoreRoadmapRepository();
+        final result = await repo.resolve('pro-orc', project.path);
+
+        final milestone = result.data.milestones.single;
+        final dependent = milestone.phases.firstWhere(
+          (p) => p.name == 'Dependent Feature',
+        );
+
+        // Known id resolved to its title; unknown id silently dropped
+        // (never surfaced as a raw id).
+        expect(dependent.dependsOn, ['Project Hub']);
+      },
+    );
+
+    test('Wave 4: dependsOn is empty when depends_on is empty', () async {
+      final project = await _createTempProject();
+      addTearDown(() => project.delete(recursive: true));
+      await _writeIndex(project, _validIndex);
+
+      final repo = ProductStoreRoadmapRepository();
+      final result = await repo.resolve('pro-orc', project.path);
+
+      final phase = result.data.milestones.single.phases.single;
+      expect(phase.dependsOn, isEmpty);
+    });
+
+    test(
       'FR-009: malformed index.json resolves to empty RoadmapData, no crash',
       () async {
         final project = await _createTempProject();

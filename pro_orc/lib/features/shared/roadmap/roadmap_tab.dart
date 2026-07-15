@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pro_orc/data/models/project_model.dart';
 import 'package:pro_orc/data/models/roadmap_data.dart';
+import 'package:pro_orc/features/shared/roadmap/milestone_lanes_view.dart';
 import 'package:pro_orc/features/shared/roadmap/offline_fallback_badge.dart';
+import 'package:pro_orc/features/shared/roadmap/roadmap_hero.dart';
 import 'package:pro_orc/features/shared/roadmap/roadmap_tree.dart';
 import 'package:pro_orc/features/shared/roadmap/spec_list.dart';
 import 'package:pro_orc/features/shared/roadmap/spec_viewer.dart';
@@ -45,6 +47,16 @@ class RoadmapTab extends ConsumerWidget {
         if (result.data.isEmpty) {
           return _EmptyRoadmapState(colors: colors);
         }
+        // Tier-0 (docs/product/) gets the Wave 4 hero + milestone-lane +
+        // feature-card view; every other tier keeps the original tree +
+        // spec-list split-view (Waves 1-2), unchanged.
+        if (result.source == RoadmapSource.productStore) {
+          return _RoadmapHeroView(
+            data: result.data,
+            colors: colors,
+            accent: accent,
+          );
+        }
         return _RoadmapSplitView(
           data: result.data,
           source: result.source,
@@ -53,6 +65,46 @@ class RoadmapTab extends ConsumerWidget {
           currentPhase: null,
         );
       },
+    );
+  }
+}
+
+/// Tier-0 (docs/product/) Roadmap view (Wave 4): hero ("Wo stehen wir" from
+/// NEXT.md) + milestone lanes with click-to-drill-down feature cards.
+///
+/// Kept as its own top-level widget (not nested inside `_RoadmapSplitView`)
+/// so a later `viewMode` toggle (Wave 7, lanes|timeline) can wrap
+/// [MilestoneLanesView] without touching the legacy tree/spec-list path.
+class _RoadmapHeroView extends StatelessWidget {
+  const _RoadmapHeroView({
+    required this.data,
+    required this.colors,
+    required this.accent,
+  });
+
+  final RoadmapData data;
+  final AppColors colors;
+  final Color accent;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        RoadmapHero(
+          nextMdContent: data.nextMdContent,
+          colors: colors,
+          accent: accent,
+        ),
+        const SizedBox(height: 12),
+        Expanded(
+          child: MilestoneLanesView(
+            milestones: data.milestones,
+            colors: colors,
+            accent: accent,
+          ),
+        ),
+      ],
     );
   }
 }

@@ -75,6 +75,12 @@ class RoadmapPhase {
   /// Optional completion date (Wave 3, for the Wave 6 timeline/Gantt view).
   final DateTime? finished;
 
+  /// Human-readable titles of phases/features this one depends on (Wave 4,
+  /// for the `feature_card.dart` dependency chips). Empty list (not null)
+  /// when the source tier does not carry dependency information or the
+  /// phase has no dependencies.
+  final List<String> dependsOn;
+
   const RoadmapPhase({
     required this.name,
     required this.status,
@@ -82,6 +88,7 @@ class RoadmapPhase {
     this.start,
     this.target,
     this.finished,
+    this.dependsOn = const [],
   });
 }
 
@@ -124,7 +131,13 @@ class RoadmapData {
   /// Milestones in file/definition order.
   final List<RoadmapMilestone> milestones;
 
-  const RoadmapData({this.milestones = const []});
+  /// Raw content of the source tier's "you are here" / next-step summary
+  /// (e.g. tier-0's `NEXT.md`), or null when the tier does not supply one.
+  /// Rendered as-is by `roadmap_hero.dart` (Wave 4) — no further parsing
+  /// performed here.
+  final String? nextMdContent;
+
+  const RoadmapData({this.milestones = const [], this.nextMdContent});
 
   static const empty = RoadmapData();
 
