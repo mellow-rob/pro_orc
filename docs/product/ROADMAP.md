@@ -41,7 +41,7 @@ milestones:
     target: null
   - id: m9-detail-roadmap-redesign
     title: "Detail view and roadmap redesign"
-    status: in-progress
+    status: done
     target: null
 features:
   - id: 002-project-organization
@@ -54,6 +54,16 @@ features:
     finished: 2026-07-15
     spec_path: projects/pro-orc/spec/002-project-organization.md
     plan_path: projects/pro-orc/plans/002-project-organization-wave-plan.md
+  - id: 003-detail-roadmap-redesign
+    milestone: m9-detail-roadmap-redesign
+    title: "Detail view cleanup + tier-0 product-store roadmap (hero, lanes, cards, structured spec renderer, timeline)"
+    status: done
+    stage: null
+    depends_on: []
+    started: null
+    finished: null
+    spec_path: null
+    plan_path: null
 next: null
 ---
 
@@ -87,6 +97,8 @@ None.
 - **2026-07-13** — 002-project-organization -> origin-cleanup — stage transition via `product stage`
 - **2026-07-15** — 002-project-organization -> done — stage transition via `product stage`
 - **2026-07-15** — milestone 'm9-detail-roadmap-redesign' added — Non-technical, visual project detail + drill-down roadmap view
+- **2026-07-15** — feature '003-detail-roadmap-redesign' added — Non-technical, visual project detail + drill-down roadmap view
+- **2026-07-15** — milestone m9-detail-roadmap-redesign status -> done — marker set via `product markers --set`
 
 ## Appendix — migrated details
 

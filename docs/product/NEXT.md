@@ -9,7 +9,6 @@ updated: 2026-07-15
 ## You are here
 
 - **m8-project-organization** — Project organization (target: unset)
-- **m9-detail-roadmap-redesign** — Detail view and roadmap redesign (target: unset)
 
 ## In-flight features
 
