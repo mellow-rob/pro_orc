@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:pro_orc/data/models/roadmap_data.dart';
+import 'package:pro_orc/features/shell/glass_card.dart';
 import 'package:pro_orc/theme/n3_colors.dart';
 
 /// Shape a single [RoadmapTimelineItem] is painted with on the time axis.
@@ -228,9 +229,10 @@ class RoadmapTimelineView extends StatelessWidget {
   final DateTime? now;
 
   static const double _rowHeight = 40;
-  static const double _labelWidth = 200;
+  static const double _labelWidth = 230;
   static const double _legendHeight = 40;
   static const double _axisPadding = 24;
+  static const double _monthAxisHeight = 22;
 
   @override
   Widget build(BuildContext context) {
@@ -256,6 +258,11 @@ class RoadmapTimelineView extends StatelessWidget {
     }
 
     final range = _dateRange(plottableItems);
+    // The "heute" line (mockup `.tl-today`) is only drawn when `now` falls
+    // inside the plotted range — outside it the line would sit off-canvas
+    // or overlap the axis, so it is simply omitted rather than clamped.
+    final showTodayLine =
+        !effectiveNow.isBefore(range.start) && !effectiveNow.isAfter(range.end);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -263,35 +270,47 @@ class RoadmapTimelineView extends StatelessWidget {
       children: [
         _TimelineLegend(colors: colors, height: _legendHeight),
         const SizedBox(height: 8),
-        SizedBox(
-          height: items.length * _rowHeight + _axisPadding,
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              return Stack(
-                children: [
-                  Positioned.fill(
-                    child: CustomPaint(
-                      painter: _TimelinePainter(
-                        items: items,
-                        range: range,
-                        colors: colors,
-                        labelWidth: _labelWidth,
-                        rowHeight: _rowHeight,
-                        axisPadding: _axisPadding,
+        GlassCard(
+          child: Padding(
+            padding: const EdgeInsets.all(28),
+            child: SizedBox(
+              height:
+                  items.length * _rowHeight + _axisPadding + _monthAxisHeight,
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  return Stack(
+                    children: [
+                      Positioned.fill(
+                        child: CustomPaint(
+                          painter: _TimelinePainter(
+                            items: items,
+                            range: range,
+                            colors: colors,
+                            labelWidth: _labelWidth,
+                            rowHeight: _rowHeight,
+                            axisPadding: _axisPadding,
+                            monthAxisHeight: _monthAxisHeight,
+                            now: effectiveNow,
+                            showTodayLine: showTodayLine,
+                          ),
+                        ),
                       ),
-                    ),
-                  ),
-                  for (var i = 0; i < items.length; i++)
-                    Positioned(
-                      left: 8 + items[i].depth * 16,
-                      top: i * _rowHeight,
-                      width: _labelWidth - 16,
-                      height: _rowHeight,
-                      child: _TimelineRowLabel(item: items[i], colors: colors),
-                    ),
-                ],
-              );
-            },
+                      for (var i = 0; i < items.length; i++)
+                        Positioned(
+                          left: 8 + items[i].depth * 16,
+                          top: i * _rowHeight,
+                          width: _labelWidth - 16,
+                          height: _rowHeight,
+                          child: _TimelineRowLabel(
+                            item: items[i],
+                            colors: colors,
+                          ),
+                        ),
+                    ],
+                  );
+                },
+              ),
+            ),
           ),
         ),
       ],
@@ -356,22 +375,32 @@ class _TimelineLegend extends StatelessWidget {
         crossAxisAlignment: WrapCrossAlignment.center,
         children: [
           _LegendEntry(
-            color: _stateColor(TimelineItemState.overdue, colors),
-            label: 'Überfällig',
+            color: _stateColor(TimelineItemState.finished, colors),
+            label: 'Fertig',
           ),
           _LegendEntry(
             color: _stateColor(TimelineItemState.onTrack, colors),
             label: 'Aktiv',
           ),
           _LegendEntry(
-            color: _stateColor(TimelineItemState.finished, colors),
-            label: 'Fertig',
+            color: _stateColor(TimelineItemState.overdue, colors),
+            label: 'Überfällig',
+          ),
+          // Mockup "Einzeltermin" entry (rotated-square swatch) — the
+          // point-marker shape used when only start OR target is known
+          // (FR-025); colored like an on-track item since a lone point has
+          // no separate state of its own.
+          _LegendEntry(
+            color: colors.textDim,
+            label: 'Einzeltermin',
+            rotated: true,
           ),
           _LegendEntry(
             color: _stateColor(TimelineItemState.dataError, colors),
             label: 'Datenfehler',
             icon: Icons.warning_amber_rounded,
           ),
+          _LegendEntry(color: colors.fuch, label: 'Heute'),
         ],
       ),
     );
@@ -379,11 +408,21 @@ class _TimelineLegend extends StatelessWidget {
 }
 
 class _LegendEntry extends StatelessWidget {
-  const _LegendEntry({required this.color, required this.label, this.icon});
+  const _LegendEntry({
+    required this.color,
+    required this.label,
+    this.icon,
+    this.rotated = false,
+  });
 
   final Color color;
   final String label;
   final IconData? icon;
+
+  /// Mockup `#zeitstrahl .tl-legend i` rotates the swatch 45deg for the
+  /// "Einzeltermin" (point-marker) legend entry to mirror the rotated-square
+  /// point markers drawn on the timeline itself.
+  final bool rotated;
 
   @override
   Widget build(BuildContext context) {
@@ -395,13 +434,22 @@ class _LegendEntry extends StatelessWidget {
           if (icon != null)
             Icon(icon, color: color, size: 14)
           else
-            Container(
-              width: 10,
-              height: 10,
-              decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+            Transform.rotate(
+              angle: rotated ? 0.785398 : 0, // 45deg
+              child: Container(
+                width: 10,
+                height: 10,
+                decoration: BoxDecoration(
+                  color: color,
+                  borderRadius: BorderRadius.circular(rotated ? 2 : 3),
+                ),
+              ),
             ),
           const SizedBox(width: 6),
-          Text(label, style: TextStyle(color: color, fontSize: 12)),
+          Text(
+            label,
+            style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w700),
+          ),
         ],
       ),
     );
@@ -466,6 +514,9 @@ class _TimelinePainter extends CustomPainter {
     required this.labelWidth,
     required this.rowHeight,
     required this.axisPadding,
+    required this.monthAxisHeight,
+    required this.now,
+    required this.showTodayLine,
   });
 
   final List<RoadmapTimelineItem> items;
@@ -474,6 +525,11 @@ class _TimelinePainter extends CustomPainter {
   final double labelWidth;
   final double rowHeight;
   final double axisPadding;
+  final double monthAxisHeight;
+  final DateTime now;
+  final bool showTodayLine;
+
+  double get _tracksHeight => items.length * rowHeight;
 
   double _xFor(DateTime date, double axisWidth) {
     final totalSpan = range.end.difference(range.start).inMilliseconds;
@@ -486,16 +542,18 @@ class _TimelinePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final axisWidth = (size.width - labelWidth).clamp(0.0, double.infinity);
+    final tracksHeight = _tracksHeight;
 
-    // Baseline axis line.
-    final axisPaint = Paint()
-      ..color = colors.textDim.withValues(alpha: 0.2)
-      ..strokeWidth = 1;
-    canvas.drawLine(
-      Offset(labelWidth, 0),
-      Offset(labelWidth, size.height),
-      axisPaint,
-    );
+    // Baseline axis line, mockup `.tl-track` track background per row.
+    final trackPaint = Paint()..color = colors.textPri.withValues(alpha: 0.03);
+    for (var i = 0; i < items.length; i++) {
+      final rowTop = i * rowHeight + 4;
+      final rrect = RRect.fromRectAndRadius(
+        Rect.fromLTWH(labelWidth, rowTop, axisWidth, rowHeight - 8),
+        const Radius.circular(6),
+      );
+      canvas.drawRRect(rrect, trackPaint);
+    }
 
     for (var i = 0; i < items.length; i++) {
       final item = items[i];
@@ -513,6 +571,18 @@ class _TimelinePainter extends CustomPainter {
           }
       }
     }
+
+    // Mockup `.tl-today` — a single magenta line spanning the full track
+    // height (not one line per row), drawn on top of the tracks/bars.
+    if (showTodayLine) {
+      final x = _xFor(now, axisWidth);
+      final todayPaint = Paint()
+        ..color = colors.fuch
+        ..strokeWidth = 2;
+      canvas.drawLine(Offset(x, -6), Offset(x, tracksHeight + 6), todayPaint);
+    }
+
+    _paintMonthAxis(canvas, axisWidth, tracksHeight);
   }
 
   void _paintBar(
@@ -528,25 +598,35 @@ class _TimelinePainter extends CustomPainter {
     if (start == null || end == null) return;
 
     final x1 = _xFor(start, axisWidth);
-    final x2 = _xFor(end, axisWidth);
+    final x2Raw = _xFor(end, axisWidth);
+    final x2 = x2Raw < x1 + 4 ? x1 + 4 : x2Raw;
     const barHeight = 10.0;
 
-    final paint = Paint()
-      ..color = color.withValues(
-        alpha: item.state == TimelineItemState.finished ? 0.55 : 0.85,
-      )
-      ..style = PaintingStyle.fill;
-
-    final rect = RRect.fromRectAndRadius(
-      Rect.fromLTRB(
-        x1,
-        rowCenterY - barHeight / 2,
-        x2 < x1 + 4 ? x1 + 4 : x2,
-        rowCenterY + barHeight / 2,
-      ),
-      const Radius.circular(4),
+    // Mockup `.tl-bar.done`/`.tl-bar.active` — a horizontal gradient from
+    // the full-strength state color to a dimmer tail, not a flat fill.
+    final rect = Rect.fromLTRB(
+      x1,
+      rowCenterY - barHeight / 2,
+      x2,
+      rowCenterY + barHeight / 2,
     );
-    canvas.drawRRect(rect, paint);
+    final paint = Paint()
+      ..style = PaintingStyle.fill
+      ..shader = LinearGradient(
+        colors: [
+          color.withValues(
+            alpha: item.state == TimelineItemState.finished ? 0.85 : 1.0,
+          ),
+          color.withValues(
+            alpha: item.state == TimelineItemState.finished ? 0.45 : 0.55,
+          ),
+        ],
+      ).createShader(rect);
+
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(rect, const Radius.circular(5)),
+      paint,
+    );
   }
 
   void _paintPoint(
@@ -560,16 +640,24 @@ class _TimelinePainter extends CustomPainter {
     if (date == null) return;
     final x = _xFor(date, axisWidth);
 
+    // Mockup `.tl-point` — a 12x12 square rotated 45deg (a "diamond"), not
+    // a circle.
+    canvas.save();
+    canvas.translate(x, rowCenterY);
+    canvas.rotate(0.785398); // 45deg
+
     final paint = Paint()
       ..color = color
       ..style = PaintingStyle.fill;
-    canvas.drawCircle(Offset(x, rowCenterY), 5, paint);
-
-    final ringPaint = Paint()
-      ..color = color.withValues(alpha: 0.35)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2;
-    canvas.drawCircle(Offset(x, rowCenterY), 8, ringPaint);
+    const half = 6.0;
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        const Rect.fromLTWH(-half, -half, half * 2, half * 2),
+        const Radius.circular(2),
+      ),
+      paint,
+    );
+    canvas.restore();
   }
 
   void _paintErrorMarkerAtLabel(Canvas canvas, double rowCenterY, Color color) {
@@ -587,7 +675,55 @@ class _TimelinePainter extends CustomPainter {
     canvas.drawPath(path, paint);
   }
 
+  /// Mockup `.tl-axis .marks` — evenly spaced month labels below the
+  /// tracks, spanning [range.start] to [range.end].
+  void _paintMonthAxis(Canvas canvas, double axisWidth, double tracksHeight) {
+    const monthNames = [
+      'Jan',
+      'Feb',
+      'Mrz',
+      'Apr',
+      'Mai',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Okt',
+      'Nov',
+      'Dez',
+    ];
+    final axisY = tracksHeight + axisPadding / 2;
+    const marksCount = 4;
+    for (var i = 0; i < marksCount; i++) {
+      final t = marksCount == 1 ? 0.0 : i / (marksCount - 1);
+      final spanMs = range.end.difference(range.start).inMilliseconds;
+      final date = range.start.add(
+        Duration(milliseconds: (spanMs * t).round()),
+      );
+      final label = "${monthNames[date.month - 1]} '${date.year % 100}";
+      final textPainter = TextPainter(
+        text: TextSpan(
+          text: label,
+          style: TextStyle(
+            fontFamily: 'monospace',
+            fontSize: 10.5,
+            color: colors.textDim,
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout();
+      final x = labelWidth + t * axisWidth;
+      final dx = i == 0
+          ? 0.0
+          : (i == marksCount - 1 ? -textPainter.width : -textPainter.width / 2);
+      textPainter.paint(canvas, Offset(x + dx, axisY));
+    }
+  }
+
   @override
   bool shouldRepaint(_TimelinePainter oldDelegate) =>
-      oldDelegate.items != items || oldDelegate.range != range;
+      oldDelegate.items != items ||
+      oldDelegate.range != range ||
+      oldDelegate.now != now ||
+      oldDelegate.showTodayLine != showTodayLine;
 }

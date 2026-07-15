@@ -3,7 +3,6 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:pro_orc/data/models/roadmap_data.dart';
 import 'package:pro_orc/features/shared/roadmap/milestone_lane.dart';
-import 'package:pro_orc/features/shared/roadmap/roadmap_status_badge.dart';
 import 'package:pro_orc/theme/n3_colors.dart';
 
 void main() {
@@ -36,17 +35,16 @@ void main() {
     target: DateTime(2026, 8),
   );
 
-  group('MilestoneLane — FR-013', () {
-    testWidgets('renders title and status badge via RoadmapStatusBadge', (
+  group('MilestoneLane — FR-013/FR-005', () {
+    testWidgets('renders title, mono id-chip and a status dot (mockup style)', (
       tester,
     ) async {
       await pumpLane(tester, milestone: milestoneWithTarget);
 
       expect(find.text('M9 — Detail Roadmap Redesign'), findsOneWidget);
-      expect(find.byType(RoadmapStatusBadge), findsOneWidget);
-      // 'in-progress' -> DisplayStatus.building -> 'In Progress' label,
-      // reused verbatim from the existing vocabulary (no new status words).
-      expect(find.text('In Progress'), findsOneWidget);
+      // Mockup `#roadmap .lane li` shows a status dot + mono id-chip (e.g.
+      // `m9`) in front of the title, not a full status-word badge.
+      expect(find.text('m9'), findsOneWidget);
     });
 
     testWidgets('renders target date when present', (tester) async {

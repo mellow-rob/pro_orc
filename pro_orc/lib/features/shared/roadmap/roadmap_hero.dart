@@ -2,14 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:pro_orc/features/shell/glass_card.dart';
 import 'package:pro_orc/theme/n3_colors.dart';
 
-/// "Wo stehen wir / Naechster Schritt" hero section for the tier-0 Roadmap
-/// path (FR-012).
+/// "Nächster Schritt" glass banner for the tier-0 Roadmap path (FR-005,
+/// mockup `#roadmap .nextstep`).
 ///
-/// Surfaces the raw content of the source tier's `NEXT.md` as-is — no
-/// Markdown parsing here (structured rendering is Wave 5's scope). Renders
-/// an explicit German empty state when no content is available, matching
-/// the project's "hide gracefully, never show a raw gap" convention (see
-/// `SpecList`'s "Keine Specs..." precedent).
+/// Renders a compact mono-eyebrow label + a single-sentence summary derived
+/// from the source tier's `NEXT.md` content — NOT the raw Markdown dump this
+/// widget rendered before Wave 2 (that verbose "Wo stehen wir" hero now
+/// lives in the Vision tab instead, see `VisionHero`). Only the first
+/// non-empty, non-heading line of `nextMdContent` is shown, matching the
+/// mockup's single-sentence banner copy; an explicit German empty state
+/// covers missing/blank content, matching the project's "hide gracefully,
+/// never show a raw gap" convention (see `SpecList`'s "Keine Specs..."
+/// precedent).
 class RoadmapHero extends StatelessWidget {
   const RoadmapHero({
     super.key,
@@ -24,45 +28,51 @@ class RoadmapHero extends StatelessWidget {
   final AppColors colors;
   final Color accent;
 
+  /// Picks the first non-empty line that isn't a Markdown heading (`#`) —
+  /// the mockup banner shows one sentence, not the full NEXT.md body.
+  static String? _summarize(String content) {
+    for (final rawLine in content.split('\n')) {
+      final line = rawLine.trim();
+      if (line.isEmpty) continue;
+      if (line.startsWith('#')) continue;
+      return line;
+    }
+    return null;
+  }
+
   @override
   Widget build(BuildContext context) {
     final content = nextMdContent?.trim();
+    final summary = (content == null || content.isEmpty)
+        ? null
+        : _summarize(content);
 
     return GlassCard(
       child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        padding: const EdgeInsets.symmetric(horizontal: 26, vertical: 22),
+        child: Wrap(
+          crossAxisAlignment: WrapCrossAlignment.center,
+          spacing: 18,
+          runSpacing: 8,
           children: [
-            Row(
-              children: [
-                Icon(Icons.explore_outlined, size: 16, color: accent),
-                const SizedBox(width: 8),
-                Text(
-                  'Wo stehen wir',
-                  style: TextStyle(
-                    color: colors.textPri,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            if (content == null || content.isEmpty)
-              Text(
-                'Kein naechster Schritt hinterlegt',
-                style: TextStyle(color: colors.textDim, fontSize: 12),
-              )
-            else
-              Text(
-                content,
-                style: TextStyle(
-                  color: colors.textSec,
-                  fontSize: 12,
-                  height: 1.5,
-                ),
+            Text(
+              'NÄCHSTER SCHRITT',
+              style: TextStyle(
+                fontFamily: 'monospace',
+                fontFeatures: const [FontFeature.tabularFigures()],
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 1.1,
+                color: accent,
               ),
+            ),
+            Text(
+              summary ?? 'Kein nächster Schritt hinterlegt',
+              style: TextStyle(
+                color: summary == null ? colors.textDim : colors.textSec,
+                fontSize: 15,
+              ),
+            ),
           ],
         ),
       ),

@@ -21,15 +21,20 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  group('RoadmapHero — FR-012', () {
-    testWidgets('renders NEXT.md content when present', (tester) async {
+  group('RoadmapHero — FR-005/FR-012', () {
+    testWidgets('renders the mono eyebrow and the first content line', (
+      tester,
+    ) async {
       await pumpHero(
         tester,
         nextMdContent: '# Aktueller Stand\n\nWir bauen gerade M9.',
       );
 
-      expect(find.textContaining('Aktueller Stand'), findsOneWidget);
-      expect(find.textContaining('Wir bauen gerade M9.'), findsOneWidget);
+      expect(find.text('NÄCHSTER SCHRITT'), findsOneWidget);
+      // Heading lines (`#`) are skipped — only the first non-heading,
+      // non-empty line is shown as the mockup's single-sentence summary.
+      expect(find.text('Wir bauen gerade M9.'), findsOneWidget);
+      expect(find.textContaining('Aktueller Stand'), findsNothing);
     });
 
     testWidgets('shows explicit empty state when NEXT.md content is null', (
@@ -37,7 +42,7 @@ void main() {
     ) async {
       await pumpHero(tester, nextMdContent: null);
 
-      expect(find.text('Kein naechster Schritt hinterlegt'), findsOneWidget);
+      expect(find.text('Kein nächster Schritt hinterlegt'), findsOneWidget);
     });
 
     testWidgets('shows explicit empty state when NEXT.md content is blank', (
@@ -45,8 +50,17 @@ void main() {
     ) async {
       await pumpHero(tester, nextMdContent: '   \n  ');
 
-      expect(find.text('Kein naechster Schritt hinterlegt'), findsOneWidget);
+      expect(find.text('Kein nächster Schritt hinterlegt'), findsOneWidget);
     });
+
+    testWidgets(
+      'shows explicit empty state when content is only headings/blank lines',
+      (tester) async {
+        await pumpHero(tester, nextMdContent: '# Nur eine Ueberschrift\n\n');
+
+        expect(find.text('Kein nächster Schritt hinterlegt'), findsOneWidget);
+      },
+    );
 
     testWidgets('no crash and no raw error widget for any content', (
       tester,

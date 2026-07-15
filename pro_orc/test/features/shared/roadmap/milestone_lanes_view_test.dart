@@ -134,6 +134,71 @@ void main() {
       },
     );
   });
+
+  group('MilestoneLanesView — FR-005 status-grouped lanes', () {
+    testWidgets(
+      'groups milestones into Aktiv/Fertig/Geplant lane headings in that '
+      'display order',
+      (tester) async {
+        await pumpView(
+          tester,
+          milestones: [
+            const RoadmapMilestone(name: 'M1 — Fertig', status: 'done'),
+            const RoadmapMilestone(name: 'M2 — Aktiv', status: 'building'),
+            const RoadmapMilestone(name: 'M3 — Geplant', status: 'planned'),
+          ],
+        );
+
+        final headings = tester
+            .widgetList<Text>(find.byType(Text))
+            .map((t) => t.data)
+            .whereType<String>()
+            .toList();
+        final activeIndex = headings.indexOf('In Arbeit');
+        final doneIndex = headings.indexOf('Ausgeliefert');
+        final plannedIndex = headings.indexOf('Geplant');
+
+        expect(activeIndex, greaterThanOrEqualTo(0));
+        expect(doneIndex, greaterThan(activeIndex));
+        expect(plannedIndex, greaterThan(doneIndex));
+
+        expect(find.text('AKTIV'), findsOneWidget);
+        expect(find.text('FERTIG'), findsOneWidget);
+        expect(find.text('GEPLANT'), findsOneWidget);
+      },
+    );
+
+    testWidgets('omits a lane group entirely when it has zero milestones', (
+      tester,
+    ) async {
+      await pumpView(
+        tester,
+        milestones: [
+          const RoadmapMilestone(name: 'M1 — Fertig', status: 'done'),
+        ],
+      );
+
+      expect(find.text('Ausgeliefert'), findsOneWidget);
+      expect(find.text('In Arbeit'), findsNothing);
+      expect(find.text('Geplant'), findsNothing);
+    });
+
+    testWidgets('milestones with an unrecognized status default to the '
+        'Aktiv lane rather than being dropped', (tester) async {
+      await pumpView(
+        tester,
+        milestones: [
+          const RoadmapMilestone(
+            name: 'M7 — Unbekannter Status',
+            status: 'weird-custom-status',
+          ),
+        ],
+      );
+
+      expect(find.text('In Arbeit'), findsOneWidget);
+      expect(find.text('M7 — Unbekannter Status'), findsOneWidget);
+    });
+  });
 }
 
 /// Test double for the real parent (`_RoadmapHeroView` in `roadmap_tab.dart`)

@@ -468,7 +468,9 @@ void main() {
         );
 
         expect(find.byType(RoadmapHero), findsOneWidget);
-        expect(find.textContaining('Aktueller Stand'), findsOneWidget);
+        // The heading line (`# Aktueller Stand`) is skipped by the mockup
+        // single-sentence banner — only the first non-heading line shows.
+        expect(find.textContaining('Wir bauen M9.'), findsOneWidget);
         // Legacy tree path must NOT render for the tier-0 source.
         expect(find.byType(RoadmapTree), findsNothing);
       });

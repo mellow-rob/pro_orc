@@ -1,15 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:pro_orc/data/models/roadmap_data.dart';
 import 'package:pro_orc/data/services/status_normalizer.dart';
+import 'package:pro_orc/features/shared/roadmap/roadmap_id_chip.dart';
 import 'package:pro_orc/features/shell/glass_card.dart';
 import 'package:pro_orc/theme/n3_colors.dart';
 
-/// Feature card for the tier-0 Roadmap drill-down (FR-016): shown for each
-/// feature ([RoadmapPhase]) of a selected milestone.
+/// Feature card for the tier-0 Roadmap drill-down (FR-016/FR-005): shown for
+/// each feature ([RoadmapPhase]) of a selected milestone, matching mockup
+/// `#roadmap .fcard`.
 ///
-/// Status-colored left edge (same color mapping as [DisplayStatusBadge] —
-/// no parallel status vocabulary, just its color reused visually), title,
-/// timeframe (start -> finished/target), and dependency chips.
+/// 4px status-colored left edge, a top row with a status tag (mockup
+/// `.tag`) and a mono id (mockup `.fid`), a bold title, and a row of mono
+/// chips (mockup `.chips span`) carrying the timeframe and dependencies —
+/// the mockup's own chip content (date range, spec number) is illustrative;
+/// this project's [RoadmapPhase] model does not carry a spec number, so the
+/// timeframe and `dependsOn` entries fill the chip row instead.
 ///
 /// When [onTap] is provided, tapping the card opens the Wave 5 structured
 /// spec/plan renderer for this feature (FR-017). Optional so existing call
@@ -49,11 +54,25 @@ class FeatureCard extends StatelessWidget {
     return switch (deriveDisplayStatus(feature.status)) {
       DisplayStatus.building => colors.cyan,
       DisplayStatus.planning => const Color(0xFFE0A020),
-      DisplayStatus.done => const Color(0xFF22C55E),
+      DisplayStatus.done => colors.emerald,
       DisplayStatus.research => colors.fuch,
       DisplayStatus.paused => const Color(0xFFF59E0B),
       DisplayStatus.archived => colors.textDis,
       null => colors.textDis,
+    };
+  }
+
+  /// Mockup `.tag` label (`Fertig`/`Aktiv`/…) — reuses the existing status
+  /// vocabulary, never a new word set (FR-003 precedent).
+  String _tagLabel() {
+    return switch (deriveDisplayStatus(feature.status)) {
+      DisplayStatus.done => 'Fertig',
+      DisplayStatus.building => 'Aktiv',
+      DisplayStatus.planning => 'Geplant',
+      DisplayStatus.paused => 'Pausiert',
+      DisplayStatus.research => 'Recherche',
+      DisplayStatus.archived => 'Archiviert',
+      null => 'Unbekannt',
     };
   }
 
@@ -71,6 +90,7 @@ class FeatureCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final statusColor = _statusColor(colors);
     final timeframe = _timeframeLabel();
+    final idChip = extractRoadmapIdChip(feature.name);
 
     final card = GlassCard(
       child: IntrinsicHeight(
@@ -90,51 +110,51 @@ class FeatureCard extends StatelessWidget {
             ),
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 12,
-                ),
+                padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
+                    Wrap(
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      spacing: 10,
+                      runSpacing: 4,
+                      children: [
+                        _StatusTag(
+                          label: _tagLabel(),
+                          color: statusColor,
+                          colors: colors,
+                        ),
+                        if (idChip != null)
+                          Text(
+                            idChip,
+                            style: TextStyle(
+                              fontFamily: 'monospace',
+                              fontSize: 11,
+                              color: colors.textDim,
+                            ),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
                     Text(
                       feature.name,
                       style: TextStyle(
                         color: colors.textPri,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
+                        fontSize: 15.5,
+                        fontWeight: FontWeight.w800,
                       ),
                     ),
-                    if (timeframe != null) ...[
-                      const SizedBox(height: 6),
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.schedule_outlined,
-                            size: 12,
-                            color: colors.textDim,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            timeframe,
-                            style: TextStyle(
-                              color: colors.textDim,
-                              fontSize: 11,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                    if (feature.dependsOn.isNotEmpty) ...[
-                      const SizedBox(height: 8),
+                    if (timeframe != null || feature.dependsOn.isNotEmpty) ...[
+                      const SizedBox(height: 12),
                       Wrap(
                         spacing: 6,
                         runSpacing: 6,
                         children: [
+                          if (timeframe != null)
+                            _MonoChip(label: timeframe, colors: colors),
                           for (final dep in feature.dependsOn)
-                            _DependencyChip(label: dep, colors: colors),
+                            _MonoChip(label: dep, colors: colors),
                         ],
                       ),
                     ],
@@ -160,8 +180,42 @@ class FeatureCard extends StatelessWidget {
   }
 }
 
-class _DependencyChip extends StatelessWidget {
-  const _DependencyChip({required this.label, required this.colors});
+/// Mockup `.tag` — status pill above the title (e.g. "Fertig"/"Aktiv").
+class _StatusTag extends StatelessWidget {
+  const _StatusTag({
+    required this.label,
+    required this.color,
+    required this.colors,
+  });
+
+  final String label;
+  final Color color;
+  final AppColors colors;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Text(
+        label.toUpperCase(),
+        style: TextStyle(
+          fontWeight: FontWeight.w900,
+          fontSize: 10.5,
+          letterSpacing: 0.6,
+          color: color,
+        ),
+      ),
+    );
+  }
+}
+
+/// Mockup `.chips span` — mono metadata chip (timeframe, dependency name).
+class _MonoChip extends StatelessWidget {
+  const _MonoChip({required this.label, required this.colors});
 
   final String label;
   final AppColors colors;
@@ -169,12 +223,19 @@ class _DependencyChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
       decoration: BoxDecoration(
-        color: colors.bgElev.withValues(alpha: 0.6),
-        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: colors.textPri.withValues(alpha: 0.08)),
+        borderRadius: BorderRadius.circular(5),
       ),
-      child: Text(label, style: TextStyle(color: colors.textSec, fontSize: 10)),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontFamily: 'monospace',
+          fontSize: 10,
+          color: colors.textDim,
+        ),
+      ),
     );
   }
 }
