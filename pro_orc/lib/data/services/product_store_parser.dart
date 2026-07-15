@@ -48,7 +48,11 @@ class ProductStoreParser {
       final features = <ProductStoreFeature>[];
       if (featuresJson is List) {
         for (final entry in featuresJson) {
-          final feature = await _parseFeature(entry, productDir.path);
+          final feature = await _parseFeature(
+            entry,
+            productDir.path,
+            projectPath,
+          );
           if (feature != null) features.add(feature);
         }
       }
@@ -90,6 +94,7 @@ class ProductStoreParser {
   Future<ProductStoreFeature?> _parseFeature(
     dynamic entry,
     String productDirPath,
+    String projectPath,
   ) async {
     if (entry is! Map<String, dynamic>) return null;
     final id = entry['id'];
@@ -133,13 +138,42 @@ class ProductStoreParser {
       started: _parseDate(entry['started']),
       finished: _parseDate(entry['finished']),
       specPath: entry['spec_path'] is String
-          ? entry['spec_path'] as String
+          ? await _resolveStorePath(entry['spec_path'] as String, projectPath)
           : null,
       planPath: entry['plan_path'] is String
-          ? entry['plan_path'] as String
+          ? await _resolveStorePath(entry['plan_path'] as String, projectPath)
           : null,
       featureMdPath: featureMdPath,
     );
+  }
+
+  /// Resolves a `spec_path`/`plan_path` value from `index.json` — which is
+  /// always relative to the a1-learnings root, NOT to [projectPath] where
+  /// `docs/product/` lives — into an absolute, existing file path.
+  ///
+  /// Mirrors the 3-tier a1-learnings-root resolution (env `A1_VAULT_ROOT` >
+  /// repo-local `.a1/learnings/` > legacy vault fallback — see
+  /// `~/.claude/rules/common/a1-framework.md`), scoped down to what this
+  /// feature needs: only the first two tiers, since a project's own
+  /// `docs/product/index.json` is only ever paired with either a repo-local
+  /// learnings store or an explicit `A1_VAULT_ROOT` override.
+  ///
+  /// Returns null when the path cannot be resolved against either root —
+  /// callers must treat null exactly like "file not found", never fall back
+  /// to the raw relative string (a relative path resolves against the
+  /// process CWD, not anything meaningful).
+  Future<String?> _resolveStorePath(String rawPath, String projectPath) async {
+    final repoLocalRoot = p.join(projectPath, '.a1', 'learnings');
+    final repoLocalCandidate = File(p.join(repoLocalRoot, rawPath));
+    if (await repoLocalCandidate.exists()) return repoLocalCandidate.path;
+
+    final vaultRoot = Platform.environment['A1_VAULT_ROOT'];
+    if (vaultRoot != null && vaultRoot.isNotEmpty) {
+      final vaultCandidate = File(p.join(vaultRoot, rawPath));
+      if (await vaultCandidate.exists()) return vaultCandidate.path;
+    }
+
+    return null;
   }
 
   Future<String?> _readNextMd(String productDirPath) async {
