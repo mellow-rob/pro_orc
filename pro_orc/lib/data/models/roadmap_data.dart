@@ -15,6 +15,10 @@ library;
 /// `local` → `brain` → `vault`. A tier is only consulted when every prior
 /// tier returned no usable data (usable = non-empty per [RoadmapData.isEmpty]).
 enum RoadmapSource {
+  /// Resolved from the project's `docs/product/index.json` schema-v1 layout
+  /// (Wave 3, tier-0 — tried ahead of every other tier).
+  productStore,
+
   /// Resolved from the project's local `.a1/roadmap.md` + `.a1/phases/`.
   local,
 
@@ -60,10 +64,24 @@ class RoadmapPhase {
   /// empty-list message rather than a blank pane (FR-005).
   final List<RoadmapSpecRef> specs;
 
+  /// Optional start date (Wave 3, for the Wave 6 timeline/Gantt view). Null
+  /// when the source tier does not carry date information (e.g. the legacy
+  /// `.a1/roadmap.md` tier never populates this).
+  final DateTime? start;
+
+  /// Optional target/due date (Wave 3, for the Wave 6 timeline/Gantt view).
+  final DateTime? target;
+
+  /// Optional completion date (Wave 3, for the Wave 6 timeline/Gantt view).
+  final DateTime? finished;
+
   const RoadmapPhase({
     required this.name,
     required this.status,
     this.specs = const [],
+    this.start,
+    this.target,
+    this.finished,
   });
 }
 
@@ -78,10 +96,23 @@ class RoadmapMilestone {
   /// Phases belonging to this milestone, in file/definition order.
   final List<RoadmapPhase> phases;
 
+  /// Optional start date (Wave 3, for the Wave 6 timeline/Gantt view). Null
+  /// when the source tier does not carry date information.
+  final DateTime? start;
+
+  /// Optional target/due date (Wave 3, for the Wave 6 timeline/Gantt view).
+  final DateTime? target;
+
+  /// Optional completion date (Wave 3, for the Wave 6 timeline/Gantt view).
+  final DateTime? finished;
+
   const RoadmapMilestone({
     required this.name,
     required this.status,
     this.phases = const [],
+    this.start,
+    this.target,
+    this.finished,
   });
 }
 

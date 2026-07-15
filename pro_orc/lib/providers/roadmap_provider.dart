@@ -4,13 +4,15 @@ import 'package:pro_orc/data/models/project_model.dart';
 import 'package:pro_orc/data/services/roadmap/a1_brain_roadmap_repository.dart';
 import 'package:pro_orc/data/services/roadmap/fallback_roadmap_repository.dart';
 import 'package:pro_orc/data/services/roadmap/local_roadmap_repository.dart';
+import 'package:pro_orc/data/services/roadmap/product_store_repository.dart';
 import 'package:pro_orc/data/services/roadmap/roadmap_repository.dart';
 
 /// Shared [FallbackRoadmapRepository] instance (stateless, safe to reuse
-/// across all projects) — composes local → A1 Brain → Obsidian Vault per
-/// the fixed priority chain (Waves 1-2).
+/// across all projects) — composes docs/product/ (tier-0, Wave 3) → local →
+/// A1 Brain → Obsidian Vault per the fixed priority chain (Waves 1-3).
 final roadmapRepositoryProvider = Provider<RoadmapRepository>((ref) {
   return FallbackRoadmapRepository(
+    productStore: ProductStoreRoadmapRepository(),
     local: LocalRoadmapRepository(),
     brain: A1BrainRoadmapRepository(),
   );

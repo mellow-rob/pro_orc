@@ -51,6 +51,14 @@ dependencies:
   url_launcher: ^6.3.2
   file_selector: ^1.1.0
   lucide_icons_flutter: ^3.1.9
+  # Markdown rendering for the structured spec renderer's freeform fallback
+  # path (Wave 5, FR-018). Chosen in Wave 3 per FR-021's dependency-validation
+  # gate: BSD-3-Clause license (github.com/Infinitix-LLC/gpt_markdown/LICENSE,
+  # compatible with this project's open-source bar), actively maintained
+  # (latest release 2026-05-10, pub.dev score 160/160, 305 likes as of
+  # 2026-07-15) — ahead of `flutter_markdown` (Google-discontinued, last
+  # release 2025-05) and `markdown_widget` (last release 2025-04).
+  gpt_markdown: ^1.1.7
 
 dev_dependencies:
   flutter_test:

@@ -30,6 +30,9 @@ const _nonEmptyBrain = RoadmapData(
 const _nonEmptyVault = RoadmapData(
   milestones: [RoadmapMilestone(name: 'M3', status: 'planning')],
 );
+const _nonEmptyProductStore = RoadmapData(
+  milestones: [RoadmapMilestone(name: 'M0 — tier-0', status: 'in-progress')],
+);
 
 void main() {
   group('FallbackRoadmapRepository ordering (FR-002)', () {
@@ -189,5 +192,95 @@ void main() {
         expect(result.source, RoadmapSource.vault);
       },
     );
+
+    test(
+      'FR-011: product-store tier wins over local/brain/vault when usable '
+      '(no productStore injected preserves FR-010 legacy behavior)',
+      () async {
+        // No productStore injected — chain behaves exactly as pre-Wave-3.
+        final local = _StubRepository(
+          const RoadmapResult(
+            data: _nonEmptyLocal,
+            source: RoadmapSource.local,
+          ),
+        );
+        final brain = _StubRepository(
+          const RoadmapResult(
+            data: RoadmapData.empty,
+            source: RoadmapSource.brain,
+          ),
+        );
+
+        final repo = FallbackRoadmapRepository(local: local, brain: brain);
+        final result = await repo.resolve('slug', '/path');
+
+        expect(result.source, RoadmapSource.local);
+      },
+    );
+
+    test(
+      'FR-011: product-store tier wins over a usable local tier when both present',
+      () async {
+        final productStore = _StubRepository(
+          const RoadmapResult(
+            data: _nonEmptyProductStore,
+            source: RoadmapSource.productStore,
+          ),
+        );
+        final local = _StubRepository(
+          const RoadmapResult(
+            data: _nonEmptyLocal,
+            source: RoadmapSource.local,
+          ),
+        );
+        final brain = _StubRepository(
+          const RoadmapResult(
+            data: RoadmapData.empty,
+            source: RoadmapSource.brain,
+          ),
+        );
+
+        final repo = FallbackRoadmapRepository(
+          local: local,
+          brain: brain,
+          productStore: productStore,
+        );
+        final result = await repo.resolve('slug', '/path');
+
+        expect(result.source, RoadmapSource.productStore);
+        expect(productStore.callCount, 1);
+        expect(local.callCount, 0);
+        expect(brain.callCount, 0);
+      },
+    );
+
+    test('falls through to local when product-store tier is empty', () async {
+      final productStore = _StubRepository(
+        const RoadmapResult(
+          data: RoadmapData.empty,
+          source: RoadmapSource.productStore,
+        ),
+      );
+      final local = _StubRepository(
+        const RoadmapResult(data: _nonEmptyLocal, source: RoadmapSource.local),
+      );
+      final brain = _StubRepository(
+        const RoadmapResult(
+          data: RoadmapData.empty,
+          source: RoadmapSource.brain,
+        ),
+      );
+
+      final repo = FallbackRoadmapRepository(
+        local: local,
+        brain: brain,
+        productStore: productStore,
+      );
+      final result = await repo.resolve('slug', '/path');
+
+      expect(result.source, RoadmapSource.local);
+      expect(productStore.callCount, 1);
+      expect(local.callCount, 1);
+    });
   });
 }
