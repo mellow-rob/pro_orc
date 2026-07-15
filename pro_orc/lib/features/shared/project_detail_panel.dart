@@ -8,6 +8,7 @@ import 'package:pro_orc/features/shared/detail/file_preview_section.dart';
 import 'package:pro_orc/features/shared/detail/links_section.dart';
 import 'package:pro_orc/features/shared/detail/quick_actions_section.dart';
 import 'package:pro_orc/features/shared/detail/section_card.dart';
+import 'package:pro_orc/features/shared/detail/token_scorecard_section.dart';
 import 'package:pro_orc/features/shared/rename_project_dialog.dart';
 import 'package:pro_orc/features/shared/roadmap/roadmap_tab.dart';
 import 'package:pro_orc/features/shell/glass_card.dart';
@@ -251,6 +252,13 @@ class _ProjectDetailPanelState extends ConsumerState<ProjectDetailPanel> {
               accent: accent,
             ),
           ),
+
+        // --- Token-Nutzung (Scorecard) ---
+        TokenScorecardSection(
+          projectPath: project.path,
+          colors: colors,
+          accent: accent,
+        ),
 
         // --- Git & Links ---
         if (git != null)
