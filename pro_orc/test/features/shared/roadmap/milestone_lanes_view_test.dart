@@ -5,6 +5,7 @@ import 'package:pro_orc/data/models/roadmap_data.dart';
 import 'package:pro_orc/features/shared/roadmap/feature_card.dart';
 import 'package:pro_orc/features/shared/roadmap/milestone_lane.dart';
 import 'package:pro_orc/features/shared/roadmap/milestone_lanes_view.dart';
+import 'package:pro_orc/features/shared/roadmap/structured_spec_renderer.dart';
 import 'package:pro_orc/theme/n3_colors.dart';
 
 void main() {
@@ -112,5 +113,25 @@ void main() {
         findsOneWidget,
       );
     });
+  });
+
+  group('MilestoneLanesView — Wave 5 tap-to-spec navigation (FR-017)', () {
+    testWidgets(
+      'tapping a FeatureCard opens the StructuredSpecRenderer dialog',
+      (tester) async {
+        await pumpView(tester, milestones: [milestoneWithFeatures]);
+
+        await tester.tap(find.text('M9 — Detail Roadmap Redesign'));
+        await tester.pumpAndSettle();
+        expect(find.byType(FeatureCard), findsNWidgets(2));
+
+        await tester.tap(find.text('Feature A'));
+        await tester.pumpAndSettle();
+
+        expect(find.byType(StructuredSpecRenderer), findsOneWidget);
+        // No spec/plan path on this fixture -> graceful fallback, not a crash.
+        expect(find.textContaining('Spec nicht verfügbar'), findsOneWidget);
+      },
+    );
   });
 }

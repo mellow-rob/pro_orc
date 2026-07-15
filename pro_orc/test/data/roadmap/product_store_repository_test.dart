@@ -157,6 +157,77 @@ void main() {
     });
 
     test(
+      'Wave 5: passes spec_path/plan_path through onto RoadmapPhase '
+      'unchanged (structured_spec_renderer.dart reads these lazily)',
+      () async {
+        final project = await _createTempProject();
+        addTearDown(() => project.delete(recursive: true));
+        await _writeIndex(project, {
+          ..._validIndex,
+          'features': [
+            {
+              'id': '002-project-organization',
+              'milestone': 'm8-project-organization',
+              'title': 'Project Hub',
+              'status': 'done',
+              'stage': 'done',
+              'depends_on': <String>[],
+              'started': '2026-07-12',
+              'finished': '2026-07-15',
+              'spec_path': 'projects/pro-orc/spec/002-project-organization.md',
+              'plan_path': 'projects/pro-orc/plans/002-project-organization.md',
+            },
+          ],
+        });
+
+        final repo = ProductStoreRoadmapRepository();
+        final result = await repo.resolve('pro-orc', project.path);
+
+        final phase = result.data.milestones.single.phases.single;
+        expect(
+          phase.specPath,
+          'projects/pro-orc/spec/002-project-organization.md',
+        );
+        expect(
+          phase.planPath,
+          'projects/pro-orc/plans/002-project-organization.md',
+        );
+      },
+    );
+
+    test(
+      'Wave 5: specPath/planPath are null when absent in index.json',
+      () async {
+        final project = await _createTempProject();
+        addTearDown(() => project.delete(recursive: true));
+        await _writeIndex(project, {
+          ..._validIndex,
+          'features': [
+            {
+              'id': '002-project-organization',
+              'milestone': 'm8-project-organization',
+              'title': 'Project Hub',
+              'status': 'done',
+              'stage': 'done',
+              'depends_on': <String>[],
+              'started': '2026-07-12',
+              'finished': '2026-07-15',
+              'spec_path': null,
+              'plan_path': null,
+            },
+          ],
+        });
+
+        final repo = ProductStoreRoadmapRepository();
+        final result = await repo.resolve('pro-orc', project.path);
+
+        final phase = result.data.milestones.single.phases.single;
+        expect(phase.specPath, isNull);
+        expect(phase.planPath, isNull);
+      },
+    );
+
+    test(
       'FR-009: malformed index.json resolves to empty RoadmapData, no crash',
       () async {
         final project = await _createTempProject();

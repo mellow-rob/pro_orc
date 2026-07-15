@@ -81,6 +81,16 @@ class RoadmapPhase {
   /// phase has no dependencies.
   final List<String> dependsOn;
 
+  /// Repo-relative or absolute path to this feature's spec document (Wave 5,
+  /// `structured_spec_renderer.dart`), or null when the source tier does not
+  /// carry a spec path (e.g. the legacy `.a1/roadmap.md` tier, which uses
+  /// [specs] instead).
+  final String? specPath;
+
+  /// Repo-relative or absolute path to this feature's wave-plan document
+  /// (Wave 5), or null when the source tier does not carry a plan path.
+  final String? planPath;
+
   const RoadmapPhase({
     required this.name,
     required this.status,
@@ -89,6 +99,8 @@ class RoadmapPhase {
     this.target,
     this.finished,
     this.dependsOn = const [],
+    this.specPath,
+    this.planPath,
   });
 }
 

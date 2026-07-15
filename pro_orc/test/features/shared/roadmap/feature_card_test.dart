@@ -78,5 +78,36 @@ void main() {
 
       expect(tester.takeException(), isNull);
     });
+
+    testWidgets('invokes onTap when the card is tapped', (tester) async {
+      var tapped = false;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: ThemeData.dark().copyWith(extensions: const [AppColors.dark]),
+          home: Scaffold(
+            body: FeatureCard(
+              feature: featureWithFullTimeframe,
+              colors: AppColors.dark,
+              onTap: () => tapped = true,
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Projekt-Hub'));
+      await tester.pumpAndSettle();
+
+      expect(tapped, isTrue);
+    });
+
+    testWidgets('renders without a tap handler when onTap is omitted', (
+      tester,
+    ) async {
+      await pumpCard(tester, feature: featureWithFullTimeframe);
+
+      expect(tester.takeException(), isNull);
+    });
   });
 }

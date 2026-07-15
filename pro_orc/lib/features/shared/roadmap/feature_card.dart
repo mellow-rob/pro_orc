@@ -10,11 +10,21 @@ import 'package:pro_orc/theme/n3_colors.dart';
 /// Status-colored left edge (same color mapping as [DisplayStatusBadge] —
 /// no parallel status vocabulary, just its color reused visually), title,
 /// timeframe (start -> finished/target), and dependency chips.
+///
+/// When [onTap] is provided, tapping the card opens the Wave 5 structured
+/// spec/plan renderer for this feature (FR-017). Optional so existing call
+/// sites/tests that only render the card visually keep working unchanged.
 class FeatureCard extends StatelessWidget {
-  const FeatureCard({super.key, required this.feature, required this.colors});
+  const FeatureCard({
+    super.key,
+    required this.feature,
+    required this.colors,
+    this.onTap,
+  });
 
   final RoadmapPhase feature;
   final AppColors colors;
+  final VoidCallback? onTap;
 
   static const _monthNames = [
     'Jan',
@@ -62,7 +72,7 @@ class FeatureCard extends StatelessWidget {
     final statusColor = _statusColor(colors);
     final timeframe = _timeframeLabel();
 
-    return GlassCard(
+    final card = GlassCard(
       child: IntrinsicHeight(
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -134,6 +144,17 @@ class FeatureCard extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+
+    if (onTap == null) return card;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: card,
       ),
     );
   }

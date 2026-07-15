@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:pro_orc/data/models/roadmap_data.dart';
 import 'package:pro_orc/features/shared/roadmap/feature_card.dart';
 import 'package:pro_orc/features/shared/roadmap/milestone_lane.dart';
+import 'package:pro_orc/features/shared/roadmap/structured_spec_renderer_dialog.dart';
 import 'package:pro_orc/theme/n3_colors.dart';
 
 /// Milestone lanes + feature-card drill-down for the tier-0 Roadmap path
@@ -96,7 +97,15 @@ class _FeatureCardsSection extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         for (final feature in milestone.phases) ...[
-          FeatureCard(feature: feature, colors: colors),
+          FeatureCard(
+            feature: feature,
+            colors: colors,
+            onTap: () => showStructuredSpecRenderer(
+              context,
+              specPath: feature.specPath,
+              planPath: feature.planPath,
+            ),
+          ),
           const SizedBox(height: 8),
         ],
       ],

@@ -87,5 +87,10 @@ class ProductStoreRoadmapRepository implements RoadmapRepository {
       for (final id in f.dependsOn)
         if (titleById[id] != null) titleById[id]!,
     ],
+    // Passed through as-is (Wave 5): `structured_spec_renderer.dart` reads
+    // these lazily by path, so no existence-check is done here — a missing
+    // file is handled gracefully by the renderer itself (FR-019).
+    specPath: f.specPath,
+    planPath: f.planPath,
   );
 }
