@@ -43,6 +43,10 @@ milestones:
     title: "Detail view and roadmap redesign"
     status: done
     target: null
+  - id: m10-detail-ui-refinement
+    title: "Detail UI refinement (compact, high-level)"
+    status: in-progress
+    target: null
 features:
   - id: 002-project-organization
     milestone: m8-project-organization
@@ -72,6 +76,16 @@ features:
     depends_on: []
     started: 2026-07-16
     finished: 2026-07-16
+    spec_path: null
+    plan_path: null
+  - id: 005-compact-detail-ui
+    milestone: m10-detail-ui-refinement
+    title: "Compact detail UI: sans fonts, milestone accordion, vision teaser (mockup v2)"
+    status: in-flight
+    stage: verify
+    depends_on: []
+    started: 2026-07-16
+    finished: null
     spec_path: null
     plan_path: null
 next: null
@@ -114,6 +128,12 @@ None.
 - **2026-07-16** — 004-magazine-detail-ui -> verify — stage transition via `product stage`
 - **2026-07-16** — 004-magazine-detail-ui -> done — stage transition via `product stage`
 - **2026-07-16** — milestone m9-detail-roadmap-redesign status -> done — marker set via `product markers --set`
+- **2026-07-16** — milestone 'm10-detail-ui-refinement' added — Live-feedback iteration on the magazine detail UI: sans typography, compact milestone accordion, vision teaser in overview
+- **2026-07-16** — feature '005-compact-detail-ui' added — new feature via `product add-feature`
+- **2026-07-16** — 005-compact-detail-ui -> started — stage transition via `product stage`
+- **2026-07-16** — 005-compact-detail-ui -> complete — stage transition via `product stage`
+- **2026-07-16** — 005-compact-detail-ui -> review — stage transition via `product stage`
+- **2026-07-16** — 005-compact-detail-ui -> verify — stage transition via `product stage`
 
 ## Appendix — migrated details
 

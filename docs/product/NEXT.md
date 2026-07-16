@@ -9,15 +9,16 @@ updated: 2026-07-16
 ## You are here
 
 - **m8-project-organization** — Project organization (target: unset)
+- **m10-detail-ui-refinement** — Detail UI refinement (compact, high-level) (target: unset)
 
 ## In-flight features
 
-None.
+- **005-compact-detail-ui** — Compact detail UI: sans fonts, milestone accordion, vision teaser (mockup v2) (milestone: m10-detail-ui-refinement, stage: verify)
 
 ## Next cursor
 
-None — no eligible feature (all done/cancelled, or blocked by unmet dependencies).
+**005-compact-detail-ui** — recommended next feature (no unmet dependencies, first eligible feature in roadmap order).
 
 ## How to continue
 
-Run `a1-progress` to review overall project state and decide the next milestone.
+Run `a1-plan` to create an executable plan for the next-cursor feature, or `a1-execute` if a plan already exists.
