@@ -230,6 +230,35 @@ void main() {
     });
   });
 
+  group('MilestoneLanesView — edge case: all milestones done', () {
+    testWidgets(
+      'when no milestone is active, all accordions start collapsed (even '
+      'a done milestone with features) and the Aktiv label is absent',
+      (tester) async {
+        final doneWithFeatures = RoadmapMilestone(
+          name: 'M1 — Fundament',
+          status: 'done',
+          phases: const [RoadmapPhase(name: 'Alte Feature', status: 'done')],
+        );
+        const doneWithoutFeatures = RoadmapMilestone(
+          name: 'M2 — Aufraeumen',
+          status: 'done',
+        );
+
+        await pumpView(
+          tester,
+          milestones: [doneWithFeatures, doneWithoutFeatures],
+        );
+
+        expect(find.byType(MilestoneLane), findsNWidgets(2));
+        expect(find.byType(FeatureCard), findsNothing);
+        expect(find.text('Alte Feature'), findsNothing);
+        expect(find.text('AKTIV'), findsNothing);
+        expect(find.text('FERTIG'), findsOneWidget);
+      },
+    );
+  });
+
   group('MilestoneLanesView — SC-001 fixture with >=3 milestones', () {
     testWidgets(
       'initial render shows only milestone rows plus the active '

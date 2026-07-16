@@ -15,6 +15,7 @@ import 'package:pro_orc/features/shared/roadmap/milestone_lane.dart';
 import 'package:pro_orc/features/shared/vision/vision_hero.dart';
 import 'package:pro_orc/features/shared/vision/vision_scorecard.dart';
 import 'package:pro_orc/features/shared/vision/vision_section.dart';
+import 'package:pro_orc/features/shared/vision/vision_teaser_card.dart';
 import 'package:pro_orc/providers/database_provider.dart';
 import 'package:pro_orc/providers/roadmap_provider.dart';
 import 'package:pro_orc/providers/vision_provider.dart';
@@ -308,6 +309,55 @@ void main() {
         expect(find.text('Pro Orc — Vision'), findsOneWidget);
         expect(find.text('Pillar A'), findsOneWidget);
         expect(find.text('Pillar B'), findsOneWidget);
+      },
+    );
+  });
+
+  group('ProjectDetailPanel — FR-002: vision teaser integration', () {
+    const vision = VisionData(
+      title: 'Pro Orc — Vision',
+      lead: 'Der Ueberblick ueber alle Projekte.',
+      pillars: [VisionPillar(name: 'Pillar A', description: 'Beschreibung A.')],
+    );
+
+    const legacyResult = RoadmapResult(
+      data: RoadmapData(
+        milestones: [
+          RoadmapMilestone(
+            name: 'M1 — Fundament',
+            status: 'done',
+            phases: [RoadmapPhase(name: 'Phase 1', status: 'done')],
+          ),
+        ],
+      ),
+      source: RoadmapSource.local,
+    );
+
+    testWidgets(
+      'the Übersicht tab shows the vision teaser card when vision data '
+      'resolves, and tapping it switches to the Vision tab',
+      (tester) async {
+        await pumpPanel(tester, roadmapResult: legacyResult, vision: vision);
+
+        expect(find.byType(VisionTeaserCard), findsOneWidget);
+
+        await tester.tap(find.byType(VisionTeaserCard));
+        await _pumpIgnoringOverflow(tester);
+
+        // Switching to the Vision tab renders the Vision-tab-only widgets
+        // and the tab button itself now shows as selected.
+        expect(find.byType(VisionHero), findsOneWidget);
+        expect(find.byType(VisionScorecard), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'the Übersicht tab shows no vision teaser card for a legacy project '
+      'without VISION.md',
+      (tester) async {
+        await pumpPanel(tester, roadmapResult: legacyResult, vision: null);
+
+        expect(find.byType(VisionTeaserCard), findsNothing);
       },
     );
   });

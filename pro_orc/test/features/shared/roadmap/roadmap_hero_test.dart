@@ -70,5 +70,22 @@ void main() {
       expect(tester.takeException(), isNull);
       expect(find.byType(ErrorWidget), findsNothing);
     });
+
+    testWidgets(
+      'FR-004: a long summary line renders as a single line with ellipsis '
+      'overflow, never a multi-line wrap (mockup v2 .nextstep p)',
+      (tester) async {
+        final longLine =
+            'Dieser Satz ist absichtlich sehr lang und wiederholt sich, '
+            'damit er garantiert breiter als jede realistische Panel-Breite '
+            'wird und den Ellipsis-Pfad statt eines Zeilenumbruchs auslöst.';
+
+        await pumpHero(tester, nextMdContent: longLine);
+
+        final textWidget = tester.widget<Text>(find.text(longLine));
+        expect(textWidget.maxLines, 1);
+        expect(textWidget.overflow, TextOverflow.ellipsis);
+      },
+    );
   });
 }
