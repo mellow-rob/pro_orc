@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated": "2026-07-16T10:00:36.025Z",
+  "generated": "2026-07-16T12:24:51.825Z",
   "project": {
     "id": "pro-orc",
     "title": "Pro Orc",
@@ -116,8 +116,20 @@
       "finished": "2026-07-16",
       "spec_path": null,
       "plan_path": null
+    },
+    {
+      "id": "006-vision-first-tab-consolidation",
+      "milestone": "m10-detail-ui-refinement",
+      "title": "Vision-first tab consolidation: merge Übersicht into Vision, product version, links section",
+      "status": "in-flight",
+      "stage": "verify",
+      "depends_on": [],
+      "started": "2026-07-16",
+      "finished": null,
+      "spec_path": null,
+      "plan_path": null
     }
   ],
   "next": null,
-  "cursor": null
+  "cursor": "006-vision-first-tab-consolidation"
 }

@@ -88,6 +88,16 @@ features:
     finished: 2026-07-16
     spec_path: null
     plan_path: null
+  - id: 006-vision-first-tab-consolidation
+    milestone: m10-detail-ui-refinement
+    title: "Vision-first tab consolidation: merge Übersicht into Vision, product version, links section"
+    status: in-flight
+    stage: verify
+    depends_on: []
+    started: 2026-07-16
+    finished: null
+    spec_path: null
+    plan_path: null
 next: null
 ---
 
@@ -138,6 +148,11 @@ None.
 - **2026-07-16** — 005-compact-detail-ui -> origin-cleanup — stage transition via `product stage`
 - **2026-07-16** — 005-compact-detail-ui -> done — stage transition via `product stage`
 - **2026-07-16** — milestone m10-detail-ui-refinement status -> done — marker set via `product markers --set`
+- **2026-07-16** — feature '006-vision-first-tab-consolidation' added — new feature via `product add-feature`
+- **2026-07-16** — 006-vision-first-tab-consolidation -> started — stage transition via `product stage`
+- **2026-07-16** — 006-vision-first-tab-consolidation -> complete — stage transition via `product stage`
+- **2026-07-16** — 006-vision-first-tab-consolidation -> review — stage transition via `product stage`
+- **2026-07-16** — 006-vision-first-tab-consolidation -> verify — stage transition via `product stage`
 
 ## Appendix — migrated details
 
