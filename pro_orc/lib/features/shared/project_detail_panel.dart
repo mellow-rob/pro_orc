@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:pro_orc/data/models/project_model.dart';
 import 'package:pro_orc/data/models/project_type.dart';
+import 'package:pro_orc/data/models/roadmap_data.dart';
 import 'package:pro_orc/features/shared/detail/description_section.dart';
 import 'package:pro_orc/features/shared/detail/file_preview_section.dart';
 import 'package:pro_orc/features/shared/detail/links_section.dart';
@@ -11,9 +12,13 @@ import 'package:pro_orc/features/shared/detail/section_card.dart';
 import 'package:pro_orc/features/shared/detail/token_scorecard_section.dart';
 import 'package:pro_orc/features/shared/rename_project_dialog.dart';
 import 'package:pro_orc/features/shared/roadmap/roadmap_tab.dart';
+import 'package:pro_orc/features/shared/roadmap/roadmap_timeline_view.dart';
+import 'package:pro_orc/features/shared/vision/vision_tab.dart';
 import 'package:pro_orc/features/shell/glass_card.dart';
 import 'package:pro_orc/providers/database_provider.dart';
 import 'package:pro_orc/providers/project_detail_provider.dart';
+import 'package:pro_orc/providers/roadmap_provider.dart';
+import 'package:pro_orc/providers/vision_provider.dart';
 import 'package:pro_orc/theme/n3_colors.dart';
 
 /// Opens the project detail view embedded inside the app shell's content
@@ -55,10 +60,17 @@ class ProjectDetailPanel extends ConsumerStatefulWidget {
   ConsumerState<ProjectDetailPanel> createState() => _ProjectDetailPanelState();
 }
 
-enum _DetailTab { uebersicht, roadmap }
+enum _DetailTab { uebersicht, vision, roadmap, zeitstrahl }
 
 class _ProjectDetailPanelState extends ConsumerState<ProjectDetailPanel> {
   _DetailTab _tab = _DetailTab.uebersicht;
+
+  /// Tier-0 milestone selection, hoisted here (above the Roadmap/Zeitstrahl
+  /// tab split) so it survives switching from Roadmap to Zeitstrahl and back
+  /// (feature 002, Wave 1 — Zeitstrahl used to be an in-tab view toggle with
+  /// its own hoisted state; now that it's a sibling top-level tab, the
+  /// selection has to live one level higher, above both).
+  RoadmapMilestone? _selectedMilestone;
 
   ProjectModel get project => widget.project;
 
@@ -68,6 +80,27 @@ class _ProjectDetailPanelState extends ConsumerState<ProjectDetailPanel> {
     final accent = project.projectType == ProjectType.research
         ? colors.fuch
         : colors.cyan;
+
+    final visionAsync = ref.watch(visionProvider(project));
+    final hasVision = visionAsync.maybeWhen(
+      data: (vision) => vision != null,
+      orElse: () => false,
+    );
+    final roadmapAsync = ref.watch(roadmapProvider(project));
+    final isTier0 = roadmapAsync.maybeWhen(
+      data: (result) => result.source == RoadmapSource.productStore,
+      orElse: () => false,
+    );
+
+    // If a gated tab's underlying data disappears after it was selected
+    // (e.g. a race on first load), fall back to Übersicht rather than
+    // rendering a body for a tab whose button no longer exists.
+    if (_tab == _DetailTab.vision && !hasVision) {
+      _tab = _DetailTab.uebersicht;
+    }
+    if (_tab == _DetailTab.zeitstrahl && !isTier0) {
+      _tab = _DetailTab.uebersicht;
+    }
 
     return DefaultTextStyle(
       style: TextStyle(
@@ -81,18 +114,13 @@ class _ProjectDetailPanelState extends ConsumerState<ProjectDetailPanel> {
           child: Column(
             children: [
               _buildHeader(context, colors, accent),
-              _buildTabSwitch(colors, accent),
+              _buildTabSwitch(colors, accent, hasVision, isTier0),
               // Content fills the remaining space given by the shell.
               Expanded(
-                child: _tab == _DetailTab.uebersicht
-                    ? SingleChildScrollView(
-                        padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-                        child: _buildBody(context, ref, colors, accent),
-                      )
-                    : Padding(
-                        padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-                        child: RoadmapTab(project: project, accent: accent),
-                      ),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+                  child: _buildTabContent(context, ref, colors, accent),
+                ),
               ),
             ],
           ),
@@ -101,7 +129,33 @@ class _ProjectDetailPanelState extends ConsumerState<ProjectDetailPanel> {
     );
   }
 
-  Widget _buildTabSwitch(AppColors colors, Color accent) {
+  Widget _buildTabContent(
+    BuildContext context,
+    WidgetRef ref,
+    AppColors colors,
+    Color accent,
+  ) {
+    return switch (_tab) {
+      _DetailTab.uebersicht => SingleChildScrollView(
+        child: _buildBody(context, ref, colors, accent),
+      ),
+      _DetailTab.vision => VisionTab(project: project),
+      _DetailTab.roadmap => RoadmapTab(
+        project: project,
+        accent: accent,
+        selectedMilestone: _selectedMilestone,
+        onMilestoneSelected: (m) => setState(() => _selectedMilestone = m),
+      ),
+      _DetailTab.zeitstrahl => _ZeitstrahlTabBody(project: project),
+    };
+  }
+
+  Widget _buildTabSwitch(
+    AppColors colors,
+    Color accent,
+    bool hasVision,
+    bool isTier0,
+  ) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(0, 0, 0, 12),
       child: Row(
@@ -113,6 +167,16 @@ class _ProjectDetailPanelState extends ConsumerState<ProjectDetailPanel> {
             accent: accent,
             onTap: () => setState(() => _tab = _DetailTab.uebersicht),
           ),
+          if (hasVision) ...[
+            const SizedBox(width: 8),
+            _TabButton(
+              label: 'Vision',
+              selected: _tab == _DetailTab.vision,
+              colors: colors,
+              accent: accent,
+              onTap: () => setState(() => _tab = _DetailTab.vision),
+            ),
+          ],
           const SizedBox(width: 8),
           _TabButton(
             label: 'Roadmap',
@@ -121,6 +185,16 @@ class _ProjectDetailPanelState extends ConsumerState<ProjectDetailPanel> {
             accent: accent,
             onTap: () => setState(() => _tab = _DetailTab.roadmap),
           ),
+          if (isTier0) ...[
+            const SizedBox(width: 8),
+            _TabButton(
+              label: 'Zeitstrahl',
+              selected: _tab == _DetailTab.zeitstrahl,
+              colors: colors,
+              accent: accent,
+              onTap: () => setState(() => _tab = _DetailTab.zeitstrahl),
+            ),
+          ],
         ],
       ),
     );
@@ -277,8 +351,57 @@ class _ProjectDetailPanelState extends ConsumerState<ProjectDetailPanel> {
   }
 }
 
+/// The "Zeitstrahl" tab body (FR-001/FR-006): reuses feature 001's
+/// [RoadmapTimelineView] against the same tier-0 [roadmapProvider] data the
+/// Roadmap tab reads, now as its own top-level tab instead of an in-tab view
+/// toggle. Only ever built while the tab button is visible (tier-0 gated in
+/// [_ProjectDetailPanelState.build]), so a non-tier-0/empty result here is
+/// defensive rather than expected.
+class _ZeitstrahlTabBody extends ConsumerWidget {
+  const _ZeitstrahlTabBody({required this.project});
+
+  final ProjectModel project;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final colors = Theme.of(context).extension<AppColors>()!;
+    final resultAsync = ref.watch(roadmapProvider(project));
+
+    return resultAsync.when(
+      loading: () => Center(
+        child: CircularProgressIndicator(color: colors.cyan, strokeWidth: 2),
+      ),
+      error: (_, _) => _EmptyZeitstrahlState(colors: colors),
+      data: (result) {
+        if (result.data.isEmpty) {
+          return _EmptyZeitstrahlState(colors: colors);
+        }
+        return SingleChildScrollView(
+          child: RoadmapTimelineView(milestones: result.data.milestones),
+        );
+      },
+    );
+  }
+}
+
+class _EmptyZeitstrahlState extends StatelessWidget {
+  const _EmptyZeitstrahlState({required this.colors});
+
+  final AppColors colors;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Text(
+        'Keine Roadmap-Daten vorhanden',
+        style: TextStyle(color: colors.textSec, fontSize: 14),
+      ),
+    );
+  }
+}
+
 /// Segmented-control-style tab button used by [ProjectDetailPanel]'s
-/// "Übersicht"/"Roadmap" switch (FR-001).
+/// "Übersicht"/"Vision"/"Roadmap"/"Zeitstrahl" switch (FR-001).
 class _TabButton extends StatelessWidget {
   const _TabButton({
     required this.label,
