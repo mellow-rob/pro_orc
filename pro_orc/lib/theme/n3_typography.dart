@@ -41,15 +41,33 @@ class N3Typography {
     Color? color,
     FontWeight fontWeight = FontWeight.w600,
     double? letterSpacing,
+    double height = 1.12,
   }) {
     return TextStyle(
       fontFamily: displayFontFallback.first,
       fontFamilyFallback: displayFontFallback,
       fontSize: fontSize,
       fontWeight: fontWeight,
-      height: 1.12,
+      height: height,
       letterSpacing: letterSpacing ?? -0.01 * fontSize,
       color: color ?? colors.textPri,
+    );
+  }
+
+  /// Serif "lead prose" text style — mockup `.prose.lead`: `font-family:
+  /// var(--display); font-size: clamp(17px, 2.4vw, 21px); line-height: 1.5;`
+  /// used for a section's opening paragraph (e.g. the spec view's "Problem"
+  /// section, FR-007), as distinct from [display]'s tighter
+  /// headline/scorecard line-height and heavier default weight — lead prose
+  /// is body text, not a heading, so it defaults to [FontWeight.w400].
+  static TextStyle lead({required AppColors colors, Color? color}) {
+    return display(
+      colors: colors,
+      fontSize: 21,
+      fontWeight: FontWeight.w400,
+      letterSpacing: 0,
+      height: 1.5,
+      color: color,
     );
   }
 

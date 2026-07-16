@@ -794,8 +794,11 @@ class _MetricTile extends StatelessWidget {
   }
 }
 
-/// Problem / User Journey → readable prose block (rendered via Markdown so
-/// any inline emphasis still shows correctly, never monospace).
+/// Problem → serif lead prose (FR-007, mockup `.prose.lead`): larger serif
+/// font, primary text color, generous line-height — distinct from an
+/// unrecognized/freeform section's smaller sans-serif secondary-color body
+/// text. Rendered via Markdown so any inline emphasis still shows
+/// correctly, never monospace.
 class _ProseSection extends StatelessWidget {
   const _ProseSection({required this.body, required this.colors});
 
@@ -804,7 +807,11 @@ class _ProseSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _FreeformMarkdown(body: body, colors: colors);
+    if (body.isEmpty) return const SizedBox.shrink();
+    return GptMarkdown(
+      body,
+      style: N3Typography.lead(colors: colors),
+    );
   }
 }
 

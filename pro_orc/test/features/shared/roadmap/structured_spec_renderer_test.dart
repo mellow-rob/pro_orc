@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:gpt_markdown/gpt_markdown.dart';
 import 'package:path/path.dart' as p;
 
 import 'package:pro_orc/features/shared/roadmap/structured_spec_renderer.dart';
@@ -137,6 +138,50 @@ Some prose describing the problem.
 
       expect(find.textContaining('Some prose describing'), findsOneWidget);
     });
+
+    testWidgets(
+      'renders Problem as serif lead prose, not plain freeform text '
+      '(FR-007, mockup .prose.lead)',
+      (tester) async {
+        final path = writeSpec('''
+## Problem
+
+Some prose describing the problem.
+
+## Some Unknown Section
+
+Unrecognized body text here.
+''');
+
+        await pumpRenderer(tester, specPath: path);
+
+        final problemMarkdown = tester.widget<GptMarkdown>(
+          find.byWidgetPredicate(
+            (w) => w is GptMarkdown && w.data.contains('Some prose describing'),
+          ),
+        );
+        final unrecognizedMarkdown = tester.widget<GptMarkdown>(
+          find.byWidgetPredicate(
+            (w) => w is GptMarkdown && w.data.contains('Unrecognized body text'),
+          ),
+        );
+
+        // Problem gets the serif display font + the mockup's larger lead
+        // size (21px) — the unrecognized/freeform section keeps the
+        // smaller sans-serif body style. Distinct styling is the whole
+        // point of this test (FR-007's gap: Problem must not look like an
+        // unrecognized section).
+        expect(problemMarkdown.style?.fontFamily, 'Iowan Old Style');
+        expect(
+          problemMarkdown.style?.fontFamilyFallback,
+          containsAll(['Iowan Old Style', 'Palatino', 'Georgia']),
+        );
+        expect(problemMarkdown.style?.fontSize, 21.0);
+
+        expect(unrecognizedMarkdown.style?.fontFamily, isNot('Iowan Old Style'));
+        expect(unrecognizedMarkdown.style?.fontSize, isNot(21.0));
+      },
+    );
 
     testWidgets('renders User Journey as prose block', (tester) async {
       final path = writeSpec('''
