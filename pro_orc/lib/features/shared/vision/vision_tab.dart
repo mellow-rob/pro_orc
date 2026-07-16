@@ -24,7 +24,11 @@ import 'package:pro_orc/theme/n3_typography.dart';
 /// FR-006), renders ONLY [legacyContent] — the same legacy-guard behavior
 /// the old "Übersicht" tab provided, just under the new tab name/position.
 class VisionTab extends ConsumerWidget {
-  const VisionTab({super.key, required this.project, required this.legacyContent});
+  const VisionTab({
+    super.key,
+    required this.project,
+    required this.legacyContent,
+  });
 
   final ProjectModel project;
 

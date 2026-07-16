@@ -78,6 +78,7 @@ class VisionReader {
         i++;
         while (i < body.length) {
           final pillarCandidate = body[i].trim();
+          if (pillarCandidate.startsWith('##')) break;
           if (pillarCandidate.isNotEmpty) {
             final match = _pillarLine.firstMatch(pillarCandidate);
             if (match != null) {
@@ -98,6 +99,7 @@ class VisionReader {
         i++;
         while (i < body.length) {
           final linkCandidate = body[i].trim();
+          if (linkCandidate.startsWith('##')) break;
           if (linkCandidate.isNotEmpty) {
             final match = _linkLine.firstMatch(linkCandidate);
             if (match != null) {
