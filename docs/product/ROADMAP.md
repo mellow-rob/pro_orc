@@ -41,7 +41,7 @@ milestones:
     target: null
   - id: m9-detail-roadmap-redesign
     title: "Detail view and roadmap redesign"
-    status: done
+    status: in-progress
     target: null
 features:
   - id: 002-project-organization
@@ -58,6 +58,16 @@ features:
     milestone: m9-detail-roadmap-redesign
     title: "Detail view cleanup + tier-0 product-store roadmap (hero, lanes, cards, structured spec renderer, timeline)"
     status: done
+    stage: null
+    depends_on: []
+    started: null
+    finished: null
+    spec_path: null
+    plan_path: null
+  - id: 004-magazine-detail-ui
+    milestone: m9-detail-roadmap-redesign
+    title: "Magazine-style detail UI: Vision/Roadmap/Zeitstrahl tabs per approved mockup"
+    status: in-flight
     stage: null
     depends_on: []
     started: null
@@ -99,6 +109,8 @@ None.
 - **2026-07-15** — milestone 'm9-detail-roadmap-redesign' added — Non-technical, visual project detail + drill-down roadmap view
 - **2026-07-15** — feature '003-detail-roadmap-redesign' added — Non-technical, visual project detail + drill-down roadmap view
 - **2026-07-15** — milestone m9-detail-roadmap-redesign status -> done — marker set via `product markers --set`
+- **2026-07-15** — feature '004-magazine-detail-ui' added — Implement docs/design/roadmap-redesign-mockup.html 1:1 in Flutter
+- **2026-07-15** — milestone m9-detail-roadmap-redesign status -> in-progress — marker set via `product markers --set`
 
 ## Appendix — migrated details
 

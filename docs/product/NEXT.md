@@ -9,15 +9,16 @@ updated: 2026-07-15
 ## You are here
 
 - **m8-project-organization** — Project organization (target: unset)
+- **m9-detail-roadmap-redesign** — Detail view and roadmap redesign (target: unset)
 
 ## In-flight features
 
-None.
+- **004-magazine-detail-ui** — Magazine-style detail UI: Vision/Roadmap/Zeitstrahl tabs per approved mockup (milestone: m9-detail-roadmap-redesign, stage: none)
 
 ## Next cursor
 
-None — no eligible feature (all done/cancelled, or blocked by unmet dependencies).
+**004-magazine-detail-ui** — recommended next feature (no unmet dependencies, first eligible feature in roadmap order).
 
 ## How to continue
 
-Run `a1-progress` to review overall project state and decide the next milestone.
+Run `a1-plan` to create an executable plan for the next-cursor feature, or `a1-execute` if a plan already exists.

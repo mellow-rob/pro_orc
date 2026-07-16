@@ -1,0 +1,523 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Pro Orc — Projekt-Detail Mockup</title>
+<style>
+  :root {
+    /* Pro Orc AppColors (dark) — 1:1 aus n3_colors.dart */
+    --bg-base: #0E0E14;
+    --bg-surf: #12181F;
+    --bg-elev: #171D26;
+    --bg-card: #1C222B;
+    --cyan-hi: #00DEEB;
+    --cyan: #00CDDC;
+    --cyan-lo: #009FAF;
+    --fuch: #D710D8;
+    --text-pri: #E0E5EB;
+    --text-sec: #9399A0;
+    --text-dim: #5F6469;
+    --amber: #F5B800;
+    --emerald: #00C97A;
+    --violet: #9D68F0;
+    --danger: #F0645A;
+    --border: rgba(224,229,235,0.08);
+    --glass: rgba(28,34,43,0.72);
+    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 12px 32px rgba(0,0,0,.45);
+    --display: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+    --body: "Nunito", ui-rounded, "Segoe UI", system-ui, -apple-system, sans-serif;
+    --mono: ui-monospace, "SF Mono", "Cascadia Code", Menlo, monospace;
+    --wrap: 1040px;
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0; background: var(--bg-base); color: var(--text-pri);
+    font-family: var(--body); line-height: 1.6; font-size: 16px;
+    -webkit-font-smoothing: antialiased;
+  }
+  /* Orb-Hintergrund wie in der App */
+  body::before {
+    content: ""; position: fixed; inset: 0; z-index: -1;
+    background:
+      radial-gradient(600px 420px at 78% 12%, rgba(0,135,154,0.16), transparent 70%),
+      radial-gradient(520px 380px at 12% 85%, rgba(166,0,169,0.10), transparent 70%),
+      var(--bg-base);
+  }
+  .wrap { max-width: var(--wrap); margin: 0 auto; padding: 0 28px; }
+  h1, h2, h3 { font-family: var(--display); font-weight: 600; text-wrap: balance; line-height: 1.12; letter-spacing: -.01em; }
+  .eyebrow {
+    font-family: var(--body); font-weight: 800; font-size: 12px;
+    letter-spacing: .16em; text-transform: uppercase; color: var(--cyan);
+  }
+
+  /* ───────── App-Chrome (Kontext: so sitzt es in Pro Orc) ───────── */
+  .appbar {
+    display: flex; align-items: center; gap: 14px;
+    padding: 18px 28px 0; max-width: var(--wrap); margin: 0 auto;
+  }
+  .appbar .back { color: var(--text-dim); font-size: 18px; text-decoration: none; }
+  .appbar .strip { width: 3px; height: 40px; border-radius: 2px; background: var(--cyan); }
+  .appbar .typeicon {
+    width: 34px; height: 34px; border-radius: 50%;
+    background: rgba(0,205,220,0.10); display: grid; place-items: center;
+    color: var(--cyan); font-size: 15px;
+  }
+  .appbar b { font-size: 19px; font-weight: 600; }
+  .appbar .meta { margin-left: auto; color: var(--text-dim); font-size: 12px; font-variant-numeric: tabular-nums; }
+
+  /* ───────── Tab-Leiste (Segmented Control wie in der App) ───────── */
+  .tabs {
+    display: flex; gap: 8px; padding: 16px 28px 0;
+    max-width: var(--wrap); margin: 0 auto;
+    border-bottom: 1px solid var(--border); padding-bottom: 14px;
+  }
+  .tab {
+    padding: 7px 16px; border-radius: 8px; font-size: 13px; cursor: pointer;
+    color: var(--text-dim); border: 1px solid var(--bg-elev);
+    background: transparent; font-family: var(--body); font-weight: 500;
+    transition: all .15s ease;
+  }
+  .tab:hover { color: var(--text-sec); }
+  .tab.active {
+    color: var(--cyan); font-weight: 700;
+    background: rgba(0,205,220,0.10); border-color: rgba(0,205,220,0.38);
+  }
+
+  .pane { display: none; animation: fadeIn .25s ease; }
+  .pane.active { display: block; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+  section { padding: 52px 0; }
+  section + section { border-top: 1px solid var(--border); }
+  .sec-head { margin-bottom: 32px; }
+  .sec-head h2 { font-size: clamp(26px, 4vw, 38px); margin: 8px 0 12px; }
+  .sec-head p { color: var(--text-sec); max-width: 64ch; margin: 0; font-size: 15px; }
+
+  /* Glass-Card Grundbaustein */
+  .glass {
+    background: var(--glass); border: 1px solid var(--border);
+    border-radius: 16px; box-shadow: var(--shadow);
+    backdrop-filter: blur(14px);
+  }
+
+  /* ───────── TAB 1: VISION / ÜBERBLICK ───────── */
+  .hero { padding: 56px 0 48px; }
+  .hero h1 { font-size: clamp(34px, 5.4vw, 58px); margin: 14px 0 18px; }
+  .hero h1 em { font-style: italic; color: var(--cyan); }
+  .hero .lede { font-size: clamp(16px, 2.2vw, 20px); color: var(--text-sec); max-width: 62ch; margin: 0; }
+  .verdict {
+    margin-top: 30px; display: inline-flex; align-items: center; gap: 12px;
+    background: var(--glass); border: 1px solid var(--border); border-radius: 999px;
+    padding: 9px 20px 9px 13px; box-shadow: var(--shadow); font-weight: 700; font-size: 14px;
+  }
+  .verdict .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--emerald); box-shadow: 0 0 0 4px rgba(0,201,122,0.15); }
+
+  .scorecard { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-top: 38px; }
+  .stat { padding: 20px; }
+  .stat .n { font-family: var(--display); font-size: 38px; font-weight: 600; font-variant-numeric: tabular-nums; line-height: 1; color: var(--text-pri); }
+  .stat .l { font-size: 12.5px; color: var(--text-sec); margin-top: 8px; font-weight: 600; }
+  .stat.c-cyan .n { color: var(--cyan); }
+  .stat.c-emerald .n { color: var(--emerald); }
+  .stat.c-amber .n { color: var(--amber); }
+  .stat.c-violet .n { color: var(--violet); }
+
+  .vision-grid { display: grid; grid-template-columns: 1.1fr .9fr; gap: 36px; align-items: start; }
+  .vision-lead { font-family: var(--display); font-size: clamp(20px, 2.8vw, 27px); line-height: 1.4; margin: 0; }
+  .vision-lead b { color: var(--cyan); font-style: italic; font-weight: 600; }
+  .pillars { display: flex; flex-direction: column; gap: 13px; }
+  .pillar { padding: 17px 20px; border-radius: 14px; }
+  .pillar h3 { font-family: var(--body); font-weight: 800; font-size: 15px; margin: 0 0 4px; }
+  .pillar p { margin: 0; font-size: 13.5px; color: var(--text-sec); }
+
+  /* ───────── TAB 2: ROADMAP (Lanes) ───────── */
+  .nextstep {
+    padding: 22px 26px; margin-bottom: 40px;
+    display: flex; gap: 18px; align-items: baseline; flex-wrap: wrap;
+  }
+  .nextstep .k { font-family: var(--mono); font-size: 11px; font-weight: 700; color: var(--cyan); letter-spacing: .1em; text-transform: uppercase; flex-shrink: 0; }
+  .nextstep p { margin: 0; font-size: 15px; color: var(--text-sec); }
+  .nextstep p b { color: var(--text-pri); }
+
+  .lanes { display: flex; flex-direction: column; }
+  .lane { display: grid; grid-template-columns: 185px 1fr; gap: 26px; padding: 26px 0; border-top: 1px dashed var(--border); }
+  .lane:first-child { border-top: none; }
+  .badge {
+    font-family: var(--body); font-weight: 900; font-size: 11px; letter-spacing: .1em;
+    text-transform: uppercase; padding: 5px 12px; border-radius: 999px; display: inline-block;
+  }
+  .badge.active-b { color: var(--cyan); background: rgba(0,205,220,0.12); }
+  .badge.done-b { color: var(--emerald); background: rgba(0,201,122,0.12); }
+  .badge.planned-b { color: var(--text-sec); background: var(--bg-elev); }
+  .badge.gate-b { color: var(--amber); background: rgba(245,184,0,0.12); }
+  .lane .when h3 { font-family: var(--display); font-size: 21px; margin: 12px 0 4px; }
+  .lane .when .sub { font-size: 12.5px; color: var(--text-dim); }
+  .lane ul { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 10px; }
+  .lane li {
+    display: flex; gap: 12px; font-size: 14.5px; align-items: baseline;
+    padding: 10px 14px; border-radius: 10px; cursor: pointer;
+    border: 1px solid transparent; transition: all .15s ease;
+  }
+  .lane li:hover { background: var(--bg-elev); border-color: var(--border); }
+  .lane li .mchip {
+    font-family: var(--mono); font-size: 10.5px; font-weight: 700; color: var(--cyan-lo);
+    background: var(--bg-surf); border: 1px solid var(--border); border-radius: 6px;
+    padding: 2px 7px; white-space: nowrap; flex-shrink: 0;
+  }
+  .lane li .dt { font-family: var(--mono); font-size: 11px; color: var(--text-dim); margin-left: auto; flex-shrink: 0; }
+  .lane li .st { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; align-self: center; }
+  .st.done { background: var(--emerald); }
+  .st.active { background: var(--cyan); }
+  .st.planned { background: var(--text-dim); }
+
+  /* Feature-Karten (Drill-down Ebene 2) */
+  .fcards { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-top: 28px; }
+  .fcard {
+    padding: 20px 20px 20px 24px; position: relative; overflow: hidden; cursor: pointer;
+    transition: transform .15s ease;
+  }
+  .fcard:hover { transform: translateY(-2px); }
+  .fcard::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; }
+  .fcard.s-done::before { background: var(--emerald); }
+  .fcard.s-active::before { background: var(--cyan); }
+  .fcard .top { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; flex-wrap: wrap; }
+  .tag { font-size: 10.5px; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; padding: 3px 9px; border-radius: 6px; }
+  .tag.done-t { color: var(--emerald); background: rgba(0,201,122,0.12); }
+  .tag.active-t { color: var(--cyan); background: rgba(0,205,220,0.12); }
+  .fid { font-family: var(--mono); font-size: 11px; color: var(--text-dim); }
+  .fcard h3 { font-family: var(--body); font-weight: 800; font-size: 15.5px; margin: 0 0 6px; }
+  .fcard p { margin: 0; font-size: 13px; color: var(--text-sec); }
+  .fcard .chips { margin-top: 12px; display: flex; gap: 6px; flex-wrap: wrap; }
+  .fcard .chips span {
+    font-family: var(--mono); font-size: 10px; color: var(--text-dim);
+    border: 1px solid var(--border); border-radius: 5px; padding: 2px 7px;
+  }
+
+  /* ───────── TAB 3: ZEITSTRAHL ───────── */
+  .tl-legend { display: flex; gap: 18px; flex-wrap: wrap; margin-bottom: 26px; font-size: 12px; font-weight: 700; color: var(--text-sec); }
+  .tl-legend i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; margin-right: 6px; vertical-align: -1px; }
+  .timeline { padding: 28px; overflow-x: auto; }
+  .tl-row { display: grid; grid-template-columns: 230px 1fr; gap: 16px; align-items: center; padding: 7px 0; }
+  .tl-row .lbl { font-size: 13px; color: var(--text-sec); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tl-row .lbl b { color: var(--text-pri); font-weight: 700; }
+  .tl-track { position: relative; height: 22px; background: rgba(224,229,235,0.03); border-radius: 6px; }
+  .tl-bar { position: absolute; top: 3px; bottom: 3px; border-radius: 5px; }
+  .tl-bar.done { background: linear-gradient(90deg, var(--emerald), rgba(0,201,122,0.65)); }
+  .tl-bar.active { background: linear-gradient(90deg, var(--cyan), rgba(0,205,220,0.55)); }
+  .tl-point { position: absolute; top: 50%; width: 12px; height: 12px; border-radius: 3px; transform: translateY(-50%) rotate(45deg); }
+  .tl-point.planned { background: var(--text-dim); }
+  .tl-today { position: absolute; top: -6px; bottom: -6px; width: 2px; background: var(--fuch); border-radius: 1px; }
+  .tl-axis { display: grid; grid-template-columns: 230px 1fr; gap: 16px; margin-top: 10px; }
+  .tl-axis .marks { display: flex; justify-content: space-between; font-family: var(--mono); font-size: 10.5px; color: var(--text-dim); }
+
+  /* ───────── TAB 4: SPEC-ANSICHT ───────── */
+  .spec-head { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-bottom: 8px; }
+  .spec-head h2 { margin: 0; font-size: clamp(24px, 3.6vw, 34px); }
+  .pill { font-size: 11px; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; padding: 4px 12px; border-radius: 999px; }
+  .pill.done-p { color: var(--emerald); background: rgba(0,201,122,0.12); }
+  .spec-meta { font-family: var(--mono); font-size: 11.5px; color: var(--text-dim); margin-bottom: 28px; }
+  .subtabs { display: flex; gap: 8px; margin: 22px 0 34px; }
+  .subtab { padding: 6px 14px; border-radius: 8px; font-size: 12px; cursor: pointer; color: var(--text-dim); border: 1px solid var(--bg-elev); background: transparent; font-weight: 500; }
+  .subtab.active { color: var(--cyan); font-weight: 700; background: rgba(0,205,220,0.10); border-color: rgba(0,205,220,0.38); }
+
+  .spec-sec { margin-bottom: 40px; }
+  .spec-sec .eyebrow { display: block; margin-bottom: 10px; }
+  .spec-sec .prose { font-size: 15.5px; color: var(--text-pri); max-width: 68ch; }
+  .spec-sec .prose.lead { font-family: var(--display); font-size: clamp(17px, 2.4vw, 21px); line-height: 1.5; }
+
+  .journey { counter-reset: step; display: flex; flex-direction: column; gap: 12px; max-width: 70ch; }
+  .jstep { display: flex; gap: 14px; align-items: baseline; padding: 13px 17px; border-radius: 12px; }
+  .jstep::before {
+    counter-increment: step; content: counter(step);
+    font-family: var(--mono); font-weight: 700; font-size: 12px; color: var(--cyan);
+    width: 24px; height: 24px; border-radius: 50%; background: rgba(0,205,220,0.10);
+    display: grid; place-items: center; flex-shrink: 0; align-self: flex-start; line-height: 24px; text-align: center;
+  }
+  .jstep p { margin: 0; font-size: 14px; color: var(--text-sec); }
+
+  .checklist { display: flex; flex-direction: column; gap: 9px; max-width: 72ch; }
+  .check { display: flex; gap: 12px; align-items: baseline; padding: 11px 15px; border-radius: 10px; }
+  .check .ic { color: var(--emerald); font-weight: 900; flex-shrink: 0; font-size: 14px; }
+  .check p { margin: 0; font-size: 14px; color: var(--text-pri); }
+
+  .infobox {
+    padding: 20px 24px; border-radius: 14px; max-width: 72ch;
+    background: rgba(224,229,235,0.03); border: 1px solid var(--border);
+  }
+  .infobox ul { margin: 0; padding-left: 18px; color: var(--text-sec); font-size: 14px; display: flex; flex-direction: column; gap: 6px; }
+
+  .warncards { display: grid; grid-template-columns: repeat(2, 1fr); gap: 13px; }
+  .warn { padding: 15px 17px; border-radius: 12px; border-left: 3px solid var(--amber); display: flex; gap: 12px; align-items: baseline; }
+  .warn .ic { color: var(--amber); flex-shrink: 0; }
+  .warn p { margin: 0; font-size: 13px; color: var(--text-sec); }
+
+  .metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  .metric { padding: 18px 20px; border-radius: 14px; }
+  .metric .n { font-family: var(--display); font-size: 26px; color: var(--cyan); line-height: 1.1; }
+  .metric p { margin: 6px 0 0; font-size: 12.5px; color: var(--text-sec); }
+
+  footer { padding: 44px 0 60px; color: var(--text-dim); font-size: 12px; text-align: center; }
+  footer .mono { font-family: var(--mono); }
+
+  @media (max-width: 820px) {
+    .scorecard, .warncards, .fcards { grid-template-columns: repeat(2, 1fr); }
+    .vision-grid, .metrics { grid-template-columns: 1fr; }
+    .lane { grid-template-columns: 1fr; gap: 14px; }
+    .tl-row, .tl-axis { grid-template-columns: 140px 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- App-Chrome: so sitzt die Ansicht im Pro-Orc-Detail-Panel -->
+<div class="appbar">
+  <a class="back" href="#">←</a>
+  <div class="strip"></div>
+  <div class="typeicon">⌘</div>
+  <b>Pro Orc</b>
+  <span class="meta">Stand 15. Juli 2026 · Quelle: docs/product/</span>
+</div>
+
+<!-- Tab-Leiste -->
+<nav class="tabs">
+  <button class="tab active" data-pane="vision">Vision</button>
+  <button class="tab" data-pane="roadmap">Roadmap</button>
+  <button class="tab" data-pane="zeitstrahl">Zeitstrahl</button>
+  <button class="tab" data-pane="spec">Spec-Ansicht</button>
+</nav>
+
+<!-- ═══════════ TAB 1: VISION ═══════════ -->
+<div class="pane active" id="vision">
+  <header class="hero">
+    <div class="wrap">
+      <p class="eyebrow">Produktvision · Roadmap · Status</p>
+      <h1>Das Cockpit für alles, was <em>Claude Code</em> für dich baut.</h1>
+      <p class="lede">Pro Orc zeigt auf einen Blick, wo jedes Projekt steht, was als Nächstes ansteht und was es kostet — ohne Terminal, ohne Markdown-Rohtext, ohne Entwickler-Jargon. Neun Meilensteine sind gebaut, das Fundament steht.</p>
+      <div class="verdict"><span class="dot"></span> Projekt aktiv — 8 von 9 Meilensteinen abgeschlossen</div>
+
+      <div class="scorecard">
+        <div class="stat glass c-emerald"><div class="n">8</div><div class="l">Meilensteine fertig</div></div>
+        <div class="stat glass c-cyan"><div class="n">1</div><div class="l">Aktiv in Arbeit</div></div>
+        <div class="stat glass c-violet"><div class="n">522</div><div class="l">Tests, alle grün</div></div>
+        <div class="stat glass c-amber"><div class="n">v3.1</div><div class="l">Aktuelles Release</div></div>
+      </div>
+    </div>
+  </header>
+
+  <section>
+    <div class="wrap">
+      <div class="sec-head">
+        <p class="eyebrow">Wofür Pro Orc da ist</p>
+        <h2>Die Produktvision</h2>
+        <p>Jede Roadmap-Entscheidung wird an diesem Versprechen gemessen — nicht an technischen Möglichkeiten.</p>
+      </div>
+      <div class="vision-grid">
+        <p class="vision-lead">Pro Orc ist das <b>Dashboard und der Launcher</b> für alle Claude-Code-Projekte — gebaut für Gründer, Berater und Macher, die <b>Ergebnisse sehen wollen, nicht Terminals</b>. Immer eine Menüleiste entfernt, nie im Weg.</p>
+        <div class="pillars">
+          <div class="pillar glass"><h3>Status auf einen Blick</h3><p>Jedes Projekt zeigt sofort: Wo stehen wir, was läuft, was kommt als Nächstes — aus den echten Projektdaten, live aktualisiert.</p></div>
+          <div class="pillar glass"><h3>Lesbar statt technisch</h3><p>Specs, Pläne und Roadmaps erscheinen als aufbereitete Ansichten — nie als Markdown-Rohtext oder Entwickler-Interna.</p></div>
+          <div class="pillar glass"><h3>Ein Klick zur Aktion</h3><p>Terminal, Editor, Finder, Claude-Session — jede Aktion startet direkt aus der Karte heraus. Das Dashboard ist auch der Launcher.</p></div>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- ═══════════ TAB 2: ROADMAP ═══════════ -->
+<div class="pane" id="roadmap">
+  <section style="border-top:none;">
+    <div class="wrap">
+      <div class="nextstep glass">
+        <span class="k">Nächster Schritt</span>
+        <p><b>m8 — Project Organization</b> ist der aktive Meilenstein. Alle übrigen acht sind abgeschlossen — bereit für die Planung von M10.</p>
+      </div>
+
+      <div class="sec-head">
+        <p class="eyebrow">Wie es weitergeht</p>
+        <h2>Roadmap: neun Meilensteine</h2>
+        <p>Sortiert nach Status. Ein Klick auf eine Zeile öffnet die Features des Meilensteins als Karten — ein Klick auf eine Karte die aufbereitete Spec.</p>
+      </div>
+
+      <div class="lanes glass" style="padding: 8px 26px;">
+        <div class="lane">
+          <div class="when">
+            <span class="badge active-b">Aktiv</span>
+            <h3>In Arbeit</h3>
+            <div class="sub">Der aktuelle Fokus</div>
+          </div>
+          <ul>
+            <li><span class="st active"></span><span class="mchip">m8</span> Project Organization — Projekt-Hub, Gruppen, Archiv <span class="dt">Juli 2026</span></li>
+          </ul>
+        </div>
+        <div class="lane">
+          <div class="when">
+            <span class="badge done-b">Fertig</span>
+            <h3>Ausgeliefert</h3>
+            <div class="sub">v2.2 bis v3.1</div>
+          </div>
+          <ul>
+            <li><span class="st done"></span><span class="mchip">m9</span> Detail View &amp; Roadmap Redesign <span class="dt">Juli 2026</span></li>
+            <li><span class="st done"></span><span class="mchip">m7</span> Rounding out v3 — Netzwerk &amp; Kosten <span class="dt">Juli 2026</span></li>
+            <li><span class="st done"></span><span class="mchip">m6</span> Selbstlernendes OS — Learning Loop <span class="dt">Juli 2026</span></li>
+            <li><span class="st done"></span><span class="mchip">m5</span> Harness-Sichtbarkeit <span class="dt">Juli 2026</span></li>
+            <li><span class="st done"></span><span class="mchip">m4</span> Session-Monitoring &amp; Collaboration-Graph <span class="dt">Juli 2026</span></li>
+            <li><span class="st done"></span><span class="mchip">m3</span> AgenticOS Views <span class="dt">Juli 2026</span></li>
+            <li><span class="st done"></span><span class="mchip">m2</span> Light-Theme Design-Refresh <span class="dt">Juli 2026</span></li>
+            <li><span class="st done"></span><span class="mchip">m1</span> Stabilisierung &amp; Window-Fix (v2.2) <span class="dt">Juli 2026</span></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="sec-head" style="margin-top:48px; margin-bottom:20px;">
+        <p class="eyebrow">Drill-down · Ebene 2</p>
+        <h2 style="font-size:24px;">Features im gewählten Meilenstein</h2>
+        <p>Beispiel: m8/m9 ausgewählt — jede Karte öffnet die aufbereitete Spec (Tab „Spec-Ansicht“).</p>
+      </div>
+      <div class="fcards">
+        <div class="fcard glass s-done">
+          <div class="top"><span class="tag done-t">Fertig</span><span class="fid">002 · m8</span></div>
+          <h3>Projekt-Hub: Gruppen, Archiv, Ansichts-Umschalter</h3>
+          <p>Alle Projekte in einem Tab, sortiert nach eigenen Gruppen, mit Drag&nbsp;&amp;&nbsp;Drop, Archiv und Listen-/Kachel-Ansicht.</p>
+          <div class="chips"><span>12.–15. Juli</span><span>Spec 002</span></div>
+        </div>
+        <div class="fcard glass s-done">
+          <div class="top"><span class="tag done-t">Fertig</span><span class="fid">003 · m9</span></div>
+          <h3>Detail-Ansicht &amp; Roadmap-Redesign</h3>
+          <p>Übersicht entrümpelt, Token-Scorecard, Roadmap mit Vision, Lanes, Feature-Karten, Spec-Renderer und Zeitstrahl.</p>
+          <div class="chips"><span>15. Juli</span><span>Spec 001</span><span>hängt ab von: —</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- ═══════════ TAB 3: ZEITSTRAHL ═══════════ -->
+<div class="pane" id="zeitstrahl">
+  <section style="border-top:none;">
+    <div class="wrap">
+      <div class="sec-head">
+        <p class="eyebrow">Zeitliche Perspektive</p>
+        <h2>Zeitstrahl</h2>
+        <p>Dieselben Meilensteine und Features auf der Zeitachse. Grün = fertig, Cyan = aktiv, Raute = nur ein Datum bekannt, Magenta-Linie = heute.</p>
+      </div>
+      <div class="tl-legend">
+        <span><i style="background:var(--emerald)"></i>Fertig</span>
+        <span><i style="background:var(--cyan)"></i>Aktiv</span>
+        <span><i style="background:var(--text-dim); border-radius:2px; transform:rotate(45deg); display:inline-block;"></i>Einzeltermin</span>
+        <span><i style="background:var(--fuch)"></i>Heute</span>
+      </div>
+      <div class="timeline glass">
+        <div class="tl-row"><div class="lbl"><b>m1–m7</b> · Fundament bis v3.0</div><div class="tl-track"><div class="tl-bar done" style="left:2%; width:58%;"></div><div class="tl-today" style="left:88%;"></div></div></div>
+        <div class="tl-row"><div class="lbl"><b>002</b> · Projekt-Hub</div><div class="tl-track"><div class="tl-bar done" style="left:62%; width:20%;"></div><div class="tl-today" style="left:88%;"></div></div></div>
+        <div class="tl-row"><div class="lbl"><b>m8</b> · Project Organization</div><div class="tl-track"><div class="tl-bar active" style="left:62%; width:30%;"></div><div class="tl-today" style="left:88%;"></div></div></div>
+        <div class="tl-row"><div class="lbl"><b>003</b> · Detail &amp; Roadmap Redesign</div><div class="tl-track"><div class="tl-point planned" style="left:87%;"></div><div class="tl-today" style="left:88%;"></div></div></div>
+        <div class="tl-axis"><div></div><div class="marks"><span>Feb 26</span><span>Apr 26</span><span>Jun 26</span><span>Jul 26</span></div></div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- ═══════════ TAB 4: SPEC-ANSICHT ═══════════ -->
+<div class="pane" id="spec">
+  <section style="border-top:none;">
+    <div class="wrap">
+      <p class="eyebrow">Drill-down · Ebene 3</p>
+      <div class="spec-head">
+        <h2>Detail-Ansicht &amp; Roadmap-Redesign</h2>
+        <span class="pill done-p">Fertig</span>
+      </div>
+      <p class="spec-meta">Spec 001 · Projekt pro-orc · abgeschlossen 15. Juli 2026</p>
+
+      <div class="subtabs">
+        <button class="subtab active">Spec</button>
+        <button class="subtab">Plan</button>
+      </div>
+
+      <div class="spec-sec">
+        <span class="eyebrow">Das Problem</span>
+        <p class="prose lead">Die Projekt-Detailansicht war voller Entwickler-Interna — Agenten, Sessions, Graphen — und die Roadmap zeigte Specs als rohen Monospace-Text. Für den eigentlichen Nutzer unlesbar.</p>
+      </div>
+
+      <div class="spec-sec">
+        <span class="eyebrow">Der Weg des Nutzers</span>
+        <div class="journey">
+          <div class="jstep glass"><p>Projekt öffnen → aufgeräumte Übersicht mit Beschreibung, Token-Verbrauch und Schnellaktionen.</p></div>
+          <div class="jstep glass"><p>Zur Roadmap wechseln → „Wo stehen wir“ plus Meilenstein-Lanes mit Status und Terminen.</p></div>
+          <div class="jstep glass"><p>Meilenstein anklicken → dessen Features als Karten mit Status-Kante und Zeitraum.</p></div>
+          <div class="jstep glass"><p>Karte anklicken → die Spec als lesbare, gegliederte Seite. Nie wieder Markdown-Rohtext.</p></div>
+        </div>
+      </div>
+
+      <div class="spec-sec">
+        <span class="eyebrow">Woran der Erfolg gemessen wird</span>
+        <div class="checklist">
+          <div class="check glass"><span class="ic">✓</span><p>Keine Agents-, Sessions- oder Graph-Sektion mehr in der Übersicht.</p></div>
+          <div class="check glass"><span class="ic">✓</span><p>Token-Scorecard immer sichtbar, sobald Nutzungsdaten existieren.</p></div>
+          <div class="check glass"><span class="ic">✓</span><p>Jeder Meilenstein und jedes Feature per Drill-down erreichbar, ohne den Tab zu verlassen.</p></div>
+          <div class="check glass"><span class="ic">✓</span><p>Kein roher Markdown- oder Frontmatter-Text im Spec-Renderer sichtbar.</p></div>
+          <div class="check glass"><span class="ic">✓</span><p>Überfällig, aktiv und fertig im Zeitstrahl auf einen Blick unterscheidbar.</p></div>
+        </div>
+      </div>
+
+      <div class="spec-sec">
+        <span class="eyebrow">Bewusst nicht enthalten</span>
+        <div class="infobox">
+          <ul>
+            <li>Änderungen am a1-specforge-Schema selbst (VISION.md, Gate-Typ) — separater Thread.</li>
+            <li>Bearbeiten von Specs oder Roadmap-Daten — die Ansicht bleibt reine Lese-Ansicht.</li>
+            <li>Der Datei-Browser in der Übersicht bleibt vorerst bestehen.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="spec-sec">
+        <span class="eyebrow">Sonderfälle, die abgefangen sind</span>
+        <div class="warncards">
+          <div class="warn glass"><span class="ic">⚠</span><p>Kaputte oder fehlende Roadmap-Daten → stiller Rückfall auf die bisherige Ansicht, nie ein Absturz.</p></div>
+          <div class="warn glass"><span class="ic">⚠</span><p>Spec-Datei fehlt auf der Festplatte → „Spec nicht verfügbar“ statt Fehlermeldung.</p></div>
+          <div class="warn glass"><span class="ic">⚠</span><p>Widersprüchliche Termine → Warnmarker statt rückwärtslaufendem Balken.</p></div>
+          <div class="warn glass"><span class="ic">⚠</span><p>Meilenstein ohne Features → ausdrücklicher Hinweis statt leerer Fläche.</p></div>
+        </div>
+      </div>
+
+      <div class="spec-sec">
+        <span class="eyebrow">Erfolgsmetriken</span>
+        <div class="metrics">
+          <div class="metric glass"><div class="n">0</div><p>Entwickler-Sektionen in der Übersicht</p></div>
+          <div class="metric glass"><div class="n">100%</div><p>der Roadmap per Drill-down erreichbar</p></div>
+          <div class="metric glass"><div class="n">522</div><p>Tests grün nach der Umsetzung</p></div>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<footer>
+  <div class="wrap">
+    <p>Design-Mockup für die Flutter-Umsetzung · Datenquelle <span class="mono">docs/product/index.json</span> + <span class="mono">VISION.md</span> (geplant)</p>
+    <p>Referenz-Layout: niimo Audit/Vision/Roadmap · Farben: Pro Orc AppColors (dark)</p>
+  </div>
+</footer>
+
+<script>
+  document.querySelectorAll('.tab').forEach(function(tab) {
+    tab.addEventListener('click', function() {
+      document.querySelectorAll('.tab').forEach(function(t) { t.classList.remove('active'); });
+      document.querySelectorAll('.pane').forEach(function(p) { p.classList.remove('active'); });
+      tab.classList.add('active');
+      document.getElementById(tab.dataset.pane).classList.add('active');
+      window.scrollTo({ top: 0 });
+    });
+  });
+  document.querySelectorAll('.subtab').forEach(function(st) {
+    st.addEventListener('click', function() {
+      document.querySelectorAll('.subtab').forEach(function(s) { s.classList.remove('active'); });
+      st.classList.add('active');
+    });
+  });
+</script>
+
+</body>
+</html>
