@@ -12,12 +12,12 @@ updated: 2026-07-16
 
 ## In-flight features
 
-None.
+- **007-links-own-tab** — Links section becomes its own tab (Vision|Roadmap|Zeitstrahl|Links) (milestone: m10-detail-ui-refinement, stage: verify)
 
 ## Next cursor
 
-None — no eligible feature (all done/cancelled, or blocked by unmet dependencies).
+**007-links-own-tab** — recommended next feature (no unmet dependencies, first eligible feature in roadmap order).
 
 ## How to continue
 
-Run `a1-progress` to review overall project state and decide the next milestone.
+Run `a1-plan` to create an executable plan for the next-cursor feature, or `a1-execute` if a plan already exists.

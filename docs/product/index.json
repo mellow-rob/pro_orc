@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated": "2026-07-16T12:25:42.613Z",
+  "generated": "2026-07-16T12:47:17.322Z",
   "project": {
     "id": "pro-orc",
     "title": "Pro Orc",
@@ -128,8 +128,20 @@
       "finished": "2026-07-16",
       "spec_path": null,
       "plan_path": null
+    },
+    {
+      "id": "007-links-own-tab",
+      "milestone": "m10-detail-ui-refinement",
+      "title": "Links section becomes its own tab (Vision|Roadmap|Zeitstrahl|Links)",
+      "status": "in-flight",
+      "stage": "verify",
+      "depends_on": [],
+      "started": "2026-07-16",
+      "finished": null,
+      "spec_path": null,
+      "plan_path": null
     }
   ],
   "next": null,
-  "cursor": null
+  "cursor": "007-links-own-tab"
 }
