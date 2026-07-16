@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pro_orc/data/services/quick_actions_service.dart';
 
@@ -112,6 +114,36 @@ void main() {
         final cmd = service.buildSkillLaunchCommand('/p', r'we"ird\name');
 
         expect(cmd, r'cd "/p" && claude "/we\"ird\\name"');
+      });
+    });
+
+    group('openLocalPathInFinder', () {
+      test('returns true for an existing directory', () async {
+        final dir = await Directory.systemTemp.createTemp('qa_finder_dir_');
+        addTearDown(() => dir.delete(recursive: true));
+
+        final result = await service.openLocalPathInFinder(dir.path);
+
+        expect(result, isTrue);
+      });
+
+      test('returns true for an existing file', () async {
+        final dir = await Directory.systemTemp.createTemp('qa_finder_file_');
+        addTearDown(() => dir.delete(recursive: true));
+        final file = File('${dir.path}/note.txt');
+        await file.writeAsString('hi');
+
+        final result = await service.openLocalPathInFinder(file.path);
+
+        expect(result, isTrue);
+      });
+
+      test('returns false for a path that does not exist on disk', () async {
+        final result = await service.openLocalPathInFinder(
+          '/nonexistent/path/does-not-exist-anywhere',
+        );
+
+        expect(result, isFalse);
       });
     });
 
