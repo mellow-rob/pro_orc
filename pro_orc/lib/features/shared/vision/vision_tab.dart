@@ -78,15 +78,10 @@ class VisionTab extends ConsumerWidget {
                 totalMilestones: roadmapData.milestones.length,
                 colors: colors,
               ),
-              const SizedBox(height: 30),
-              VisionScorecard(data: scorecard, colors: colors),
-              const SizedBox(height: 44),
-              Container(
-                height: 1,
-                color: colors.textPri.withValues(alpha: 0.08),
-              ),
               const SizedBox(height: 44),
               VisionSection(vision: vision, colors: colors),
+              const SizedBox(height: 30),
+              VisionScorecard(data: scorecard, colors: colors),
               const SizedBox(height: 44),
               Container(
                 height: 1,

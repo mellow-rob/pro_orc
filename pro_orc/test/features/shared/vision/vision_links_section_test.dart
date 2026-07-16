@@ -6,6 +6,27 @@ import 'package:pro_orc/data/services/quick_actions_service.dart';
 import 'package:pro_orc/features/shared/vision/vision_links_section.dart';
 import 'package:pro_orc/theme/n3_colors.dart';
 
+/// Captures launch calls instead of hitting real dart:io/url_launcher —
+/// overriding the two launch methods is the seam QuickActionsService already
+/// exposes for this (both are plain overridable instance methods, no
+/// existing mock/interface abstraction in this codebase to reuse instead).
+class _FakeQuickActionsService extends QuickActionsService {
+  String? openedUrl;
+  String? openedLocalPath;
+  bool localPathResult = true;
+
+  @override
+  Future<void> openUrl(String url) async {
+    openedUrl = url;
+  }
+
+  @override
+  Future<bool> openLocalPathInFinder(String path) async {
+    openedLocalPath = path;
+    return localPathResult;
+  }
+}
+
 void main() {
   Future<void> pumpSection(
     WidgetTester tester, {
@@ -87,6 +108,53 @@ void main() {
 
       expect(tester.takeException(), isNull);
       expect(find.textContaining('Pfad nicht gefunden'), findsOneWidget);
+    });
+
+    testWidgets('tapping a web-link chip invokes the URL-launch call with '
+        'the correct URL (SC-003)', (tester) async {
+      final qa = _FakeQuickActionsService();
+
+      await pumpSection(
+        tester,
+        links: const [
+          VisionLink(
+            title: 'GitHub Repo',
+            target: 'https://github.com/example/pro-orc',
+            isWeb: true,
+          ),
+        ],
+        qa: qa,
+      );
+
+      await tester.tap(find.text('GitHub Repo'));
+      await tester.pumpAndSettle();
+
+      expect(qa.openedUrl, 'https://github.com/example/pro-orc');
+      expect(qa.openedLocalPath, isNull);
+    });
+
+    testWidgets('tapping an existing-local-path chip invokes the '
+        'Finder-open call with the correct path (SC-003)', (tester) async {
+      final qa = _FakeQuickActionsService();
+
+      await pumpSection(
+        tester,
+        links: const [
+          VisionLink(
+            title: 'Projektordner',
+            target: '/Users/rob/code/pro_orc',
+            isWeb: false,
+          ),
+        ],
+        qa: qa,
+      );
+
+      await tester.tap(find.text('Projektordner'));
+      await tester.pumpAndSettle();
+
+      expect(qa.openedLocalPath, '/Users/rob/code/pro_orc');
+      expect(qa.openedUrl, isNull);
+      expect(find.textContaining('Pfad nicht gefunden'), findsNothing);
     });
   });
 }

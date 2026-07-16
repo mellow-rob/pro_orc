@@ -309,6 +309,15 @@ void main() {
         expect(find.text('Pillar B'), findsOneWidget);
         // FR-003: former-Übersicht content is appended, not dropped.
         expect(find.text('A test project description.'), findsOneWidget);
+
+        // SC-002: content order is hero -> pillars -> scorecard, not
+        // hero -> scorecard -> pillars. Comparing vertical position (not
+        // just presence) is what actually catches an order regression.
+        final heroTop = tester.getTopLeft(find.byType(VisionHero)).dy;
+        final sectionTop = tester.getTopLeft(find.byType(VisionSection)).dy;
+        final scorecardTop = tester.getTopLeft(find.byType(VisionScorecard)).dy;
+        expect(heroTop, lessThan(sectionTop));
+        expect(sectionTop, lessThan(scorecardTop));
       },
     );
 
