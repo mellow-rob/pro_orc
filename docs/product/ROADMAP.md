@@ -101,11 +101,11 @@ features:
   - id: 007-links-own-tab
     milestone: m10-detail-ui-refinement
     title: "Links section becomes its own tab (Vision|Roadmap|Zeitstrahl|Links)"
-    status: in-flight
-    stage: verify
+    status: done
+    stage: done
     depends_on: []
     started: 2026-07-16
-    finished: null
+    finished: 2026-07-16
     spec_path: null
     plan_path: null
 next: null
@@ -171,6 +171,9 @@ None.
 - **2026-07-16** — 007-links-own-tab -> complete — stage transition via `product stage`
 - **2026-07-16** — 007-links-own-tab -> review — stage transition via `product stage`
 - **2026-07-16** — 007-links-own-tab -> verify — stage transition via `product stage`
+- **2026-07-16** — 007-links-own-tab -> merge — stage transition via `product stage`
+- **2026-07-16** — 007-links-own-tab -> origin-cleanup — stage transition via `product stage`
+- **2026-07-16** — 007-links-own-tab -> done — stage transition via `product stage`
 
 ## Appendix — migrated details
 
