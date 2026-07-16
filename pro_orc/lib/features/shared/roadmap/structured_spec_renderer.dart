@@ -581,8 +581,10 @@ class _JourneyStepsSection extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Container(
-                      width: 24,
-                      height: 24,
+                      // Mockup v2 `.jstep::before { width: 22px; height:
+                      // 22px; }` (FR-005 density pass).
+                      width: 22,
+                      height: 22,
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
                         color: colors.cyan.withValues(alpha: 0.10),
