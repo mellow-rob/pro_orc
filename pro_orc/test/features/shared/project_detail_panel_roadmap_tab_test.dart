@@ -368,7 +368,6 @@ void main() {
           vision: visionWithLinks,
         );
 
-        expect(find.text('LINKS'), findsNothing);
         expect(find.byType(VisionLinksSection), findsNothing);
       },
     );

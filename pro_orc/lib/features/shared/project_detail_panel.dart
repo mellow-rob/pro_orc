@@ -450,7 +450,7 @@ class _EmptyLinksState extends StatelessWidget {
 }
 
 /// Segmented-control-style tab button used by [ProjectDetailPanel]'s
-/// "Vision"/"Roadmap"/"Zeitstrahl"/"Links" switch (FR-001).
+/// "Vision"/"Roadmap"/"Zeitstrahl"/"Links" switch (feature 005).
 class _TabButton extends StatelessWidget {
   const _TabButton({
     required this.label,
