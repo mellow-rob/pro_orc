@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated": "2026-07-15T14:45:14.663Z",
+  "generated": "2026-07-16T06:35:53.476Z",
   "project": {
     "id": "pro-orc",
     "title": "Pro Orc",
@@ -58,7 +58,7 @@
     {
       "id": "m9-detail-roadmap-redesign",
       "title": "Detail view and roadmap redesign",
-      "status": "in-progress",
+      "status": "done",
       "target": null
     }
   ],
@@ -91,15 +91,15 @@
       "id": "004-magazine-detail-ui",
       "milestone": "m9-detail-roadmap-redesign",
       "title": "Magazine-style detail UI: Vision/Roadmap/Zeitstrahl tabs per approved mockup",
-      "status": "in-flight",
-      "stage": null,
+      "status": "done",
+      "stage": "done",
       "depends_on": [],
-      "started": null,
-      "finished": null,
+      "started": "2026-07-16",
+      "finished": "2026-07-16",
       "spec_path": null,
       "plan_path": null
     }
   ],
   "next": null,
-  "cursor": "004-magazine-detail-ui"
+  "cursor": null
 }
