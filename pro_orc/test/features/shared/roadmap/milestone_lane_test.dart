@@ -10,6 +10,7 @@ void main() {
     WidgetTester tester, {
     required RoadmapMilestone milestone,
     bool selected = false,
+    bool expanded = false,
     VoidCallback? onTap,
   }) async {
     await tester.pumpWidget(
@@ -21,6 +22,7 @@ void main() {
             colors: AppColors.dark,
             accent: AppColors.dark.cyan,
             selected: selected,
+            expanded: expanded,
             onTap: onTap ?? () {},
           ),
         ),
@@ -29,46 +31,66 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  final milestoneWithTarget = RoadmapMilestone(
+  final milestoneWithFeatures = RoadmapMilestone(
     name: 'M9 — Detail Roadmap Redesign',
     status: 'in-progress',
-    target: DateTime(2026, 8),
+    phases: const [RoadmapPhase(name: 'Feature A', status: 'done')],
   );
 
-  group('MilestoneLane — FR-013/FR-005', () {
+  group('MilestoneLane — FR-003 (mockup v2 accordion row)', () {
     testWidgets('renders title, mono id-chip and a status dot (mockup style)', (
       tester,
     ) async {
-      await pumpLane(tester, milestone: milestoneWithTarget);
+      await pumpLane(tester, milestone: milestoneWithFeatures);
 
       expect(find.text('M9 — Detail Roadmap Redesign'), findsOneWidget);
-      // Mockup `#roadmap .lane li` shows a status dot + mono id-chip (e.g.
+      // Mockup `#roadmap .m-row` shows a status dot + mono id-chip (e.g.
       // `m9`) in front of the title, not a full status-word badge.
       expect(find.text('m9'), findsOneWidget);
     });
 
-    testWidgets('renders target date when present', (tester) async {
-      await pumpLane(tester, milestone: milestoneWithTarget);
+    testWidgets('renders the right-aligned "<n> Features" meta label', (
+      tester,
+    ) async {
+      await pumpLane(tester, milestone: milestoneWithFeatures);
 
-      expect(find.textContaining('2026'), findsOneWidget);
+      expect(find.text('1 Feature'), findsOneWidget);
     });
 
-    testWidgets('renders no date text when target is null', (tester) async {
-      const milestoneNoTarget = RoadmapMilestone(
+    testWidgets('appends a checkmark to the meta label for a done milestone', (
+      tester,
+    ) async {
+      final doneMilestone = RoadmapMilestone(
+        name: 'M1 — Fertig',
+        status: 'done',
+        phases: const [
+          RoadmapPhase(name: 'Feature A', status: 'done'),
+          RoadmapPhase(name: 'Feature B', status: 'done'),
+        ],
+      );
+
+      await pumpLane(tester, milestone: doneMilestone);
+
+      expect(find.text('2 Features ✓'), findsOneWidget);
+    });
+
+    testWidgets('renders a placeholder meta label for a milestone with zero '
+        'features', (tester) async {
+      const milestoneNoFeatures = RoadmapMilestone(
         name: 'M10 — Unscheduled',
         status: 'planned',
       );
 
-      await pumpLane(tester, milestone: milestoneNoTarget);
+      await pumpLane(tester, milestone: milestoneNoFeatures);
 
-      expect(find.textContaining('2026'), findsNothing);
+      expect(find.text('—'), findsOneWidget);
     });
 
     testWidgets('is tappable and invokes onTap', (tester) async {
       var tapped = false;
       await pumpLane(
         tester,
-        milestone: milestoneWithTarget,
+        milestone: milestoneWithFeatures,
         onTap: () => tapped = true,
       );
 
@@ -77,9 +99,18 @@ void main() {
     });
 
     testWidgets('reflects selected state without crashing', (tester) async {
-      await pumpLane(tester, milestone: milestoneWithTarget, selected: true);
+      await pumpLane(tester, milestone: milestoneWithFeatures, selected: true);
 
       expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('rotates the chevron when expanded, without crashing', (
+      tester,
+    ) async {
+      await pumpLane(tester, milestone: milestoneWithFeatures, expanded: true);
+
+      expect(tester.takeException(), isNull);
+      expect(find.byIcon(Icons.chevron_right_rounded), findsOneWidget);
     });
   });
 }

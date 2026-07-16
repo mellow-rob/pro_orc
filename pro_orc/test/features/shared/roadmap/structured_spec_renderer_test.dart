@@ -140,7 +140,7 @@ Some prose describing the problem.
     });
 
     testWidgets(
-      'renders Problem as serif lead prose, not plain freeform text '
+      'renders Problem as lead prose, not plain freeform text '
       '(FR-007, mockup .prose.lead)',
       (tester) async {
         final path = writeSpec('''
@@ -166,20 +166,23 @@ Unrecognized body text here.
           ),
         );
 
-        // Problem gets the serif display font + the mockup's larger lead
-        // size (21px) — the unrecognized/freeform section keeps the
-        // smaller sans-serif body style. Distinct styling is the whole
-        // point of this test (FR-007's gap: Problem must not look like an
-        // unrecognized section).
-        expect(problemMarkdown.style?.fontFamily, 'Iowan Old Style');
+        // Problem gets the mockup's larger lead size (19px) — the
+        // unrecognized/freeform section keeps the smaller secondary-color
+        // body style. Distinct styling is the whole point of this test
+        // (FR-007's gap: Problem must not look like an unrecognized
+        // section). FR-001 (Wave 1): no serif font family anywhere — assert
+        // its absence explicitly rather than presence.
+        expect(problemMarkdown.style?.fontFamily, isNot('Iowan Old Style'));
+        expect(problemMarkdown.style?.fontFamily, isNot('Palatino'));
+        expect(problemMarkdown.style?.fontFamily, isNot('Georgia'));
         expect(
           problemMarkdown.style?.fontFamilyFallback,
-          containsAll(['Iowan Old Style', 'Palatino', 'Georgia']),
+          anyOf(isNull, isNot(containsAll(['Iowan Old Style']))),
         );
-        expect(problemMarkdown.style?.fontSize, 21.0);
+        expect(problemMarkdown.style?.fontSize, 19.0);
 
         expect(unrecognizedMarkdown.style?.fontFamily, isNot('Iowan Old Style'));
-        expect(unrecognizedMarkdown.style?.fontSize, isNot(21.0));
+        expect(unrecognizedMarkdown.style?.fontSize, isNot(19.0));
       },
     );
 

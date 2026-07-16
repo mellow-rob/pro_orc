@@ -14,6 +14,10 @@ import 'package:pro_orc/theme/n3_colors.dart';
 /// covers missing/blank content, matching the project's "hide gracefully,
 /// never show a raw gap" convention (see `SpecList`'s "Keine Specs..."
 /// precedent).
+///
+/// FR-004 (mockup v2 `.nextstep p`): the summary renders as a single line
+/// with ellipsis overflow, never a multi-line wrap block — mockup CSS
+/// `white-space: nowrap; overflow: hidden; text-overflow: ellipsis;`.
 class RoadmapHero extends StatelessWidget {
   const RoadmapHero({
     super.key,
@@ -50,10 +54,7 @@ class RoadmapHero extends StatelessWidget {
     return GlassCard(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 26, vertical: 22),
-        child: Wrap(
-          crossAxisAlignment: WrapCrossAlignment.center,
-          spacing: 18,
-          runSpacing: 8,
+        child: Row(
           children: [
             Text(
               'NÄCHSTER SCHRITT',
@@ -66,11 +67,16 @@ class RoadmapHero extends StatelessWidget {
                 color: accent,
               ),
             ),
-            Text(
-              summary ?? 'Kein nächster Schritt hinterlegt',
-              style: TextStyle(
-                color: summary == null ? colors.textDim : colors.textSec,
-                fontSize: 15,
+            const SizedBox(width: 18),
+            Expanded(
+              child: Text(
+                summary ?? 'Kein nächster Schritt hinterlegt',
+                style: TextStyle(
+                  color: summary == null ? colors.textDim : colors.textSec,
+                  fontSize: 15,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
           ],

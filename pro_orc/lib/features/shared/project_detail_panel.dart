@@ -13,7 +13,9 @@ import 'package:pro_orc/features/shared/detail/token_scorecard_section.dart';
 import 'package:pro_orc/features/shared/rename_project_dialog.dart';
 import 'package:pro_orc/features/shared/roadmap/roadmap_tab.dart';
 import 'package:pro_orc/features/shared/roadmap/roadmap_timeline_view.dart';
+import 'package:pro_orc/features/shared/vision/vision_scorecard_data.dart';
 import 'package:pro_orc/features/shared/vision/vision_tab.dart';
+import 'package:pro_orc/features/shared/vision/vision_teaser_card.dart';
 import 'package:pro_orc/features/shell/glass_card.dart';
 import 'package:pro_orc/providers/database_provider.dart';
 import 'package:pro_orc/providers/project_detail_provider.dart';
@@ -303,6 +305,17 @@ class _ProjectDetailPanelState extends ConsumerState<ProjectDetailPanel> {
     final git = project.git;
     final qa = ref.read(quickActionsProvider);
 
+    // FR-002: the vision teaser is additive-only below the existing
+    // Übersicht content, and hidden entirely for a legacy project without
+    // `docs/product/VISION.md` — same `visionProvider` the tab-gating logic
+    // in `build()` already reads, so a project without vision data behaves
+    // identically to before this feature (no teaser, no crash).
+    final visionAsync = ref.watch(visionProvider(project));
+    final vision = visionAsync.maybeWhen(
+      data: (v) => v,
+      orElse: () => null,
+    );
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -346,6 +359,21 @@ class _ProjectDetailPanelState extends ConsumerState<ProjectDetailPanel> {
           accent: accent,
           qa: qa,
         ),
+
+        // --- Vision-Teaser (FR-002) ---
+        if (vision != null) ...[
+          const SizedBox(height: 8),
+          VisionTeaserCard(
+            vision: vision,
+            scorecard: VisionScorecardData.fromRoadmapData(
+              ref
+                  .watch(roadmapProvider(project))
+                  .maybeWhen(data: (r) => r.data, orElse: () => RoadmapData.empty),
+            ),
+            colors: colors,
+            onTap: () => setState(() => _tab = _DetailTab.vision),
+          ),
+        ],
       ],
     );
   }

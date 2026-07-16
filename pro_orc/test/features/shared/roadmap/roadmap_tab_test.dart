@@ -488,13 +488,16 @@ void main() {
       });
 
       testWidgets(
-        'tapping a milestone lane reveals its features as cards (FR-016)',
+        'the active milestone starts expanded and shows its features as '
+        'rows without needing a tap first (FR-003 SC-001)',
         (tester) async {
-          // Selection is now a controlled value (feature 002, Wave 1) rather
+          // Selection is a controlled value (feature 002, Wave 1) rather
           // than local state inside RoadmapTab, so the test host must supply
-          // its own setState-backed callback for a tap to actually change
-          // what's selected — a no-op onMilestoneSelected (as pumpTab's
-          // default provides) would leave selectedMilestone null forever.
+          // its own setState-backed callback — a no-op onMilestoneSelected
+          // (as pumpTab's default provides) would leave selectedMilestone
+          // null forever. That no longer matters for the *initial* expand
+          // state though: FR-003 expands the active milestone regardless of
+          // the controlled selection.
           await tester.pumpWidget(
             ProviderScope(
               overrides: [
@@ -520,20 +523,24 @@ void main() {
           );
           await tester.pumpAndSettle();
 
-          expect(find.byType(FeatureCard), findsNothing);
+          expect(find.byType(FeatureCard), findsOneWidget);
+          expect(find.text('Wave 4 — Hero + Lanes'), findsOneWidget);
+          // The compact FR-003 feature row no longer renders dependsOn
+          // chips (mockup v2's `.f-row` carries only a status dot, id
+          // chip, title, and status tag) — that's an intentional scope
+          // reduction versus the old feature-card grid, not a regression.
 
+          // Tapping the already-expanded row collapses it again.
           await tester.tap(find.text('M9 — Detail Roadmap Redesign'));
           await tester.pumpAndSettle();
 
-          expect(find.byType(FeatureCard), findsOneWidget);
-          expect(find.text('Wave 4 — Hero + Lanes'), findsOneWidget);
-          expect(find.text('Wave 3 — Tier-0 Reader'), findsOneWidget);
+          expect(find.byType(FeatureCard), findsNothing);
         },
       );
 
       testWidgets(
-        'tapping a milestone lane with zero features shows the explicit '
-        'German empty state (FR-014)',
+        'tapping a milestone lane with zero features shows the mockup '
+        'placeholder text (FR-003, FR-014 precedent)',
         (tester) async {
           await tester.pumpWidget(
             ProviderScope(
@@ -564,7 +571,9 @@ void main() {
           await tester.pumpAndSettle();
 
           expect(
-            find.text('Keine Features fuer diesen Meilenstein'),
+            find.text(
+              'Keine Feature-Spec-Dateien fuer diesen Meilenstein hinterlegt.',
+            ),
             findsOneWidget,
           );
         },
@@ -608,7 +617,8 @@ void main() {
     );
 
     testWidgets(
-      'with no selection supplied, renders lanes with nothing selected',
+      'with no selection supplied, the active milestone still starts '
+      'expanded (FR-003 SC-001) while the planned one stays collapsed',
       (tester) async {
         await pumpTab(
           tester,
@@ -619,7 +629,9 @@ void main() {
         );
 
         expect(find.byType(MilestoneLane), findsNWidgets(2));
-        expect(find.byType(FeatureCard), findsNothing);
+        // M9 (in-progress/active) auto-expands; M10 (planned) does not.
+        expect(find.byType(FeatureCard), findsOneWidget);
+        expect(find.text('Wave 4 — Hero + Lanes'), findsOneWidget);
       },
     );
 

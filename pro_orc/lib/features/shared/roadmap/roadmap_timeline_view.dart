@@ -272,7 +272,8 @@ class RoadmapTimelineView extends StatelessWidget {
         const SizedBox(height: 8),
         GlassCard(
           child: Padding(
-            padding: const EdgeInsets.all(28),
+            // Mockup v2 `.timeline { padding: 22px; }` (FR-005 density pass).
+            padding: const EdgeInsets.all(22),
             child: SizedBox(
               height:
                   items.length * _rowHeight + _axisPadding + _monthAxisHeight,
