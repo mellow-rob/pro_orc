@@ -45,7 +45,7 @@ milestones:
     target: null
   - id: m10-detail-ui-refinement
     title: "Detail UI refinement (compact, high-level)"
-    status: in-progress
+    status: done
     target: null
 features:
   - id: 002-project-organization
@@ -81,11 +81,11 @@ features:
   - id: 005-compact-detail-ui
     milestone: m10-detail-ui-refinement
     title: "Compact detail UI: sans fonts, milestone accordion, vision teaser (mockup v2)"
-    status: in-flight
-    stage: verify
+    status: done
+    stage: done
     depends_on: []
     started: 2026-07-16
-    finished: null
+    finished: 2026-07-16
     spec_path: null
     plan_path: null
 next: null
@@ -134,6 +134,10 @@ None.
 - **2026-07-16** — 005-compact-detail-ui -> complete — stage transition via `product stage`
 - **2026-07-16** — 005-compact-detail-ui -> review — stage transition via `product stage`
 - **2026-07-16** — 005-compact-detail-ui -> verify — stage transition via `product stage`
+- **2026-07-16** — 005-compact-detail-ui -> merge — stage transition via `product stage`
+- **2026-07-16** — 005-compact-detail-ui -> origin-cleanup — stage transition via `product stage`
+- **2026-07-16** — 005-compact-detail-ui -> done — stage transition via `product stage`
+- **2026-07-16** — milestone m10-detail-ui-refinement status -> done — marker set via `product markers --set`
 
 ## Appendix — migrated details
 

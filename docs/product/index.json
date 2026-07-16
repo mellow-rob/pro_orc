@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated": "2026-07-16T09:59:30.762Z",
+  "generated": "2026-07-16T10:00:36.025Z",
   "project": {
     "id": "pro-orc",
     "title": "Pro Orc",
@@ -64,7 +64,7 @@
     {
       "id": "m10-detail-ui-refinement",
       "title": "Detail UI refinement (compact, high-level)",
-      "status": "in-progress",
+      "status": "done",
       "target": null
     }
   ],
@@ -109,15 +109,15 @@
       "id": "005-compact-detail-ui",
       "milestone": "m10-detail-ui-refinement",
       "title": "Compact detail UI: sans fonts, milestone accordion, vision teaser (mockup v2)",
-      "status": "in-flight",
-      "stage": "verify",
+      "status": "done",
+      "stage": "done",
       "depends_on": [],
       "started": "2026-07-16",
-      "finished": null,
+      "finished": "2026-07-16",
       "spec_path": null,
       "plan_path": null
     }
   ],
   "next": null,
-  "cursor": "005-compact-detail-ui"
+  "cursor": null
 }
