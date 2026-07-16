@@ -111,11 +111,11 @@ features:
   - id: 008-files-tokens-own-tabs
     milestone: m10-detail-ui-refinement
     title: "Dateien and Token-Nutzung become their own tabs"
-    status: in-flight
-    stage: verify
+    status: done
+    stage: done
     depends_on: []
     started: 2026-07-16
-    finished: null
+    finished: 2026-07-16
     spec_path: null
     plan_path: null
 next: null
@@ -189,6 +189,9 @@ None.
 - **2026-07-16** — 008-files-tokens-own-tabs -> complete — stage transition via `product stage`
 - **2026-07-16** — 008-files-tokens-own-tabs -> review — stage transition via `product stage`
 - **2026-07-16** — 008-files-tokens-own-tabs -> verify — stage transition via `product stage`
+- **2026-07-16** — 008-files-tokens-own-tabs -> merge — stage transition via `product stage`
+- **2026-07-16** — 008-files-tokens-own-tabs -> origin-cleanup — stage transition via `product stage`
+- **2026-07-16** — 008-files-tokens-own-tabs -> done — stage transition via `product stage`
 
 ## Appendix — migrated details
 

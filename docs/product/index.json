@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated": "2026-07-16T15:58:16.281Z",
+  "generated": "2026-07-16T15:58:59.327Z",
   "project": {
     "id": "pro-orc",
     "title": "Pro Orc",
@@ -145,15 +145,15 @@
       "id": "008-files-tokens-own-tabs",
       "milestone": "m10-detail-ui-refinement",
       "title": "Dateien and Token-Nutzung become their own tabs",
-      "status": "in-flight",
-      "stage": "verify",
+      "status": "done",
+      "stage": "done",
       "depends_on": [],
       "started": "2026-07-16",
-      "finished": null,
+      "finished": "2026-07-16",
       "spec_path": null,
       "plan_path": null
     }
   ],
   "next": null,
-  "cursor": "008-files-tokens-own-tabs"
+  "cursor": null
 }
