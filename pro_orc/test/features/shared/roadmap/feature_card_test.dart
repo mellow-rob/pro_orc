@@ -21,7 +21,7 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  final featureWithFullTimeframe = RoadmapPhase(
+  final feature = RoadmapPhase(
     name: 'Projekt-Hub',
     status: 'done',
     start: DateTime(2026, 7, 1),
@@ -29,57 +29,41 @@ void main() {
     dependsOn: const ['Backend-API', 'Auth-Flow'],
   );
 
-  group('FeatureCard — FR-016', () {
+  group('FeatureCard — FR-003 compact accordion feature row', () {
     testWidgets('renders title', (tester) async {
-      await pumpCard(tester, feature: featureWithFullTimeframe);
+      await pumpCard(tester, feature: feature);
 
       expect(find.text('Projekt-Hub'), findsOneWidget);
     });
 
-    testWidgets('renders a status-colored left edge (via Container/Border)', (
+    testWidgets('renders a status-colored dot (via Container/Key)', (
       tester,
     ) async {
-      await pumpCard(tester, feature: featureWithFullTimeframe);
+      await pumpCard(tester, feature: feature);
 
-      // The card must communicate status visually, not just via a badge
-      // string — assert the left-edge accent Container exists at all.
+      // The row must communicate status visually, not just via a tag
+      // string — assert the status-dot Container exists at all.
       expect(find.byKey(const Key('feature_card_status_edge')), findsOneWidget);
     });
 
-    testWidgets('renders timeframe when start/finished are present', (
+    testWidgets('renders a small status tag (mockup .ftag)', (tester) async {
+      await pumpCard(tester, feature: feature);
+
+      expect(find.text('FERTIG'), findsOneWidget);
+    });
+
+    testWidgets('no crash when start/finished/dependsOn are all empty', (
       tester,
     ) async {
-      await pumpCard(tester, feature: featureWithFullTimeframe);
+      final noExtras = RoadmapPhase(name: 'Solo Feature', status: 'planned');
 
-      expect(find.textContaining('2026'), findsWidgets);
-    });
-
-    testWidgets('renders dependency chips', (tester) async {
-      await pumpCard(tester, feature: featureWithFullTimeframe);
-
-      expect(find.text('Backend-API'), findsOneWidget);
-      expect(find.text('Auth-Flow'), findsOneWidget);
-    });
-
-    testWidgets('renders no dependency chips when dependsOn is empty', (
-      tester,
-    ) async {
-      final noDeps = RoadmapPhase(name: 'Solo Feature', status: 'planned');
-
-      await pumpCard(tester, feature: noDeps);
+      await pumpCard(tester, feature: noExtras);
 
       expect(tester.takeException(), isNull);
+      expect(find.text('GEPLANT'), findsOneWidget);
     });
 
-    testWidgets('no crash when start/finished are both null', (tester) async {
-      final noDates = RoadmapPhase(name: 'Unscheduled', status: 'planned');
-
-      await pumpCard(tester, feature: noDates);
-
-      expect(tester.takeException(), isNull);
-    });
-
-    testWidgets('invokes onTap when the card is tapped', (tester) async {
+    testWidgets('invokes onTap when the row is tapped', (tester) async {
       var tapped = false;
 
       await tester.pumpWidget(
@@ -87,7 +71,7 @@ void main() {
           theme: ThemeData.dark().copyWith(extensions: const [AppColors.dark]),
           home: Scaffold(
             body: FeatureCard(
-              feature: featureWithFullTimeframe,
+              feature: feature,
               colors: AppColors.dark,
               onTap: () => tapped = true,
             ),
@@ -105,7 +89,7 @@ void main() {
     testWidgets('renders without a tap handler when onTap is omitted', (
       tester,
     ) async {
-      await pumpCard(tester, feature: featureWithFullTimeframe);
+      await pumpCard(tester, feature: feature);
 
       expect(tester.takeException(), isNull);
     });

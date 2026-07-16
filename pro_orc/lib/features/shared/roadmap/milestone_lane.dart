@@ -4,11 +4,11 @@ import 'package:pro_orc/data/services/status_normalizer.dart';
 import 'package:pro_orc/features/shared/roadmap/roadmap_id_chip.dart';
 import 'package:pro_orc/theme/n3_colors.dart';
 
-/// Tappable milestone row for the tier-0 Roadmap lanes (FR-005, mockup
-/// `#roadmap .lane li`): a small status dot, a mono id-chip (e.g. `m8`), the
-/// milestone title, and a right-aligned mono date — with a hover highlight
-/// and a chevron affordance. Tapping selects the milestone so its features
-/// render as cards below (FR-016).
+/// Tappable milestone accordion row (FR-003, mockup v2 `#roadmap .m-row`): a
+/// small status dot, a mono id-chip (e.g. `m8`), the milestone title, a
+/// right-aligned mono meta label ("`<n> Features`", with a `✓` suffix when
+/// the milestone is done), and a chevron that rotates to reflect
+/// [expanded]. Tapping toggles the accordion open/closed via [onTap].
 class MilestoneLane extends StatefulWidget {
   const MilestoneLane({
     super.key,
@@ -16,32 +16,24 @@ class MilestoneLane extends StatefulWidget {
     required this.colors,
     required this.accent,
     required this.selected,
+    required this.expanded,
     required this.onTap,
   });
 
   final RoadmapMilestone milestone;
   final AppColors colors;
   final Color accent;
+
+  /// Kept for the selected-row accent border contract used by
+  /// `MilestoneLanesView` — an accordion row is "selected" while its body is
+  /// expanded, so callers typically pass the same value as [expanded].
   final bool selected;
+
+  /// Whether this milestone's feature-row body is currently expanded
+  /// (mockup `.m-item.open`). Drives the rotating chevron.
+  final bool expanded;
+
   final VoidCallback onTap;
-
-  static const _monthNames = [
-    'Jan',
-    'Feb',
-    'Mrz',
-    'Apr',
-    'Mai',
-    'Jun',
-    'Jul',
-    'Aug',
-    'Sep',
-    'Okt',
-    'Nov',
-    'Dez',
-  ];
-
-  static String _formatTarget(DateTime target) =>
-      '${_monthNames[target.month - 1]} ${target.year}';
 
   /// Status-dot color (mockup `.st.done`/`.st.active`/`.st.planned`) — reuses
   /// the shared status vocabulary, no parallel color mapping.
@@ -56,6 +48,20 @@ class MilestoneLane extends StatefulWidget {
     };
   }
 
+  /// Mockup `.mmeta` label: "`<n> Features`" for a milestone with features,
+  /// with a trailing `✓` when the milestone itself is done; "—" for a
+  /// milestone with zero features (matching the mockup's `m10` placeholder
+  /// row).
+  static String metaLabel(RoadmapMilestone milestone) {
+    if (milestone.phases.isEmpty) return '—';
+    final count = milestone.phases.length;
+    final noun = count == 1 ? 'Feature' : 'Features';
+    final suffix = deriveDisplayStatus(milestone.status) == DisplayStatus.done
+        ? ' ✓'
+        : '';
+    return '$count $noun$suffix';
+  }
+
   @override
   State<MilestoneLane> createState() => _MilestoneLaneState();
 }
@@ -67,7 +73,6 @@ class _MilestoneLaneState extends State<MilestoneLane> {
   Widget build(BuildContext context) {
     final colors = widget.colors;
     final milestone = widget.milestone;
-    final target = milestone.target;
     final chip = extractRoadmapIdChip(milestone.name);
     final dotColor = MilestoneLane.statusDotColor(milestone.status, colors);
 
@@ -120,22 +125,24 @@ class _MilestoneLaneState extends State<MilestoneLane> {
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                if (target != null) ...[
-                  const SizedBox(width: 12),
-                  Text(
-                    MilestoneLane._formatTarget(target),
-                    style: TextStyle(
-                      fontFamily: 'monospace',
-                      color: colors.textDim,
-                      fontSize: 11,
-                    ),
+                const SizedBox(width: 12),
+                Text(
+                  MilestoneLane.metaLabel(milestone),
+                  style: TextStyle(
+                    fontFamily: 'monospace',
+                    color: colors.textDim,
+                    fontSize: 11,
                   ),
-                ],
+                ),
                 const SizedBox(width: 8),
-                Icon(
-                  Icons.chevron_right_rounded,
-                  size: 18,
-                  color: colors.textDim,
+                AnimatedRotation(
+                  turns: widget.expanded ? 0.25 : 0,
+                  duration: const Duration(milliseconds: 180),
+                  child: Icon(
+                    Icons.chevron_right_rounded,
+                    size: 18,
+                    color: widget.expanded ? widget.accent : colors.textDim,
+                  ),
                 ),
               ],
             ),

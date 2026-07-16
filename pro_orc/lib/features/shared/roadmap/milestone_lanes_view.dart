@@ -4,60 +4,27 @@ import 'package:pro_orc/data/services/status_normalizer.dart';
 import 'package:pro_orc/features/shared/roadmap/feature_card.dart';
 import 'package:pro_orc/features/shared/roadmap/milestone_lane.dart';
 import 'package:pro_orc/features/shared/roadmap/structured_spec_renderer_dialog.dart';
-import 'package:pro_orc/features/shell/glass_card.dart';
 import 'package:pro_orc/theme/n3_colors.dart';
-import 'package:pro_orc/theme/n3_typography.dart';
 
-/// One status-grouped bucket of milestones, matching the mockup's three
-/// `.lane` rows (`#roadmap .lanes .lane`): Aktiv, Fertig, Geplant, in that
-/// display order. A group with zero milestones is omitted entirely (the
-/// mockup never shows an empty lane).
+/// One status-grouped bucket of milestones, matching mockup v2's three
+/// `.rm-section-label` groups: Aktiv, Fertig, Geplant, in that display
+/// order. A group with zero milestones is omitted entirely — the mockup
+/// never invents an empty "Geplant" placeholder group (FR-003).
 enum _LaneGroup { active, done, planned }
 
 extension on _LaneGroup {
-  /// Mockup `.badge` label text (`Aktiv`/`Fertig`/`Geplant`).
-  String get badgeLabel => switch (this) {
+  /// Mockup `.rm-section-label` text (`Aktiv`/`Fertig`/`Geplant`).
+  String get label => switch (this) {
     _LaneGroup.active => 'Aktiv',
     _LaneGroup.done => 'Fertig',
     _LaneGroup.planned => 'Geplant',
   };
-
-  /// Mockup `.lane .when h3` serif heading ("In Arbeit"/"Ausgeliefert"/
-  /// "Geplant").
-  String get heading => switch (this) {
-    _LaneGroup.active => 'In Arbeit',
-    _LaneGroup.done => 'Ausgeliefert',
-    _LaneGroup.planned => 'Geplant',
-  };
-
-  /// Mockup `.lane .when .sub` — a short description line under the
-  /// heading. Kept generic (not milestone-count-dependent) since the
-  /// mockup's own sub-lines ("Der aktuelle Fokus", "v2.2 bis v3.1") are
-  /// project-specific prose we cannot derive from data.
-  String get sub => switch (this) {
-    _LaneGroup.active => 'Der aktuelle Fokus',
-    _LaneGroup.done => 'Bereits ausgeliefert',
-    _LaneGroup.planned => 'Als Naechstes geplant',
-  };
-
-  /// Mockup `.badge.active-b`/`.done-b`/`.planned-b` colors.
-  Color badgeColor(AppColors colors) => switch (this) {
-    _LaneGroup.active => colors.cyan,
-    _LaneGroup.done => colors.emerald,
-    _LaneGroup.planned => colors.textSec,
-  };
-
-  Color badgeBackground(AppColors colors) => switch (this) {
-    _LaneGroup.active => colors.cyan.withValues(alpha: 0.12),
-    _LaneGroup.done => colors.emerald.withValues(alpha: 0.12),
-    _LaneGroup.planned => colors.bgElev,
-  };
 }
 
 /// Classifies a milestone's raw status into one of the three lane groups
-/// (FR-005: "lanes grouped Aktiv→Fertig→Geplant"). Anything not recognized
-/// as done/planning defaults to [_LaneGroup.active] so in-flight or
-/// unrecognized statuses (e.g. "building", "paused", "research") still
+/// (FR-003: "gruppiert unter Aktiv/Fertig/Geplant"). Anything not
+/// recognized as done/planning defaults to [_LaneGroup.active] so in-flight
+/// or unrecognized statuses (e.g. "building", "paused", "research") still
 /// surface prominently rather than being silently dropped into "Geplant".
 _LaneGroup _groupFor(RoadmapMilestone milestone) {
   final status = deriveDisplayStatus(milestone.status);
@@ -83,21 +50,23 @@ Map<_LaneGroup, List<RoadmapMilestone>> _groupMilestones(
   };
 }
 
-/// Milestone lanes (grouped by status, FR-005) + feature-card drill-down for
-/// the tier-0 Roadmap path (FR-013/FR-014/FR-016).
+/// Milestone accordion (FR-003, mockup v2 pane `#roadmap`): one compact row
+/// per milestone grouped under subtle Aktiv/Fertig/Geplant section labels.
+/// Only active milestone(s) start expanded; clicking a row toggles its
+/// accordion; the expanded body renders that milestone's features as
+/// compact indented [FeatureCard] rows (not cards/grids); clicking a
+/// feature row opens the existing structured spec dialog.
 ///
-/// Renders one lane section per status group (Aktiv → Fertig → Geplant),
-/// each with a [MilestoneLane] per milestone; tapping a lane selects it and
-/// shows that milestone's features as [FeatureCard]s below the lanes, or an
-/// explicit "keine Features" message when the milestone has zero features.
-///
-/// Selection is a controlled value ([selectedMilestone]/[onMilestoneSelected])
-/// rather than local widget state: the Zeitstrahl tab (feature 002, Wave 1)
-/// needs the selection to survive switching to that sibling top-level tab
-/// and back, so the selection is hoisted all the way up to
-/// `ProjectDetailPanel`'s state instead of living inside this widget, which
-/// would reset it on rebuild/remount.
-class MilestoneLanesView extends StatelessWidget {
+/// [selectedMilestone]/[onMilestoneSelected] remain the single controlled
+/// value hoisted by `ProjectDetailPanel` (feature 002) so the
+/// last-interacted-with milestone survives a Roadmap<->Zeitstrahl tab
+/// round-trip (FR-009) — this widget additionally keeps its own internal
+/// per-milestone expand/collapse state (SC-001: only the active milestone's
+/// body is visible on first render) and folds a tap on any row into both:
+/// it toggles that row's local expanded state AND reports the tap via
+/// [onMilestoneSelected] so the hoisted selection tracks the
+/// most-recently-toggled milestone for the cross-tab persistence contract.
+class MilestoneLanesView extends StatefulWidget {
   const MilestoneLanesView({
     super.key,
     required this.milestones,
@@ -111,44 +80,83 @@ class MilestoneLanesView extends StatelessWidget {
   final AppColors colors;
   final Color accent;
 
-  /// Currently selected milestone, owned by the parent so it survives a
-  /// Wave 7 view-mode switch (lanes <-> timeline).
+  /// The most-recently toggled milestone, owned by the parent so it
+  /// survives a view-mode switch (lanes <-> timeline tab).
   final RoadmapMilestone? selectedMilestone;
 
   final ValueChanged<RoadmapMilestone> onMilestoneSelected;
 
   @override
+  State<MilestoneLanesView> createState() => _MilestoneLanesViewState();
+}
+
+class _MilestoneLanesViewState extends State<MilestoneLanesView> {
+  /// Milestones whose accordion body is currently expanded, tracked by
+  /// identity (milestone names are not guaranteed unique across tiers).
+  ///
+  /// Deliberately NOT re-synced from `widget.selectedMilestone` in
+  /// `didUpdateWidget`: every toggle already reports through
+  /// `onMilestoneSelected`, so a naive "re-add the hoisted selection to
+  /// `_expanded`" reaction would immediately re-expand a milestone the user
+  /// just collapsed (the parent's `selectedMilestone` still points at it).
+  /// The one-time initialization below already covers the "mount with an
+  /// already-selected milestone" case (e.g. after a tab round-trip, this
+  /// widget remounts fresh with `_initialized == false`).
+  final Set<RoadmapMilestone> _expanded = {};
+  bool _initialized = false;
+
+  void _initializeExpandedIfNeeded() {
+    if (_initialized) return;
+    _initialized = true;
+    // SC-001: only active milestone(s) start expanded.
+    for (final milestone in widget.milestones) {
+      if (_groupFor(milestone) == _LaneGroup.active) {
+        _expanded.add(milestone);
+      }
+    }
+    final selected = widget.selectedMilestone;
+    if (selected != null) _expanded.add(selected);
+  }
+
+  void _toggle(RoadmapMilestone milestone) {
+    setState(() {
+      if (_expanded.contains(milestone)) {
+        _expanded.remove(milestone);
+      } else {
+        _expanded.add(milestone);
+      }
+    });
+    widget.onMilestoneSelected(milestone);
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final selected = selectedMilestone;
-    final grouped = _groupMilestones(milestones);
+    _initializeExpandedIfNeeded();
+    final grouped = _groupMilestones(widget.milestones);
 
     return SingleChildScrollView(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          GlassCard(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 26),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  for (final entry in grouped.entries)
-                    _LaneSection(
-                      group: entry.key,
-                      milestones: entry.value,
-                      colors: colors,
-                      accent: accent,
-                      selected: selected,
-                      onMilestoneSelected: onMilestoneSelected,
-                      isFirst: entry.key == grouped.keys.first,
-                    ),
+          for (final entry in grouped.entries) ...[
+            _GroupLabel(group: entry.key, colors: widget.colors),
+            const SizedBox(height: 8),
+            Column(
+              children: [
+                for (final milestone in entry.value) ...[
+                  _AccordionItem(
+                    milestone: milestone,
+                    colors: widget.colors,
+                    accent: widget.accent,
+                    expanded: _expanded.contains(milestone),
+                    onToggle: () => _toggle(milestone),
+                  ),
+                  if (milestone != entry.value.last)
+                    const SizedBox(height: 6),
                 ],
-              ),
+              ],
             ),
-          ),
-          if (selected != null) ...[
-            const SizedBox(height: 28),
-            _FeatureCardsSection(milestone: selected, colors: colors),
+            if (entry.key != grouped.keys.last) const SizedBox(height: 22),
           ],
         ],
       ),
@@ -156,123 +164,79 @@ class MilestoneLanesView extends StatelessWidget {
   }
 }
 
-/// One status-grouped lane section (mockup `.lane`): a left "when" column
-/// (badge + serif heading + sub-line) and a right column of tappable
-/// [MilestoneLane] rows.
-class _LaneSection extends StatelessWidget {
-  const _LaneSection({
-    required this.group,
-    required this.milestones,
-    required this.colors,
-    required this.accent,
-    required this.selected,
-    required this.onMilestoneSelected,
-    required this.isFirst,
-  });
+/// Mockup `.rm-section-label` — subtle uppercase group label.
+class _GroupLabel extends StatelessWidget {
+  const _GroupLabel({required this.group, required this.colors});
 
   final _LaneGroup group;
-  final List<RoadmapMilestone> milestones;
+  final AppColors colors;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      group.label.toUpperCase(),
+      style: TextStyle(
+        fontWeight: FontWeight.w800,
+        fontSize: 11,
+        letterSpacing: 1.1,
+        color: colors.textDim,
+      ),
+    );
+  }
+}
+
+/// One accordion item (mockup `.m-item`): the [MilestoneLane] row plus its
+/// expandable feature-row body.
+class _AccordionItem extends StatelessWidget {
+  const _AccordionItem({
+    required this.milestone,
+    required this.colors,
+    required this.accent,
+    required this.expanded,
+    required this.onToggle,
+  });
+
+  final RoadmapMilestone milestone;
   final AppColors colors;
   final Color accent;
-  final RoadmapMilestone? selected;
-  final ValueChanged<RoadmapMilestone> onMilestoneSelected;
-  final bool isFirst;
+  final bool expanded;
+  final VoidCallback onToggle;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 26),
-      decoration: isFirst
-          ? null
-          : BoxDecoration(
-              border: Border(
-                top: BorderSide(color: colors.textPri.withValues(alpha: 0.08)),
-              ),
-            ),
-      child: Row(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: colors.textPri.withValues(alpha: 0.08)),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(
-            width: 185,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _LaneBadge(group: group, colors: colors),
-                const SizedBox(height: 12),
-                Text(
-                  group.heading,
-                  style: N3Typography.display(
-                    colors: colors,
-                    fontSize: 21,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  group.sub,
-                  style: TextStyle(color: colors.textDim, fontSize: 12.5),
-                ),
-              ],
-            ),
+          MilestoneLane(
+            milestone: milestone,
+            colors: colors,
+            accent: accent,
+            selected: expanded,
+            expanded: expanded,
+            onTap: onToggle,
           ),
-          const SizedBox(width: 26),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                for (final milestone in milestones) ...[
-                  MilestoneLane(
-                    milestone: milestone,
-                    colors: colors,
-                    accent: accent,
-                    selected: identical(milestone, selected),
-                    onTap: () => onMilestoneSelected(milestone),
-                  ),
-                  if (milestone != milestones.last) const SizedBox(height: 2),
-                ],
-              ],
+          if (expanded)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 12, 10),
+              child: _FeatureRowsBody(milestone: milestone, colors: colors),
             ),
-          ),
         ],
       ),
     );
   }
 }
 
-/// Mockup `.badge` pill (e.g. "Aktiv"/"Fertig"/"Geplant").
-class _LaneBadge extends StatelessWidget {
-  const _LaneBadge({required this.group, required this.colors});
-
-  final _LaneGroup group;
-  final AppColors colors;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-      decoration: BoxDecoration(
-        color: group.badgeBackground(colors),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        group.badgeLabel.toUpperCase(),
-        style: TextStyle(
-          fontWeight: FontWeight.w900,
-          fontSize: 11,
-          letterSpacing: 1.1,
-          color: group.badgeColor(colors),
-        ),
-      ),
-    );
-  }
-}
-
-/// Feature-card list for the currently-selected milestone (FR-016), with the
-/// FR-014 "keine Features" empty state mirroring `SpecList`'s
-/// "Keine Specs..." precedent.
-class _FeatureCardsSection extends StatelessWidget {
-  const _FeatureCardsSection({required this.milestone, required this.colors});
+/// Expanded accordion body: compact indented feature rows (FR-003), or the
+/// mockup's placeholder text when the milestone has zero feature specs
+/// (FR-014 precedent).
+class _FeatureRowsBody extends StatelessWidget {
+  const _FeatureRowsBody({required this.milestone, required this.colors});
 
   final RoadmapMilestone milestone;
   final AppColors colors;
@@ -281,45 +245,34 @@ class _FeatureCardsSection extends StatelessWidget {
   Widget build(BuildContext context) {
     if (milestone.phases.isEmpty) {
       return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 24),
-        child: Center(
-          child: Text(
-            'Keine Features fuer diesen Meilenstein',
-            style: TextStyle(color: colors.textDim, fontSize: 12),
-            textAlign: TextAlign.center,
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Text(
+          'Keine Feature-Spec-Dateien fuer diesen Meilenstein hinterlegt.',
+          style: TextStyle(
+            color: colors.textDim,
+            fontSize: 12.5,
+            fontStyle: FontStyle.italic,
           ),
         ),
       );
     }
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        // Mockup `.fcards` uses a 2-column grid; fall back to a single
-        // column when the pane is too narrow for two comfortable cards.
-        final columns = constraints.maxWidth >= 560 ? 2 : 1;
-        return GridView.count(
-          crossAxisCount: columns,
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          mainAxisSpacing: 16,
-          crossAxisSpacing: 16,
-          childAspectRatio: columns == 2 ? 2.1 : 2.6,
-          children: [
-            for (final feature in milestone.phases)
-              FeatureCard(
-                feature: feature,
-                colors: colors,
-                onTap: () => showStructuredSpecRenderer(
-                  context,
-                  specPath: feature.specPath,
-                  planPath: feature.planPath,
-                  title: feature.name,
-                  status: feature.status,
-                ),
-              ),
-          ],
-        );
-      },
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        for (final feature in milestone.phases)
+          FeatureCard(
+            feature: feature,
+            colors: colors,
+            onTap: () => showStructuredSpecRenderer(
+              context,
+              specPath: feature.specPath,
+              planPath: feature.planPath,
+              title: feature.name,
+              status: feature.status,
+            ),
+          ),
+      ],
     );
   }
 }

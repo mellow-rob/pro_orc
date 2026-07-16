@@ -9,12 +9,13 @@ import 'package:pro_orc/features/shared/roadmap/structured_spec_renderer.dart';
 import 'package:pro_orc/theme/n3_colors.dart';
 
 void main() {
-  // `MilestoneLanesView` no longer owns its selection internally (Wave 7 —
-  // the selection is hoisted to the parent so it survives a lanes<->timeline
-  // view switch, see `roadmap_tab.dart`). `_SelectionHost` below stands in
-  // for that parent: it holds `selectedMilestone` in real widget state and
-  // rebuilds on `onMilestoneSelected`, so the original tap-to-select
-  // behavior is exercised exactly as before.
+  // `MilestoneLanesView` reports the most-recently-toggled milestone via
+  // `onMilestoneSelected`, but owns its own per-milestone expand/collapse
+  // accordion state internally (FR-003). `_SelectionHost` below stands in
+  // for the real parent (`_RoadmapHeroView` in `roadmap_tab.dart`), holding
+  // `selectedMilestone` in real widget state so the controlled-value
+  // contract (used for cross-tab persistence, FR-009) is exercised exactly
+  // as production code drives it.
   Future<void> pumpView(
     WidgetTester tester, {
     required List<RoadmapMilestone> milestones,
@@ -28,88 +29,99 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  final milestoneWithFeatures = RoadmapMilestone(
+  final activeMilestoneWithFeatures = RoadmapMilestone(
     name: 'M9 — Detail Roadmap Redesign',
     status: 'in-progress',
-    phases: [
+    phases: const [
       RoadmapPhase(name: 'Feature A', status: 'done'),
       RoadmapPhase(name: 'Feature B', status: 'planned'),
     ],
   );
 
-  const milestoneWithoutFeatures = RoadmapMilestone(
+  const doneMilestoneWithoutFeatures = RoadmapMilestone(
     name: 'M10 — Leer',
-    status: 'planned',
+    status: 'done',
   );
 
-  group('MilestoneLanesView — FR-013/FR-014/FR-016', () {
+  group('MilestoneLanesView — FR-003 accordion', () {
     testWidgets('renders one MilestoneLane per milestone', (tester) async {
       await pumpView(
         tester,
-        milestones: [milestoneWithFeatures, milestoneWithoutFeatures],
+        milestones: [activeMilestoneWithFeatures, doneMilestoneWithoutFeatures],
       );
 
       expect(find.byType(MilestoneLane), findsNWidgets(2));
     });
 
-    testWidgets('tapping a lane shows its features as FeatureCards (FR-016)', (
-      tester,
-    ) async {
-      await pumpView(tester, milestones: [milestoneWithFeatures]);
+    testWidgets(
+      'SC-001: only the active milestone starts expanded — its feature '
+      'rows show, nothing else',
+      (tester) async {
+        await pumpView(
+          tester,
+          milestones: [
+            activeMilestoneWithFeatures,
+            doneMilestoneWithoutFeatures,
+          ],
+        );
 
-      expect(find.byType(FeatureCard), findsNothing);
-
-      await tester.tap(find.text('M9 — Detail Roadmap Redesign'));
-      await tester.pumpAndSettle();
-
-      expect(find.byType(FeatureCard), findsNWidgets(2));
-      expect(find.text('Feature A'), findsOneWidget);
-      expect(find.text('Feature B'), findsOneWidget);
-    });
+        expect(find.byType(FeatureCard), findsNWidgets(2));
+        expect(find.text('Feature A'), findsOneWidget);
+        expect(find.text('Feature B'), findsOneWidget);
+      },
+    );
 
     testWidgets(
-      'tapping a lane with zero features shows explicit "keine Features" '
-      'state (FR-014)',
+      'a milestone without feature specs shows the placeholder text when '
+      'its accordion is expanded',
       (tester) async {
-        await pumpView(tester, milestones: [milestoneWithoutFeatures]);
+        await pumpView(tester, milestones: [doneMilestoneWithoutFeatures]);
 
         await tester.tap(find.text('M10 — Leer'));
         await tester.pumpAndSettle();
 
         expect(
-          find.text('Keine Features fuer diesen Meilenstein'),
+          find.text(
+            'Keine Feature-Spec-Dateien fuer diesen Meilenstein hinterlegt.',
+          ),
           findsOneWidget,
         );
         expect(find.byType(FeatureCard), findsNothing);
       },
     );
 
-    testWidgets('no lane is selected initially — no feature cards shown', (
+    testWidgets('tapping an expanded milestone collapses it again', (
       tester,
     ) async {
-      await pumpView(tester, milestones: [milestoneWithFeatures]);
+      await pumpView(tester, milestones: [activeMilestoneWithFeatures]);
 
-      expect(find.byType(FeatureCard), findsNothing);
-      expect(find.text('Keine Features fuer diesen Meilenstein'), findsNothing);
-    });
-
-    testWidgets('selecting a second lane replaces the first selection', (
-      tester,
-    ) async {
-      await pumpView(
-        tester,
-        milestones: [milestoneWithFeatures, milestoneWithoutFeatures],
-      );
+      expect(find.byType(FeatureCard), findsNWidgets(2));
 
       await tester.tap(find.text('M9 — Detail Roadmap Redesign'));
       await tester.pumpAndSettle();
+
+      expect(find.byType(FeatureCard), findsNothing);
+    });
+
+    testWidgets('tapping a collapsed done/planned milestone expands it '
+        'without collapsing the already-expanded active one', (tester) async {
+      await pumpView(
+        tester,
+        milestones: [activeMilestoneWithFeatures, doneMilestoneWithoutFeatures],
+      );
+
       expect(find.byType(FeatureCard), findsNWidgets(2));
 
       await tester.tap(find.text('M10 — Leer'));
       await tester.pumpAndSettle();
-      expect(find.byType(FeatureCard), findsNothing);
+
+      // Both accordions are now open: the active milestone's 2 feature rows
+      // plus the newly-expanded done milestone's placeholder text.
+      expect(find.byType(FeatureCard), findsNWidgets(2));
       expect(
-        find.text('Keine Features fuer diesen Meilenstein'),
+        find.text(
+          'Keine Feature-Spec-Dateien fuer diesen Meilenstein hinterlegt.',
+        ),
         findsOneWidget,
       );
     });
@@ -119,10 +131,8 @@ void main() {
     testWidgets(
       'tapping a FeatureCard opens the StructuredSpecRenderer dialog',
       (tester) async {
-        await pumpView(tester, milestones: [milestoneWithFeatures]);
+        await pumpView(tester, milestones: [activeMilestoneWithFeatures]);
 
-        await tester.tap(find.text('M9 — Detail Roadmap Redesign'));
-        await tester.pumpAndSettle();
         expect(find.byType(FeatureCard), findsNWidgets(2));
 
         await tester.tap(find.text('Feature A'));
@@ -138,10 +148,7 @@ void main() {
       'the opened dialog carries the feature name and status through as '
       'the mockup title/status-pill header (FR-007)',
       (tester) async {
-        await pumpView(tester, milestones: [milestoneWithFeatures]);
-
-        await tester.tap(find.text('M9 — Detail Roadmap Redesign'));
-        await tester.pumpAndSettle();
+        await pumpView(tester, milestones: [activeMilestoneWithFeatures]);
 
         await tester.tap(find.text('Feature B'));
         await tester.pumpAndSettle();
@@ -162,10 +169,10 @@ void main() {
     );
   });
 
-  group('MilestoneLanesView — FR-005 status-grouped lanes', () {
+  group('MilestoneLanesView — FR-003 status-grouped labels', () {
     testWidgets(
-      'groups milestones into Aktiv/Fertig/Geplant lane headings in that '
-      'display order',
+      'groups milestones into Aktiv/Fertig/Geplant labels in that display '
+      'order',
       (tester) async {
         await pumpView(
           tester,
@@ -176,26 +183,22 @@ void main() {
           ],
         );
 
-        final headings = tester
+        final labels = tester
             .widgetList<Text>(find.byType(Text))
             .map((t) => t.data)
             .whereType<String>()
             .toList();
-        final activeIndex = headings.indexOf('In Arbeit');
-        final doneIndex = headings.indexOf('Ausgeliefert');
-        final plannedIndex = headings.indexOf('Geplant');
+        final activeIndex = labels.indexOf('AKTIV');
+        final doneIndex = labels.indexOf('FERTIG');
+        final plannedIndex = labels.indexOf('GEPLANT');
 
         expect(activeIndex, greaterThanOrEqualTo(0));
         expect(doneIndex, greaterThan(activeIndex));
         expect(plannedIndex, greaterThan(doneIndex));
-
-        expect(find.text('AKTIV'), findsOneWidget);
-        expect(find.text('FERTIG'), findsOneWidget);
-        expect(find.text('GEPLANT'), findsOneWidget);
       },
     );
 
-    testWidgets('omits a lane group entirely when it has zero milestones', (
+    testWidgets('omits a group label entirely when it has zero milestones', (
       tester,
     ) async {
       await pumpView(
@@ -205,13 +208,13 @@ void main() {
         ],
       );
 
-      expect(find.text('Ausgeliefert'), findsOneWidget);
-      expect(find.text('In Arbeit'), findsNothing);
-      expect(find.text('Geplant'), findsNothing);
+      expect(find.text('FERTIG'), findsOneWidget);
+      expect(find.text('AKTIV'), findsNothing);
+      expect(find.text('GEPLANT'), findsNothing);
     });
 
     testWidgets('milestones with an unrecognized status default to the '
-        'Aktiv lane rather than being dropped', (tester) async {
+        'Aktiv group rather than being dropped', (tester) async {
       await pumpView(
         tester,
         milestones: [
@@ -222,17 +225,51 @@ void main() {
         ],
       );
 
-      expect(find.text('In Arbeit'), findsOneWidget);
+      expect(find.text('AKTIV'), findsOneWidget);
       expect(find.text('M7 — Unbekannter Status'), findsOneWidget);
     });
+  });
+
+  group('MilestoneLanesView — SC-001 fixture with >=3 milestones', () {
+    testWidgets(
+      'initial render shows only milestone rows plus the active '
+      'milestone\'s feature rows, nothing from done/planned milestones',
+      (tester) async {
+        final doneWithFeatures = RoadmapMilestone(
+          name: 'M1 — Fundament',
+          status: 'done',
+          phases: const [RoadmapPhase(name: 'Alte Feature', status: 'done')],
+        );
+        const plannedMilestone = RoadmapMilestone(
+          name: 'M11 — Zukunft',
+          status: 'planned',
+        );
+
+        await pumpView(
+          tester,
+          milestones: [
+            doneWithFeatures,
+            activeMilestoneWithFeatures,
+            plannedMilestone,
+          ],
+        );
+
+        expect(find.byType(MilestoneLane), findsNWidgets(3));
+        // Only the active milestone's 2 feature rows are visible.
+        expect(find.byType(FeatureCard), findsNWidgets(2));
+        expect(find.text('Feature A'), findsOneWidget);
+        expect(find.text('Feature B'), findsOneWidget);
+        expect(find.text('Alte Feature'), findsNothing);
+      },
+    );
   });
 }
 
 /// Test double for the real parent (`_RoadmapHeroView` in `roadmap_tab.dart`)
-/// that now owns the milestone selection as hoisted state (Wave 7,
-/// FR-023). Holds `selectedMilestone` across rebuilds so
-/// `MilestoneLanesView`'s tap-to-select contract is exercised the same way
-/// production code drives it.
+/// that owns the last-toggled milestone as hoisted state (feature 002,
+/// FR-023) for cross-tab persistence. Holds `selectedMilestone` across
+/// rebuilds so `MilestoneLanesView`'s controlled-value contract is
+/// exercised the same way production code drives it.
 class _SelectionHost extends StatefulWidget {
   const _SelectionHost({required this.milestones});
 

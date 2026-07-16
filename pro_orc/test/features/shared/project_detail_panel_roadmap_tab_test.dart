@@ -314,13 +314,17 @@ void main() {
 
   group('ProjectDetailPanel — feature 002 FR-009: milestone selection survives '
       'Roadmap <-> Zeitstrahl tab switches', () {
+    // The milestone under test is `done` (not `active`) so the accordion
+    // does NOT auto-expand it on first render (FR-003 SC-001 only expands
+    // active milestones) — a tap on it is then unambiguously "open it",
+    // which is what this FR-009 persistence test needs to exercise.
     const tier0Result = RoadmapResult(
       data: RoadmapData(
         nextMdContent: '# Stand',
         milestones: [
           RoadmapMilestone(
             name: 'M9 — Detail Roadmap Redesign',
-            status: 'in-progress',
+            status: 'done',
             phases: [
               RoadmapPhase(name: 'Wave 4 — Hero + Lanes', status: 'done'),
             ],
@@ -339,7 +343,9 @@ void main() {
         await tester.tap(find.text('Roadmap'));
         await _pumpIgnoringOverflow(tester);
 
-        // Select the milestone -> its feature cards appear.
+        expect(find.byType(FeatureCard), findsNothing);
+
+        // Select the milestone -> its feature rows appear.
         await tester.tap(find.text('M9 — Detail Roadmap Redesign'));
         await _pumpIgnoringOverflow(tester);
 
@@ -355,7 +361,7 @@ void main() {
         expect(find.byType(FeatureCard), findsNothing);
 
         // Switch back to Roadmap: the previously-selected milestone's
-        // feature cards must reappear without tapping the lane again —
+        // feature rows must reappear without tapping the lane again —
         // proof the selection survived the round-trip (FR-009).
         await tester.tap(find.text('Roadmap'));
         await _pumpIgnoringOverflow(tester);
