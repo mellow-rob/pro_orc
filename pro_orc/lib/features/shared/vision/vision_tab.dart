@@ -4,11 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pro_orc/data/models/project_model.dart';
 import 'package:pro_orc/data/models/roadmap_data.dart';
 import 'package:pro_orc/features/shared/vision/vision_hero.dart';
-import 'package:pro_orc/features/shared/vision/vision_links_section.dart';
 import 'package:pro_orc/features/shared/vision/vision_scorecard.dart';
 import 'package:pro_orc/features/shared/vision/vision_scorecard_data.dart';
 import 'package:pro_orc/features/shared/vision/vision_section.dart';
-import 'package:pro_orc/providers/database_provider.dart';
 import 'package:pro_orc/providers/roadmap_provider.dart';
 import 'package:pro_orc/providers/vision_provider.dart';
 import 'package:pro_orc/theme/n3_colors.dart';
@@ -19,10 +17,12 @@ import 'package:pro_orc/theme/n3_typography.dart';
 ///
 /// When [visionProvider] resolves a non-null [VisionData] (FR-003), renders
 /// in order: product version badge → hero → pillars → scorecard → the
-/// former-Übersicht content ([legacyContent], reused verbatim) → links
-/// section (FR-005). When it resolves `null` (no `docs/product/VISION.md`,
-/// FR-006), renders ONLY [legacyContent] — the same legacy-guard behavior
-/// the old "Übersicht" tab provided, just under the new tab name/position.
+/// former-Übersicht content ([legacyContent], reused verbatim). When it
+/// resolves `null` (no `docs/product/VISION.md`, FR-006), renders ONLY
+/// [legacyContent] — the same legacy-guard behavior the old "Übersicht" tab
+/// provided, just under the new tab name/position. The links section moved
+/// to its own top-level "Links" tab (feature 005) and is no longer rendered
+/// here.
 class VisionTab extends ConsumerWidget {
   const VisionTab({
     super.key,
@@ -60,7 +60,6 @@ class VisionTab extends ConsumerWidget {
           orElse: () => RoadmapData.empty,
         );
         final scorecard = VisionScorecardData.fromRoadmapData(roadmapData);
-        final qa = ref.read(quickActionsProvider);
 
         return SingleChildScrollView(
           padding: const EdgeInsets.only(bottom: 24),
@@ -89,10 +88,6 @@ class VisionTab extends ConsumerWidget {
               ),
               const SizedBox(height: 32),
               legacyContent,
-              if (vision.links.isNotEmpty) ...[
-                const SizedBox(height: 32),
-                VisionLinksSection(links: vision.links, colors: colors, qa: qa),
-              ],
             ],
           ),
         );

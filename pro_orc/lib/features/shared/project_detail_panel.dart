@@ -13,11 +13,13 @@ import 'package:pro_orc/features/shared/detail/token_scorecard_section.dart';
 import 'package:pro_orc/features/shared/rename_project_dialog.dart';
 import 'package:pro_orc/features/shared/roadmap/roadmap_tab.dart';
 import 'package:pro_orc/features/shared/roadmap/roadmap_timeline_view.dart';
+import 'package:pro_orc/features/shared/vision/vision_links_section.dart';
 import 'package:pro_orc/features/shared/vision/vision_tab.dart';
 import 'package:pro_orc/features/shell/glass_card.dart';
 import 'package:pro_orc/providers/database_provider.dart';
 import 'package:pro_orc/providers/project_detail_provider.dart';
 import 'package:pro_orc/providers/roadmap_provider.dart';
+import 'package:pro_orc/providers/vision_provider.dart';
 import 'package:pro_orc/theme/n3_colors.dart';
 
 /// Opens the project detail view embedded inside the app shell's content
@@ -39,10 +41,10 @@ void showProjectDetail(BuildContext context, ProjectModel project) {
 ///
 /// Accent color follows project type: cyan for code, fuchsia for research.
 ///
-/// Has three tabs (FR-001): "Vision" (first — absorbs the former
-/// "Übersicht" content, plus hero/pillars/scorecard/links when vision data
-/// is available), "Roadmap" (read-only three-tier fallback view), and
-/// "Zeitstrahl" (tier-0 only). Embedded directly inside
+/// Has four tabs: "Vision" (first — absorbs the former "Übersicht" content,
+/// plus hero/pillars/scorecard when vision data is available), "Roadmap"
+/// (read-only three-tier fallback view), "Zeitstrahl" (tier-0 only), and
+/// "Links" (last, always present — feature 005). Embedded directly inside
 /// [ShellScreen]'s content area (see `openProjectDetailProvider`) instead of
 /// being pushed as its own route, so it no longer owns a [Scaffold] — the
 /// shell provides the surrounding chrome. [onBack] is invoked instead of
@@ -61,7 +63,7 @@ class ProjectDetailPanel extends ConsumerStatefulWidget {
   ConsumerState<ProjectDetailPanel> createState() => _ProjectDetailPanelState();
 }
 
-enum _DetailTab { vision, roadmap, zeitstrahl }
+enum _DetailTab { vision, roadmap, zeitstrahl, links }
 
 class _ProjectDetailPanelState extends ConsumerState<ProjectDetailPanel> {
   _DetailTab _tab = _DetailTab.vision;
@@ -141,6 +143,7 @@ class _ProjectDetailPanelState extends ConsumerState<ProjectDetailPanel> {
         onMilestoneSelected: (m) => setState(() => _selectedMilestone = m),
       ),
       _DetailTab.zeitstrahl => _ZeitstrahlTabBody(project: project),
+      _DetailTab.links => _LinksTabBody(project: project),
     };
   }
 
@@ -174,6 +177,14 @@ class _ProjectDetailPanelState extends ConsumerState<ProjectDetailPanel> {
               onTap: () => setState(() => _tab = _DetailTab.zeitstrahl),
             ),
           ],
+          const SizedBox(width: 8),
+          _TabButton(
+            label: 'Links',
+            selected: _tab == _DetailTab.links,
+            colors: colors,
+            accent: accent,
+            onTap: () => setState(() => _tab = _DetailTab.links),
+          ),
         ],
       ),
     );
@@ -384,8 +395,62 @@ class _EmptyZeitstrahlState extends StatelessWidget {
   }
 }
 
+/// The "Links" tab body (FR-002): always present regardless of whether the
+/// project has `docs/product/VISION.md` or any links at all — the one
+/// exception in this detail view to the "hide when nothing to show"
+/// convention (Vision's own legacy guard, Zeitstrahl's tier-0 gate). An
+/// always-present tab gives the user a stable, predictable place to look for
+/// links, even if it's currently empty. Reuses [VisionLinksSection]
+/// unchanged; that widget renders `SizedBox.shrink()` for an empty list
+/// (correct when embedded as a section inside another tab), so this wrapper
+/// supplies a visible empty state instead of leaving the tab blank.
+class _LinksTabBody extends ConsumerWidget {
+  const _LinksTabBody({required this.project});
+
+  final ProjectModel project;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final colors = Theme.of(context).extension<AppColors>()!;
+    final visionAsync = ref.watch(visionProvider(project));
+    final qa = ref.read(quickActionsProvider);
+
+    return visionAsync.when(
+      loading: () => Center(
+        child: CircularProgressIndicator(color: colors.cyan, strokeWidth: 2),
+      ),
+      error: (_, _) => _EmptyLinksState(colors: colors),
+      data: (vision) {
+        final links = vision?.links ?? const [];
+        if (links.isEmpty) {
+          return _EmptyLinksState(colors: colors);
+        }
+        return SingleChildScrollView(
+          child: VisionLinksSection(links: links, colors: colors, qa: qa),
+        );
+      },
+    );
+  }
+}
+
+class _EmptyLinksState extends StatelessWidget {
+  const _EmptyLinksState({required this.colors});
+
+  final AppColors colors;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Text(
+        'Keine Links konfiguriert',
+        style: TextStyle(color: colors.textSec, fontSize: 14),
+      ),
+    );
+  }
+}
+
 /// Segmented-control-style tab button used by [ProjectDetailPanel]'s
-/// "Vision"/"Roadmap"/"Zeitstrahl" switch (FR-001).
+/// "Vision"/"Roadmap"/"Zeitstrahl"/"Links" switch (feature 005).
 class _TabButton extends StatelessWidget {
   const _TabButton({
     required this.label,

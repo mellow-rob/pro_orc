@@ -13,6 +13,7 @@ import 'package:pro_orc/features/shared/project_detail_panel.dart';
 import 'package:pro_orc/features/shared/roadmap/feature_card.dart';
 import 'package:pro_orc/features/shared/roadmap/milestone_lane.dart';
 import 'package:pro_orc/features/shared/vision/vision_hero.dart';
+import 'package:pro_orc/features/shared/vision/vision_links_section.dart';
 import 'package:pro_orc/features/shared/vision/vision_scorecard.dart';
 import 'package:pro_orc/features/shared/vision/vision_section.dart';
 import 'package:pro_orc/providers/database_provider.dart';
@@ -345,36 +346,161 @@ void main() {
       expect(find.byType(VisionHero), findsOneWidget);
     });
 
-    testWidgets('renders a links section when the vision fixture has links '
-        '(FR-005)', (tester) async {
-      const visionWithLinks = VisionData(
-        title: 'Pro Orc — Vision',
-        lead: 'Der Ueberblick ueber alle Projekte.',
-        links: [
-          VisionLink(
-            title: 'GitHub Repo',
-            target: 'https://github.com/example/pro-orc',
-            isWeb: true,
+    testWidgets(
+      'the Vision tab renders no VisionLinksSection even when the vision '
+      'fixture has links — links moved to their own tab (feature 005)',
+      (tester) async {
+        const visionWithLinks = VisionData(
+          title: 'Pro Orc — Vision',
+          lead: 'Der Ueberblick ueber alle Projekte.',
+          links: [
+            VisionLink(
+              title: 'GitHub Repo',
+              target: 'https://github.com/example/pro-orc',
+              isWeb: true,
+            ),
+          ],
+        );
+
+        await pumpPanel(
+          tester,
+          roadmapResult: legacyResult,
+          vision: visionWithLinks,
+        );
+
+        expect(find.byType(VisionLinksSection), findsNothing);
+      },
+    );
+  });
+
+  group('ProjectDetailPanel — FR-001/FR-002: Links tab (feature 005)', () {
+    const vision = VisionData(
+      title: 'Pro Orc — Vision',
+      lead: 'Der Ueberblick ueber alle Projekte.',
+      links: [
+        VisionLink(
+          title: 'GitHub Repo',
+          target: 'https://github.com/example/pro-orc',
+          isWeb: true,
+        ),
+      ],
+    );
+
+    const legacyResult = RoadmapResult(
+      data: RoadmapData(
+        milestones: [
+          RoadmapMilestone(
+            name: 'M1 — Fundament',
+            status: 'done',
+            phases: [RoadmapPhase(name: 'Phase 1', status: 'done')],
           ),
         ],
-      );
+      ),
+      source: RoadmapSource.local,
+    );
 
-      await pumpPanel(
-        tester,
-        roadmapResult: legacyResult,
-        vision: visionWithLinks,
-      );
+    testWidgets(
+      'shows exactly 4 tab buttons (Vision, Roadmap, Zeitstrahl, Links) '
+      'for a tier-0 project with a populated vision',
+      (tester) async {
+        const tier0Result = RoadmapResult(
+          data: RoadmapData(
+            nextMdContent: '# Stand',
+            milestones: [RoadmapMilestone(name: 'M9', status: 'in-progress')],
+          ),
+          source: RoadmapSource.productStore,
+        );
 
-      expect(find.text('LINKS'), findsOneWidget);
-      expect(find.text('GitHub Repo'), findsOneWidget);
-    });
+        await pumpPanel(tester, roadmapResult: tier0Result, vision: vision);
 
-    testWidgets('renders no links section (no header chrome) when the '
-        'vision fixture has zero links', (tester) async {
-      await pumpPanel(tester, roadmapResult: legacyResult, vision: vision);
+        expect(find.text('Vision'), findsOneWidget);
+        expect(find.text('Roadmap'), findsOneWidget);
+        expect(find.text('Zeitstrahl'), findsOneWidget);
+        expect(find.text('Links'), findsOneWidget);
+      },
+    );
 
-      expect(find.text('LINKS'), findsNothing);
-    });
+    testWidgets(
+      'the Links tab is present even for a legacy project with no '
+      'docs/product/ at all (FR-002)',
+      (tester) async {
+        await pumpPanel(tester, roadmapResult: legacyResult, vision: null);
+
+        expect(find.text('Links'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'selecting the Links tab renders the same VisionLinksSection with '
+      'the vision fixture\'s links',
+      (tester) async {
+        await pumpPanel(tester, roadmapResult: legacyResult, vision: vision);
+
+        await tester.tap(find.text('Links'));
+        await _pumpIgnoringOverflow(tester);
+
+        expect(find.byType(VisionLinksSection), findsOneWidget);
+        expect(find.text('GitHub Repo'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'selecting the Links tab shows a visible empty state when the vision '
+      'fixture has zero links (FR-002/SC-003)',
+      (tester) async {
+        const visionNoLinks = VisionData(
+          title: 'Pro Orc — Vision',
+          lead: 'Der Ueberblick ueber alle Projekte.',
+        );
+
+        await pumpPanel(
+          tester,
+          roadmapResult: legacyResult,
+          vision: visionNoLinks,
+        );
+
+        await tester.tap(find.text('Links'));
+        await _pumpIgnoringOverflow(tester);
+
+        expect(find.text('Keine Links konfiguriert'), findsOneWidget);
+        expect(find.byType(VisionLinksSection), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'selecting the Links tab shows a visible empty state for a legacy '
+      'project with no VISION.md at all (FR-002/SC-003)',
+      (tester) async {
+        await pumpPanel(tester, roadmapResult: legacyResult, vision: null);
+
+        await tester.tap(find.text('Links'));
+        await _pumpIgnoringOverflow(tester);
+
+        expect(find.text('Keine Links konfiguriert'), findsOneWidget);
+        expect(find.byType(VisionLinksSection), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'switching from Links to Roadmap and back preserves the '
+      'selection-persistence contract (no crash, tab content restored)',
+      (tester) async {
+        await pumpPanel(tester, roadmapResult: legacyResult, vision: vision);
+
+        await tester.tap(find.text('Links'));
+        await _pumpIgnoringOverflow(tester);
+        expect(find.text('GitHub Repo'), findsOneWidget);
+
+        await tester.tap(find.text('Roadmap'));
+        await _pumpIgnoringOverflow(tester);
+        expect(find.text('M1 — Fundament'), findsOneWidget);
+        expect(find.text('GitHub Repo'), findsNothing);
+
+        await tester.tap(find.text('Links'));
+        await _pumpIgnoringOverflow(tester);
+        expect(find.text('GitHub Repo'), findsOneWidget);
+      },
+    );
   });
 
   group('ProjectDetailPanel — FR-009: milestone selection survives '
