@@ -7,10 +7,17 @@ import 'package:pro_orc/theme/n3_colors.dart';
 /// glassmorphism dialog (FR-017), following the same
 /// `showGeneralDialog` + slide/fade transition pattern as
 /// `claude_tool_detail_panel.dart`'s detail dialogs.
+///
+/// [title]/[status] are optional (FR-007) and forwarded to
+/// [StructuredSpecRenderer] to render the mockup's serif title + status pill
+/// header — omit them to keep the dialog body-only (e.g. no feature name
+/// available at the call site).
 Future<void> showStructuredSpecRenderer(
   BuildContext context, {
   required String? specPath,
   required String? planPath,
+  String? title,
+  String? status,
 }) async {
   await showGeneralDialog(
     context: context,
@@ -37,6 +44,8 @@ Future<void> showStructuredSpecRenderer(
             specPath: specPath,
             planPath: planPath,
             colors: colors,
+            title: title,
+            status: status,
           ),
         ),
       );

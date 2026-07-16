@@ -210,6 +210,66 @@ void main() {
     });
   });
 
+  group('ProjectDetailPanel — feature 002 Wave 3 FR-008: legacy-project '
+      'regression guard', () {
+    // A project with no `docs/product/` tier-0 data at all — the roadmap
+    // resolves from a legacy tier (`.a1/roadmap.md`/Brain/Vault) and no
+    // VISION.md exists. This is the exact fixture shape a project without
+    // `docs/product/` produces: `RoadmapSource.local` (never `productStore`)
+    // and a null vision.
+    const legacyOnlyResult = RoadmapResult(
+      data: RoadmapData(
+        milestones: [
+          RoadmapMilestone(
+            name: 'M2 — Legacy-Meilenstein',
+            status: 'building',
+            phases: [
+              RoadmapPhase(
+                name: 'Legacy-Phase',
+                status: 'building',
+                specs: [RoadmapSpecRef(title: 'Legacy-Spec', path: '/tmp/x')],
+              ),
+            ],
+          ),
+        ],
+      ),
+      source: RoadmapSource.local,
+    );
+
+    testWidgets(
+      'shows only Übersicht and Roadmap tabs (no Vision/Zeitstrahl) for a '
+      'project without docs/product/',
+      (tester) async {
+        await pumpPanel(tester, roadmapResult: legacyOnlyResult, vision: null);
+
+        expect(find.text('Übersicht'), findsOneWidget);
+        expect(find.text('Roadmap'), findsOneWidget);
+        expect(find.text('Vision'), findsNothing);
+        expect(find.text('Zeitstrahl'), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'the Roadmap tab falls back to the legacy tree/spec-list view, not '
+      'the tier-0 hero+lanes view, for a project without docs/product/',
+      (tester) async {
+        await pumpPanel(tester, roadmapResult: legacyOnlyResult, vision: null);
+
+        await tester.tap(find.text('Roadmap'));
+        await _pumpIgnoringOverflow(tester);
+
+        // Legacy tree/spec-list markers: the milestone/phase renders via
+        // RoadmapTree (clickable phase row), not a MilestoneLane/FeatureCard
+        // (the tier-0-only widgets from feature 002).
+        expect(find.text('Legacy-Phase'), findsOneWidget);
+        expect(find.byType(MilestoneLane), findsNothing);
+        expect(find.byType(FeatureCard), findsNothing);
+        // No tier-0 "Nächster Schritt" banner either.
+        expect(find.textContaining('NÄCHSTER SCHRITT'), findsNothing);
+      },
+    );
+  });
+
   group('ProjectDetailPanel — Vision tab rendering', () {
     const vision = VisionData(
       title: 'Pro Orc — Vision',

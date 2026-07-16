@@ -133,6 +133,33 @@ void main() {
         expect(find.textContaining('Spec nicht verfügbar'), findsOneWidget);
       },
     );
+
+    testWidgets(
+      'the opened dialog carries the feature name and status through as '
+      'the mockup title/status-pill header (FR-007)',
+      (tester) async {
+        await pumpView(tester, milestones: [milestoneWithFeatures]);
+
+        await tester.tap(find.text('M9 — Detail Roadmap Redesign'));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Feature B'));
+        await tester.pumpAndSettle();
+
+        expect(find.byType(StructuredSpecRenderer), findsOneWidget);
+        // Feature B's status is 'planned' -> mockup pill label 'GEPLANT',
+        // rendered inside the StructuredSpecRenderer header specifically
+        // (the FeatureCard behind the dialog also shows a 'GEPLANT' tag, so
+        // scope the finder to the renderer subtree to avoid ambiguity).
+        expect(
+          find.descendant(
+            of: find.byType(StructuredSpecRenderer),
+            matching: find.text('GEPLANT'),
+          ),
+          findsOneWidget,
+        );
+      },
+    );
   });
 
   group('MilestoneLanesView — FR-005 status-grouped lanes', () {

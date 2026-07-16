@@ -313,6 +313,8 @@ class _FeatureCardsSection extends StatelessWidget {
                   context,
                   specPath: feature.specPath,
                   planPath: feature.planPath,
+                  title: feature.name,
+                  status: feature.status,
                 ),
               ),
           ],

@@ -29,6 +29,8 @@ void main() {
     WidgetTester tester, {
     String? specPath,
     String? planPath,
+    String? title,
+    String? status,
   }) async {
     await tester.pumpWidget(
       MaterialApp(
@@ -38,6 +40,8 @@ void main() {
             specPath: specPath,
             planPath: planPath,
             colors: AppColors.dark,
+            title: title,
+            status: status,
           ),
         ),
       ),
@@ -145,6 +149,28 @@ The user opens the roadmap, taps a milestone, then a feature.
 
       expect(find.textContaining('The user opens the roadmap'), findsOneWidget);
     });
+
+    testWidgets(
+      'renders multi-bullet User Journey as numbered glass steps '
+      '(mockup .jstep)',
+      (tester) async {
+        final path = writeSpec('''
+## User Journey
+
+- Open the project detail view.
+- Switch to the Roadmap tab.
+- Tap a milestone lane to reveal its features.
+''');
+
+        await pumpRenderer(tester, specPath: path);
+
+        expect(find.text('1'), findsOneWidget);
+        expect(find.text('2'), findsOneWidget);
+        expect(find.text('3'), findsOneWidget);
+        expect(find.textContaining('Open the project detail view'), findsOneWidget);
+        expect(find.textContaining('Tap a milestone lane'), findsOneWidget);
+      },
+    );
   });
 
   group('StructuredSpecRenderer — freeform fallback (FR-018)', () {
@@ -262,6 +288,45 @@ This has **bold** and *italic* text plus a list:
       await tester.pumpAndSettle();
 
       expect(find.textContaining('Plan nicht verfügbar'), findsOneWidget);
+    });
+  });
+
+  group('StructuredSpecRenderer — FR-007 title/status header', () {
+    testWidgets('renders no header when title is omitted (existing call '
+        'sites unaffected)', (tester) async {
+      final path = writeSpec('## Problem\n\nSome prose.');
+
+      await pumpRenderer(tester, specPath: path);
+
+      expect(find.textContaining('FERTIG'), findsNothing);
+      expect(find.textContaining('AKTIV'), findsNothing);
+    });
+
+    testWidgets('renders serif title and a status pill when both are given', (
+      tester,
+    ) async {
+      final path = writeSpec('## Problem\n\nSome prose.');
+
+      await pumpRenderer(
+        tester,
+        specPath: path,
+        title: 'Projekt-Hub: Gruppen, Archiv',
+        status: 'done',
+      );
+
+      expect(find.text('Projekt-Hub: Gruppen, Archiv'), findsOneWidget);
+      expect(find.text('FERTIG'), findsOneWidget);
+    });
+
+    testWidgets('renders the title without a pill when status is omitted', (
+      tester,
+    ) async {
+      final path = writeSpec('## Problem\n\nSome prose.');
+
+      await pumpRenderer(tester, specPath: path, title: 'Ohne Status');
+
+      expect(find.text('Ohne Status'), findsOneWidget);
+      expect(find.textContaining('UNBEKANNT'), findsNothing);
     });
   });
 }

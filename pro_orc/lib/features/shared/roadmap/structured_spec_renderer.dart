@@ -3,8 +3,10 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:gpt_markdown/gpt_markdown.dart';
+import 'package:pro_orc/data/services/status_normalizer.dart';
 import 'package:pro_orc/features/shell/glass_card.dart';
 import 'package:pro_orc/theme/n3_colors.dart';
+import 'package:pro_orc/theme/n3_typography.dart';
 
 /// Structured, readable renderer for a feature's spec/plan Markdown (FR-017
 /// through FR-020) — replaces [SpecViewer]'s raw monospace dump for the
@@ -21,12 +23,20 @@ import 'package:pro_orc/theme/n3_colors.dart';
 /// [planPath]. Missing/empty files render a graceful German "nicht
 /// verfügbar" state (FR-019), carrying forward `SpecViewer._readContent()`'s
 /// null-on-missing precedent.
+///
+/// [title]/[status] are optional (FR-007, mockup `#spec .spec-head`): when
+/// supplied by the caller (the feature's [RoadmapPhase.name]/`.status`),
+/// a serif title + status pill header and a mono meta line are rendered
+/// above the Spec/Plan subtabs. Omitted entirely when [title] is null so
+/// existing call sites that only pass paths keep rendering unchanged.
 class StructuredSpecRenderer extends StatefulWidget {
   const StructuredSpecRenderer({
     super.key,
     required this.specPath,
     required this.planPath,
     required this.colors,
+    this.title,
+    this.status,
   });
 
   /// Path to the feature's spec document, or null when the source tier does
@@ -38,6 +48,14 @@ class StructuredSpecRenderer extends StatefulWidget {
   final String? planPath;
 
   final AppColors colors;
+
+  /// Feature title (mockup `.spec-head h2`), or null to omit the header
+  /// entirely (e.g. call sites without a feature name available).
+  final String? title;
+
+  /// Raw/normalized feature status (mockup `.pill`) — reuses the existing
+  /// status vocabulary, no new status words (FR-003 precedent).
+  final String? status;
 
   @override
   State<StructuredSpecRenderer> createState() => _StructuredSpecRendererState();
@@ -76,6 +94,14 @@ class _StructuredSpecRendererState extends State<StructuredSpecRenderer> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        if (widget.title != null) ...[
+          _SpecHeader(
+            title: widget.title!,
+            status: widget.status,
+            colors: colors,
+          ),
+          const SizedBox(height: 16),
+        ],
         _DocTabSwitch(
           tab: _tab,
           colors: colors,
@@ -88,6 +114,88 @@ class _StructuredSpecRendererState extends State<StructuredSpecRenderer> {
               : SingleChildScrollView(
                   child: _SpecSectionList(content: content, colors: colors),
                 ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Mockup `#spec .spec-head` + `.spec-meta` — serif title, status pill and a
+/// mono meta line above the Spec/Plan subtabs (FR-007).
+class _SpecHeader extends StatelessWidget {
+  const _SpecHeader({required this.title, required this.status, required this.colors});
+
+  final String title;
+  final String? status;
+  final AppColors colors;
+
+  /// Mockup `.pill` label — reuses the existing status vocabulary (no new
+  /// status words, FR-003 precedent), German like the rest of the UI.
+  String _pillLabel() {
+    return switch (status != null ? deriveDisplayStatus(status!) : null) {
+      DisplayStatus.done => 'Fertig',
+      DisplayStatus.building => 'Aktiv',
+      DisplayStatus.planning => 'Geplant',
+      DisplayStatus.paused => 'Pausiert',
+      DisplayStatus.research => 'Recherche',
+      DisplayStatus.archived => 'Archiviert',
+      null => 'Unbekannt',
+    };
+  }
+
+  Color _pillColor() {
+    return switch (status != null ? deriveDisplayStatus(status!) : null) {
+      DisplayStatus.done => colors.emerald,
+      DisplayStatus.building => colors.cyan,
+      DisplayStatus.planning => const Color(0xFFE0A020),
+      DisplayStatus.paused => const Color(0xFFF59E0B),
+      DisplayStatus.research => colors.fuch,
+      DisplayStatus.archived => colors.textDis,
+      null => colors.textDis,
+    };
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final pillColor = _pillColor();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Wrap(
+          crossAxisAlignment: WrapCrossAlignment.center,
+          spacing: 14,
+          runSpacing: 6,
+          children: [
+            Text(
+              title,
+              style: N3Typography.display(
+                colors: colors,
+                fontSize: 26,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            if (status != null)
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 4,
+                ),
+                decoration: BoxDecoration(
+                  color: pillColor.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(
+                  _pillLabel().toUpperCase(),
+                  style: TextStyle(
+                    fontWeight: FontWeight.w900,
+                    fontSize: 11,
+                    letterSpacing: 0.8,
+                    color: pillColor,
+                  ),
+                ),
+              ),
+          ],
         ),
       ],
     );
@@ -338,10 +446,15 @@ class _SectionRenderer extends StatelessWidget {
         colors: colors,
         child: _MetricsTilesSection(lines: bulletLines, colors: colors),
       ),
-      _SectionKind.problem || _SectionKind.userJourney => _SectionHeading(
+      _SectionKind.problem => _SectionHeading(
         heading: section.heading,
         colors: colors,
         child: _ProseSection(body: section.body, colors: colors),
+      ),
+      _SectionKind.userJourney => _SectionHeading(
+        heading: section.heading,
+        colors: colors,
+        child: _JourneyStepsSection(lines: bulletLines, colors: colors),
       ),
       _SectionKind.freeform =>
         section.heading.isEmpty
@@ -435,6 +548,72 @@ class _ChecklistSection extends StatelessWidget {
                   ),
                 ),
               ],
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+/// User Journey → numbered glass steps with a counter circle (FR-017,
+/// mockup `.journey .jstep`), one per bullet/line.
+class _JourneyStepsSection extends StatelessWidget {
+  const _JourneyStepsSection({required this.lines, required this.colors});
+
+  final List<String> lines;
+  final AppColors colors;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        for (var i = 0; i < lines.length; i++)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: GlassCard(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 13,
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: 24,
+                      height: 24,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: colors.cyan.withValues(alpha: 0.10),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Text(
+                        '${i + 1}',
+                        style: TextStyle(
+                          fontFamily: 'monospace',
+                          fontWeight: FontWeight.w700,
+                          fontSize: 12,
+                          color: colors.cyan,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.only(top: 3),
+                        child: Text(
+                          lines[i],
+                          style: TextStyle(
+                            color: colors.textSec,
+                            fontSize: 13.5,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ),
       ],
@@ -539,46 +718,78 @@ class _WarningCardsSection extends StatelessWidget {
   }
 }
 
-/// Success Metrics → compact stat tiles in a grid (FR-017).
+/// Success Metrics → tiles with a large serif number (FR-017, mockup
+/// `.metrics .metric .n`), one per bullet/line.
+///
+/// The leading number/percentage token (e.g. "100%", "0", "522") is
+/// extracted and rendered large/serif per the mockup; the remainder of the
+/// line becomes the caption below it. Lines with no leading numeric token
+/// fall back to the full line as the caption with an em-dash placeholder
+/// number, so the tile never renders blank.
 class _MetricsTilesSection extends StatelessWidget {
   const _MetricsTilesSection({required this.lines, required this.colors});
 
   final List<String> lines;
   final AppColors colors;
 
+  static final _leadingNumber = RegExp(r'^(\d+%?|\d+\.\d+%?)\s*');
+
   @override
   Widget build(BuildContext context) {
     return Wrap(
       key: const Key('success_metrics_grid'),
-      spacing: 8,
-      runSpacing: 8,
+      spacing: 12,
+      runSpacing: 12,
       children: [
-        for (final line in lines)
-          ConstrainedBox(
-            constraints: const BoxConstraints(minWidth: 140, maxWidth: 220),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              decoration: BoxDecoration(
-                color: colors.bgCard,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Icon(Icons.trending_up, size: 14, color: colors.cyan),
-                  const SizedBox(width: 6),
-                  Flexible(
-                    child: Text(
-                      line,
-                      style: TextStyle(color: colors.textSec, fontSize: 12),
-                    ),
-                  ),
-                ],
+        for (final line in lines) _MetricTile(line: line, colors: colors),
+      ],
+    );
+  }
+}
+
+class _MetricTile extends StatelessWidget {
+  const _MetricTile({required this.line, required this.colors});
+
+  final String line;
+  final AppColors colors;
+
+  @override
+  Widget build(BuildContext context) {
+    final match = _MetricsTilesSection._leadingNumber.firstMatch(line);
+    final number = match != null ? match.group(1)! : '—';
+    final caption = match != null
+        ? line.substring(match.end).trim()
+        : line;
+
+    return ConstrainedBox(
+      constraints: const BoxConstraints(minWidth: 140, maxWidth: 220),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: colors.bgCard,
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              number,
+              style: N3Typography.display(
+                colors: colors,
+                fontSize: 26,
+                fontWeight: FontWeight.w600,
+                color: colors.cyan,
               ),
             ),
-          ),
-      ],
+            const SizedBox(height: 6),
+            Text(
+              caption.isEmpty ? line : caption,
+              style: TextStyle(color: colors.textSec, fontSize: 12.5),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
