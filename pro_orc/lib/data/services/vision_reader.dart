@@ -23,6 +23,14 @@ class VisionReader {
     r'^-\s*\*\*(.+?)\*\*\s*[-–—]\s*(.+)$',
   );
 
+  /// Matches a `## Links` bullet: `- [<title>](<target>)`.
+  static final RegExp _linkLine = RegExp(r'^-\s*\[(.+?)\]\((.+?)\)\s*$');
+
+  /// Matches the frontmatter `version:` key, e.g. `version: "2026.06"` or
+  /// `version: 2026.06 — Closed Beta`. Surrounding single/double quotes are
+  /// stripped.
+  static final RegExp _versionLine = RegExp(r'^version:\s*(.+)$');
+
   /// Reads and parses `docs/product/VISION.md` for [projectPath].
   ///
   /// Returns `null` when the file is absent, empty, unreadable, or has no
@@ -47,11 +55,15 @@ class VisionReader {
 
   VisionData? _parse(String content) {
     final lines = const LineSplitter().convert(content);
+    final frontmatter = _extractFrontmatter(lines);
     final body = _stripFrontmatter(lines);
+
+    final version = _parseVersion(frontmatter);
 
     String? title;
     String? lead;
     final pillars = <VisionPillar>[];
+    final links = <VisionLink>[];
 
     var i = 0;
     while (i < body.length) {
@@ -66,6 +78,7 @@ class VisionReader {
         i++;
         while (i < body.length) {
           final pillarCandidate = body[i].trim();
+          if (pillarCandidate.startsWith('##')) break;
           if (pillarCandidate.isNotEmpty) {
             final match = _pillarLine.firstMatch(pillarCandidate);
             if (match != null) {
@@ -82,6 +95,31 @@ class VisionReader {
         continue;
       }
 
+      if (line.startsWith('## Links')) {
+        i++;
+        while (i < body.length) {
+          final linkCandidate = body[i].trim();
+          if (linkCandidate.startsWith('##')) break;
+          if (linkCandidate.isNotEmpty) {
+            final match = _linkLine.firstMatch(linkCandidate);
+            if (match != null) {
+              final target = match.group(2)!.trim();
+              links.add(
+                VisionLink(
+                  title: match.group(1)!.trim(),
+                  target: target,
+                  isWeb:
+                      target.startsWith('http://') ||
+                      target.startsWith('https://'),
+                ),
+              );
+            }
+          }
+          i++;
+        }
+        continue;
+      }
+
       if (line.startsWith('# ')) {
         title ??= line.substring(2).trim();
         i++;
@@ -89,7 +127,7 @@ class VisionReader {
       }
 
       if (line.startsWith('##')) {
-        // Any other heading (not Pillars) — skip, we don't model it.
+        // Any other heading (not Pillars/Links) — skip, we don't model it.
         i++;
         continue;
       }
@@ -111,7 +149,45 @@ class VisionReader {
 
     if (lead == null || lead.isEmpty) return null;
 
-    return VisionData(title: title, lead: lead, pillars: pillars);
+    return VisionData(
+      title: title,
+      version: version,
+      lead: lead,
+      pillars: pillars,
+      links: links,
+    );
+  }
+
+  /// Extracts the raw lines of a leading YAML frontmatter block (`---` ...
+  /// `---`), excluding the delimiters. Empty when absent or unterminated.
+  List<String> _extractFrontmatter(List<String> lines) {
+    if (lines.isEmpty || lines.first.trim() != '---') return const [];
+
+    for (var i = 1; i < lines.length; i++) {
+      if (lines[i].trim() == '---') {
+        return lines.sublist(1, i);
+      }
+    }
+    // Unterminated frontmatter block.
+    return const [];
+  }
+
+  /// Parses the `version:` key out of the frontmatter lines. Surrounding
+  /// single/double quotes are stripped. Returns null when absent or empty.
+  String? _parseVersion(List<String> frontmatter) {
+    for (final rawLine in frontmatter) {
+      final match = _versionLine.firstMatch(rawLine.trim());
+      if (match == null) continue;
+
+      var value = match.group(1)!.trim();
+      if (value.length >= 2 &&
+          ((value.startsWith('"') && value.endsWith('"')) ||
+              (value.startsWith("'") && value.endsWith("'")))) {
+        value = value.substring(1, value.length - 1).trim();
+      }
+      return value.isEmpty ? null : value;
+    }
+    return null;
   }
 
   /// Drops a leading YAML frontmatter block (`---` ... `---`) if present.

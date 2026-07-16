@@ -13,14 +13,11 @@ import 'package:pro_orc/features/shared/detail/token_scorecard_section.dart';
 import 'package:pro_orc/features/shared/rename_project_dialog.dart';
 import 'package:pro_orc/features/shared/roadmap/roadmap_tab.dart';
 import 'package:pro_orc/features/shared/roadmap/roadmap_timeline_view.dart';
-import 'package:pro_orc/features/shared/vision/vision_scorecard_data.dart';
 import 'package:pro_orc/features/shared/vision/vision_tab.dart';
-import 'package:pro_orc/features/shared/vision/vision_teaser_card.dart';
 import 'package:pro_orc/features/shell/glass_card.dart';
 import 'package:pro_orc/providers/database_provider.dart';
 import 'package:pro_orc/providers/project_detail_provider.dart';
 import 'package:pro_orc/providers/roadmap_provider.dart';
-import 'package:pro_orc/providers/vision_provider.dart';
 import 'package:pro_orc/theme/n3_colors.dart';
 
 /// Opens the project detail view embedded inside the app shell's content
@@ -42,8 +39,10 @@ void showProjectDetail(BuildContext context, ProjectModel project) {
 ///
 /// Accent color follows project type: cyan for code, fuchsia for research.
 ///
-/// Has two tabs (FR-001): "Übersicht" (today's content, unchanged) and
-/// "Roadmap" (read-only three-tier fallback view). Embedded directly inside
+/// Has three tabs (FR-001): "Vision" (first — absorbs the former
+/// "Übersicht" content, plus hero/pillars/scorecard/links when vision data
+/// is available), "Roadmap" (read-only three-tier fallback view), and
+/// "Zeitstrahl" (tier-0 only). Embedded directly inside
 /// [ShellScreen]'s content area (see `openProjectDetailProvider`) instead of
 /// being pushed as its own route, so it no longer owns a [Scaffold] — the
 /// shell provides the surrounding chrome. [onBack] is invoked instead of
@@ -62,10 +61,10 @@ class ProjectDetailPanel extends ConsumerStatefulWidget {
   ConsumerState<ProjectDetailPanel> createState() => _ProjectDetailPanelState();
 }
 
-enum _DetailTab { uebersicht, vision, roadmap, zeitstrahl }
+enum _DetailTab { vision, roadmap, zeitstrahl }
 
 class _ProjectDetailPanelState extends ConsumerState<ProjectDetailPanel> {
-  _DetailTab _tab = _DetailTab.uebersicht;
+  _DetailTab _tab = _DetailTab.vision;
 
   /// Tier-0 milestone selection, hoisted here (above the Roadmap/Zeitstrahl
   /// tab split) so it survives switching from Roadmap to Zeitstrahl and back
@@ -83,11 +82,6 @@ class _ProjectDetailPanelState extends ConsumerState<ProjectDetailPanel> {
         ? colors.fuch
         : colors.cyan;
 
-    final visionAsync = ref.watch(visionProvider(project));
-    final hasVision = visionAsync.maybeWhen(
-      data: (vision) => vision != null,
-      orElse: () => false,
-    );
     final roadmapAsync = ref.watch(roadmapProvider(project));
     final isTier0 = roadmapAsync.maybeWhen(
       data: (result) => result.source == RoadmapSource.productStore,
@@ -95,13 +89,11 @@ class _ProjectDetailPanelState extends ConsumerState<ProjectDetailPanel> {
     );
 
     // If a gated tab's underlying data disappears after it was selected
-    // (e.g. a race on first load), fall back to Übersicht rather than
-    // rendering a body for a tab whose button no longer exists.
-    if (_tab == _DetailTab.vision && !hasVision) {
-      _tab = _DetailTab.uebersicht;
-    }
+    // (e.g. a race on first load), fall back to Vision rather than
+    // rendering a body for a tab whose button no longer exists. Vision is
+    // always present (FR-001/FR-006), so it's the universal fallback.
     if (_tab == _DetailTab.zeitstrahl && !isTier0) {
-      _tab = _DetailTab.uebersicht;
+      _tab = _DetailTab.vision;
     }
 
     return DefaultTextStyle(
@@ -116,7 +108,7 @@ class _ProjectDetailPanelState extends ConsumerState<ProjectDetailPanel> {
           child: Column(
             children: [
               _buildHeader(context, colors, accent),
-              _buildTabSwitch(colors, accent, hasVision, isTier0),
+              _buildTabSwitch(colors, accent, isTier0),
               // Content fills the remaining space given by the shell.
               Expanded(
                 child: Padding(
@@ -138,10 +130,10 @@ class _ProjectDetailPanelState extends ConsumerState<ProjectDetailPanel> {
     Color accent,
   ) {
     return switch (_tab) {
-      _DetailTab.uebersicht => SingleChildScrollView(
-        child: _buildBody(context, ref, colors, accent),
+      _DetailTab.vision => VisionTab(
+        project: project,
+        legacyContent: _buildLegacyOverviewContent(context, ref, colors, accent),
       ),
-      _DetailTab.vision => VisionTab(project: project),
       _DetailTab.roadmap => RoadmapTab(
         project: project,
         accent: accent,
@@ -152,33 +144,18 @@ class _ProjectDetailPanelState extends ConsumerState<ProjectDetailPanel> {
     };
   }
 
-  Widget _buildTabSwitch(
-    AppColors colors,
-    Color accent,
-    bool hasVision,
-    bool isTier0,
-  ) {
+  Widget _buildTabSwitch(AppColors colors, Color accent, bool isTier0) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(0, 0, 0, 12),
       child: Row(
         children: [
           _TabButton(
-            label: 'Übersicht',
-            selected: _tab == _DetailTab.uebersicht,
+            label: 'Vision',
+            selected: _tab == _DetailTab.vision,
             colors: colors,
             accent: accent,
-            onTap: () => setState(() => _tab = _DetailTab.uebersicht),
+            onTap: () => setState(() => _tab = _DetailTab.vision),
           ),
-          if (hasVision) ...[
-            const SizedBox(width: 8),
-            _TabButton(
-              label: 'Vision',
-              selected: _tab == _DetailTab.vision,
-              colors: colors,
-              accent: accent,
-              onTap: () => setState(() => _tab = _DetailTab.vision),
-            ),
-          ],
           const SizedBox(width: 8),
           _TabButton(
             label: 'Roadmap',
@@ -296,7 +273,12 @@ class _ProjectDetailPanelState extends ConsumerState<ProjectDetailPanel> {
     );
   }
 
-  Widget _buildBody(
+  /// The former "Übersicht" tab body (FR-003/FR-006), now absorbed into the
+  /// Vision tab: project description, files, token scorecard, git links, and
+  /// quick actions — reused verbatim, not reimplemented. [VisionTab] renders
+  /// this after its own hero/pillars/scorecard content when vision data is
+  /// present, or as the sole content when it's absent (legacy guard).
+  Widget _buildLegacyOverviewContent(
     BuildContext context,
     WidgetRef ref,
     AppColors colors,
@@ -304,17 +286,6 @@ class _ProjectDetailPanelState extends ConsumerState<ProjectDetailPanel> {
   ) {
     final git = project.git;
     final qa = ref.read(quickActionsProvider);
-
-    // FR-002: the vision teaser is additive-only below the existing
-    // Übersicht content, and hidden entirely for a legacy project without
-    // `docs/product/VISION.md` — same `visionProvider` the tab-gating logic
-    // in `build()` already reads, so a project without vision data behaves
-    // identically to before this feature (no teaser, no crash).
-    final visionAsync = ref.watch(visionProvider(project));
-    final vision = visionAsync.maybeWhen(
-      data: (v) => v,
-      orElse: () => null,
-    );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -359,21 +330,6 @@ class _ProjectDetailPanelState extends ConsumerState<ProjectDetailPanel> {
           accent: accent,
           qa: qa,
         ),
-
-        // --- Vision-Teaser (FR-002) ---
-        if (vision != null) ...[
-          const SizedBox(height: 8),
-          VisionTeaserCard(
-            vision: vision,
-            scorecard: VisionScorecardData.fromRoadmapData(
-              ref
-                  .watch(roadmapProvider(project))
-                  .maybeWhen(data: (r) => r.data, orElse: () => RoadmapData.empty),
-            ),
-            colors: colors,
-            onTap: () => setState(() => _tab = _DetailTab.vision),
-          ),
-        ],
       ],
     );
   }
@@ -429,7 +385,7 @@ class _EmptyZeitstrahlState extends StatelessWidget {
 }
 
 /// Segmented-control-style tab button used by [ProjectDetailPanel]'s
-/// "Übersicht"/"Vision"/"Roadmap"/"Zeitstrahl" switch (FR-001).
+/// "Vision"/"Roadmap"/"Zeitstrahl" switch (FR-001).
 class _TabButton extends StatelessWidget {
   const _TabButton({
     required this.label,

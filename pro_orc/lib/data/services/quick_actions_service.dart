@@ -25,6 +25,18 @@ class QuickActionsService {
     await Process.run('open', [projectPath], runInShell: true);
   }
 
+  /// Reveals a local path in Finder, but only if it exists on disk. Returns
+  /// `true` on success, `false` if the path doesn't exist — callers show a
+  /// graceful failure indicator instead of silently no-op'ing.
+  Future<bool> openLocalPathInFinder(String path) async {
+    final exists =
+        await FileSystemEntity.isDirectory(path) ||
+        await FileSystemEntity.isFile(path);
+    if (!exists) return false;
+    await Process.run('open', [path], runInShell: true);
+    return true;
+  }
+
   /// Builds the shell command that cd's into [projectPath] and runs Claude
   /// Code with [prompt] as its argument — `claude "<prompt>"`. Pure and
   /// exposed for testing so the escaping of both the path and the prompt is
