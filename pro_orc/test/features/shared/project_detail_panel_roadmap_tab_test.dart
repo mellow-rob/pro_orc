@@ -4,9 +4,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:pro_orc/data/db/app_database.dart';
-import 'package:pro_orc/data/models/project_model.dart';
+import 'package:pro_orc/data/models/project_model.dart'
+    show MdFileInfo, ProjectModel;
 import 'package:pro_orc/data/models/project_type.dart';
 import 'package:pro_orc/data/models/roadmap_data.dart';
+import 'package:pro_orc/data/models/session_data.dart';
 import 'package:pro_orc/data/models/vision_data.dart';
 import 'package:pro_orc/data/services/roadmap/roadmap_repository.dart';
 import 'package:pro_orc/features/shared/project_detail_panel.dart';
@@ -18,6 +20,7 @@ import 'package:pro_orc/features/shared/vision/vision_scorecard.dart';
 import 'package:pro_orc/features/shared/vision/vision_section.dart';
 import 'package:pro_orc/providers/database_provider.dart';
 import 'package:pro_orc/providers/roadmap_provider.dart';
+import 'package:pro_orc/providers/session_provider.dart';
 import 'package:pro_orc/providers/vision_provider.dart';
 import 'package:pro_orc/theme/n3_colors.dart';
 
@@ -43,7 +46,7 @@ void main() {
     await db.close();
   });
 
-  final project = const ProjectModel(
+  final defaultProject = const ProjectModel(
     folderId: 'my-folder',
     displayName: 'My Project',
     path: '/tmp/my-folder',
@@ -55,7 +58,11 @@ void main() {
     WidgetTester tester, {
     RoadmapResult? roadmapResult,
     VisionData? vision,
+    ProjectModel? project,
+    ProjectSessionData? sessionData,
   }) async {
+    final activeProject = project ?? defaultProject;
+
     tester.view.physicalSize = const Size(1200, 1400);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.resetPhysicalSize);
@@ -64,7 +71,7 @@ void main() {
       ProviderScope(
         overrides: [
           appDatabaseProvider.overrideWithValue(db),
-          roadmapProvider(project).overrideWith(
+          roadmapProvider(activeProject).overrideWith(
             (ref) async =>
                 roadmapResult ??
                 const RoadmapResult(
@@ -80,11 +87,18 @@ void main() {
                   source: RoadmapSource.local,
                 ),
           ),
-          visionProvider(project).overrideWith((ref) async => vision),
+          visionProvider(activeProject).overrideWith((ref) async => vision),
+          // projectSessionsProvider does real disk I/O (scans
+          // ~/.claude/projects) which never resolves inside flutter_test's
+          // fake-async pump loop — overridden with a deterministic fixture,
+          // same rationale as roadmapProvider/visionProvider above.
+          projectSessionsProvider(activeProject.path).overrideWith(
+            (ref) async => sessionData ?? ProjectSessionData.empty,
+          ),
         ],
         child: MaterialApp(
           theme: ThemeData.dark().copyWith(extensions: const [AppColors.dark]),
-          home: Scaffold(body: ProjectDetailPanel(project: project)),
+          home: Scaffold(body: ProjectDetailPanel(project: activeProject)),
         ),
       ),
     );
@@ -499,6 +513,153 @@ void main() {
         await tester.tap(find.text('Links'));
         await _pumpIgnoringOverflow(tester);
         expect(find.text('GitHub Repo'), findsOneWidget);
+      },
+    );
+  });
+
+  group('ProjectDetailPanel — FR-001/FR-002/FR-003: Dateien and Token tabs '
+      '(feature 006)', () {
+    const legacyResult = RoadmapResult(
+      data: RoadmapData(
+        milestones: [
+          RoadmapMilestone(
+            name: 'M1 — Fundament',
+            status: 'done',
+            phases: [RoadmapPhase(name: 'Phase 1', status: 'done')],
+          ),
+        ],
+      ),
+      source: RoadmapSource.local,
+    );
+
+    final projectWithFiles = const ProjectModel(
+      folderId: 'my-folder',
+      displayName: 'My Project',
+      path: '/tmp/my-folder',
+      projectType: ProjectType.code,
+      description: 'A test project description.',
+      mdFiles: [MdFileInfo(name: 'README.md', path: '/tmp/my-folder/README.md', relativePath: 'README.md')],
+    );
+
+    testWidgets(
+      'shows exactly 6 tab buttons (Vision, Roadmap, Zeitstrahl, Links, '
+      'Dateien, Token) for a tier-0 project',
+      (tester) async {
+        const tier0Result = RoadmapResult(
+          data: RoadmapData(
+            nextMdContent: '# Stand',
+            milestones: [RoadmapMilestone(name: 'M9', status: 'in-progress')],
+          ),
+          source: RoadmapSource.productStore,
+        );
+
+        await pumpPanel(tester, roadmapResult: tier0Result, vision: null);
+
+        expect(find.text('Vision'), findsOneWidget);
+        expect(find.text('Roadmap'), findsOneWidget);
+        expect(find.text('Zeitstrahl'), findsOneWidget);
+        expect(find.text('Links'), findsOneWidget);
+        expect(find.text('Dateien'), findsOneWidget);
+        expect(find.text('Token'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'Dateien and Token tabs are present even for a legacy project with no '
+      'docs/product/ at all (FR-003)',
+      (tester) async {
+        await pumpPanel(tester, roadmapResult: legacyResult, vision: null);
+
+        expect(find.text('Dateien'), findsOneWidget);
+        expect(find.text('Token'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'Vision tab no longer renders the DATEIEN or TOKEN-NUTZUNG sections '
+      '(FR-001/FR-002 — moved to their own tabs)',
+      (tester) async {
+        await pumpPanel(tester, roadmapResult: legacyResult, vision: null);
+
+        expect(find.text('DATEIEN'), findsNothing);
+        expect(find.text('TOKEN-NUTZUNG'), findsNothing);
+        // FR-004: remaining legacy content (description) still renders.
+        expect(find.text('A test project description.'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'selecting the Dateien tab renders the project\'s markdown file '
+      'hierarchy',
+      (tester) async {
+        await pumpPanel(
+          tester,
+          roadmapResult: legacyResult,
+          vision: null,
+          project: projectWithFiles,
+        );
+
+        await tester.tap(find.text('Dateien'));
+        await _pumpIgnoringOverflow(tester);
+
+        expect(find.text('README.md'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'selecting the Dateien tab shows a visible empty state when the '
+      'project has no markdown files (FR-001/SC-003)',
+      (tester) async {
+        await pumpPanel(tester, roadmapResult: legacyResult, vision: null);
+
+        await tester.tap(find.text('Dateien'));
+        await _pumpIgnoringOverflow(tester);
+
+        expect(find.text('Keine Dateien gefunden'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'selecting the Token tab renders the TOKEN-NUTZUNG scorecard as sole '
+      'content, with its own empty state for a project with no session data',
+      (tester) async {
+        await pumpPanel(tester, roadmapResult: legacyResult, vision: null);
+
+        await tester.tap(find.text('Token'));
+        await _pumpIgnoringOverflow(tester);
+
+        expect(find.text('TOKEN-NUTZUNG'), findsOneWidget);
+        expect(
+          find.text('Keine Daten zur Token-Nutzung vorhanden.'),
+          findsOneWidget,
+        );
+      },
+    );
+
+    testWidgets(
+      'switching from Dateien to Token and back to Vision preserves the '
+      'selection-persistence contract (no crash, tab content restored)',
+      (tester) async {
+        await pumpPanel(
+          tester,
+          roadmapResult: legacyResult,
+          vision: null,
+          project: projectWithFiles,
+        );
+
+        await tester.tap(find.text('Dateien'));
+        await _pumpIgnoringOverflow(tester);
+        expect(find.text('README.md'), findsOneWidget);
+
+        await tester.tap(find.text('Token'));
+        await _pumpIgnoringOverflow(tester);
+        expect(find.text('TOKEN-NUTZUNG'), findsOneWidget);
+        expect(find.text('README.md'), findsNothing);
+
+        await tester.tap(find.text('Vision'));
+        await _pumpIgnoringOverflow(tester);
+        expect(find.text('A test project description.'), findsOneWidget);
+        expect(find.text('TOKEN-NUTZUNG'), findsNothing);
       },
     );
   });

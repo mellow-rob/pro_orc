@@ -8,7 +8,6 @@ import 'package:pro_orc/features/shared/detail/description_section.dart';
 import 'package:pro_orc/features/shared/detail/file_preview_section.dart';
 import 'package:pro_orc/features/shared/detail/links_section.dart';
 import 'package:pro_orc/features/shared/detail/quick_actions_section.dart';
-import 'package:pro_orc/features/shared/detail/section_card.dart';
 import 'package:pro_orc/features/shared/detail/token_scorecard_section.dart';
 import 'package:pro_orc/features/shared/rename_project_dialog.dart';
 import 'package:pro_orc/features/shared/roadmap/roadmap_tab.dart';
@@ -41,14 +40,15 @@ void showProjectDetail(BuildContext context, ProjectModel project) {
 ///
 /// Accent color follows project type: cyan for code, fuchsia for research.
 ///
-/// Has four tabs: "Vision" (first — absorbs the former "Übersicht" content,
+/// Has six tabs: "Vision" (first — absorbs the former "Übersicht" content,
 /// plus hero/pillars/scorecard when vision data is available), "Roadmap"
-/// (read-only three-tier fallback view), "Zeitstrahl" (tier-0 only), and
-/// "Links" (last, always present — feature 005). Embedded directly inside
-/// [ShellScreen]'s content area (see `openProjectDetailProvider`) instead of
-/// being pushed as its own route, so it no longer owns a [Scaffold] — the
-/// shell provides the surrounding chrome. [onBack] is invoked instead of
-/// `Navigator.pop` when the user wants to return to the previous tab.
+/// (read-only three-tier fallback view), "Zeitstrahl" (tier-0 only),
+/// "Links", "Dateien", and "Token" (last three always present — features
+/// 005 and 006). Embedded directly inside [ShellScreen]'s content area (see
+/// `openProjectDetailProvider`) instead of being pushed as its own route, so
+/// it no longer owns a [Scaffold] — the shell provides the surrounding
+/// chrome. [onBack] is invoked instead of `Navigator.pop` when the user
+/// wants to return to the previous tab.
 class ProjectDetailPanel extends ConsumerStatefulWidget {
   const ProjectDetailPanel({super.key, required this.project, this.onBack});
 
@@ -63,7 +63,7 @@ class ProjectDetailPanel extends ConsumerStatefulWidget {
   ConsumerState<ProjectDetailPanel> createState() => _ProjectDetailPanelState();
 }
 
-enum _DetailTab { vision, roadmap, zeitstrahl, links }
+enum _DetailTab { vision, roadmap, zeitstrahl, links, dateien, token }
 
 class _ProjectDetailPanelState extends ConsumerState<ProjectDetailPanel> {
   _DetailTab _tab = _DetailTab.vision;
@@ -144,6 +144,8 @@ class _ProjectDetailPanelState extends ConsumerState<ProjectDetailPanel> {
       ),
       _DetailTab.zeitstrahl => _ZeitstrahlTabBody(project: project),
       _DetailTab.links => _LinksTabBody(project: project),
+      _DetailTab.dateien => _DateienTabBody(project: project),
+      _DetailTab.token => _TokenTabBody(project: project),
     };
   }
 
@@ -184,6 +186,22 @@ class _ProjectDetailPanelState extends ConsumerState<ProjectDetailPanel> {
             colors: colors,
             accent: accent,
             onTap: () => setState(() => _tab = _DetailTab.links),
+          ),
+          const SizedBox(width: 8),
+          _TabButton(
+            label: 'Dateien',
+            selected: _tab == _DetailTab.dateien,
+            colors: colors,
+            accent: accent,
+            onTap: () => setState(() => _tab = _DetailTab.dateien),
+          ),
+          const SizedBox(width: 8),
+          _TabButton(
+            label: 'Token',
+            selected: _tab == _DetailTab.token,
+            colors: colors,
+            accent: accent,
+            onTap: () => setState(() => _tab = _DetailTab.token),
           ),
         ],
       ),
@@ -285,10 +303,11 @@ class _ProjectDetailPanelState extends ConsumerState<ProjectDetailPanel> {
   }
 
   /// The former "Übersicht" tab body (FR-003/FR-006), now absorbed into the
-  /// Vision tab: project description, files, token scorecard, git links, and
-  /// quick actions — reused verbatim, not reimplemented. [VisionTab] renders
-  /// this after its own hero/pillars/scorecard content when vision data is
-  /// present, or as the sole content when it's absent (legacy guard).
+  /// Vision tab: project description, git links, and quick actions — reused
+  /// verbatim, not reimplemented. [VisionTab] renders this after its own
+  /// hero/pillars/scorecard content when vision data is present, or as the
+  /// sole content when it's absent (legacy guard). Dateien and Token-Nutzung
+  /// moved to their own tabs (feature 006); no longer rendered here.
   Widget _buildLegacyOverviewContent(
     BuildContext context,
     WidgetRef ref,
@@ -308,26 +327,6 @@ class _ProjectDetailPanelState extends ConsumerState<ProjectDetailPanel> {
             accent: accent,
             description: project.description!,
           ),
-
-        // --- Dateien (.md Hierarchie) ---
-        if (project.mdFiles != null && project.mdFiles!.isNotEmpty)
-          SectionCard(
-            colors: colors,
-            accent: accent,
-            title: 'DATEIEN',
-            child: FilePreviewSection(
-              mdFiles: project.mdFiles!,
-              colors: colors,
-              accent: accent,
-            ),
-          ),
-
-        // --- Token-Nutzung (Scorecard) ---
-        TokenScorecardSection(
-          projectPath: project.path,
-          colors: colors,
-          accent: accent,
-        ),
 
         // --- Git & Links ---
         if (git != null)
@@ -449,8 +448,86 @@ class _EmptyLinksState extends StatelessWidget {
   }
 }
 
+/// The "Dateien" tab body (FR-001, feature 006): always present, same
+/// unconditional-visibility exception as the Links tab. Reuses
+/// [FilePreviewSection] unchanged; that widget renders an empty [Column]
+/// for a null/empty `mdFiles` list rather than any visible placeholder, so
+/// this wrapper supplies a visible empty state instead of leaving the tab
+/// blank.
+class _DateienTabBody extends StatelessWidget {
+  const _DateienTabBody({required this.project});
+
+  final ProjectModel project;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).extension<AppColors>()!;
+    final mdFiles = project.mdFiles;
+
+    if (mdFiles == null || mdFiles.isEmpty) {
+      return _EmptyDateienState(colors: colors);
+    }
+
+    final accent = project.projectType == ProjectType.research
+        ? colors.fuch
+        : colors.cyan;
+
+    return SingleChildScrollView(
+      child: FilePreviewSection(
+        mdFiles: mdFiles,
+        colors: colors,
+        accent: accent,
+      ),
+    );
+  }
+}
+
+class _EmptyDateienState extends StatelessWidget {
+  const _EmptyDateienState({required this.colors});
+
+  final AppColors colors;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Text(
+        'Keine Dateien gefunden',
+        style: TextStyle(color: colors.textSec, fontSize: 14),
+      ),
+    );
+  }
+}
+
+/// The "Token" tab body (FR-002, feature 006): always present, same
+/// unconditional-visibility exception as the Links tab. Reuses
+/// [TokenScorecardSection] unchanged — that widget already renders its own
+/// [SectionCard] title plus internal loading/empty states gracefully as
+/// standalone content, so no additional wrapper empty-state is needed here.
+class _TokenTabBody extends StatelessWidget {
+  const _TokenTabBody({required this.project});
+
+  final ProjectModel project;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).extension<AppColors>()!;
+    final accent = project.projectType == ProjectType.research
+        ? colors.fuch
+        : colors.cyan;
+
+    return SingleChildScrollView(
+      child: TokenScorecardSection(
+        projectPath: project.path,
+        colors: colors,
+        accent: accent,
+      ),
+    );
+  }
+}
+
 /// Segmented-control-style tab button used by [ProjectDetailPanel]'s
-/// "Vision"/"Roadmap"/"Zeitstrahl"/"Links" switch (feature 005).
+/// "Vision"/"Roadmap"/"Zeitstrahl"/"Links"/"Dateien"/"Token" switch
+/// (features 005, 006).
 class _TabButton extends StatelessWidget {
   const _TabButton({
     required this.label,
