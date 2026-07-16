@@ -12,12 +12,12 @@ updated: 2026-07-16
 
 ## In-flight features
 
-- **006-vision-first-tab-consolidation** — Vision-first tab consolidation: merge Übersicht into Vision, product version, links section (milestone: m10-detail-ui-refinement, stage: verify)
+None.
 
 ## Next cursor
 
-**006-vision-first-tab-consolidation** — recommended next feature (no unmet dependencies, first eligible feature in roadmap order).
+None — no eligible feature (all done/cancelled, or blocked by unmet dependencies).
 
 ## How to continue
 
-Run `a1-plan` to create an executable plan for the next-cursor feature, or `a1-execute` if a plan already exists.
+Run `a1-progress` to review overall project state and decide the next milestone.
