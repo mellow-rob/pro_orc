@@ -133,6 +133,168 @@ Der eigentliche Lead-Absatz.
     });
   });
 
+  group('VisionReader — version (FR-002)', () {
+    test('parses a quoted version from frontmatter', () async {
+      final project = await _createTempProject();
+      addTearDown(() => project.delete(recursive: true));
+
+      await _writeVisionMd(project, '''
+---
+version: "2026.06 — Closed Beta"
+---
+# Titel
+
+Lead-Satz.
+''');
+
+      final data = await VisionReader().read(project.path);
+
+      expect(data, isNotNull);
+      expect(data!.version, '2026.06 — Closed Beta');
+    });
+
+    test('parses an unquoted version from frontmatter', () async {
+      final project = await _createTempProject();
+      addTearDown(() => project.delete(recursive: true));
+
+      await _writeVisionMd(project, '''
+---
+version: 2026.06
+---
+Lead-Satz.
+''');
+
+      final data = await VisionReader().read(project.path);
+
+      expect(data, isNotNull);
+      expect(data!.version, '2026.06');
+    });
+
+    test('version is null when frontmatter has no version key', () async {
+      final project = await _createTempProject();
+      addTearDown(() => project.delete(recursive: true));
+
+      await _writeVisionMd(project, '''
+---
+status: draft
+---
+Lead-Satz.
+''');
+
+      final data = await VisionReader().read(project.path);
+
+      expect(data, isNotNull);
+      expect(data!.version, isNull);
+    });
+
+    test('version is null when there is no frontmatter block at all', () async {
+      final project = await _createTempProject();
+      addTearDown(() => project.delete(recursive: true));
+
+      await _writeVisionMd(project, 'Lead-Satz ganz ohne Frontmatter.');
+
+      final data = await VisionReader().read(project.path);
+
+      expect(data, isNotNull);
+      expect(data!.version, isNull);
+    });
+
+    test('version is null when frontmatter is malformed (unterminated)', () async {
+      final project = await _createTempProject();
+      addTearDown(() => project.delete(recursive: true));
+
+      await _writeVisionMd(project, '''
+---
+version: "2026.06"
+Lead-Satz.
+''');
+
+      final data = await VisionReader().read(project.path);
+
+      // Unterminated frontmatter swallows the whole file, so there's no
+      // lead paragraph left — the whole thing is null, not a crash.
+      expect(data, isNull);
+    });
+  });
+
+  group('VisionReader — links (FR-004)', () {
+    test('parses multiple links, mixed web and local', () async {
+      final project = await _createTempProject();
+      addTearDown(() => project.delete(recursive: true));
+
+      await _writeVisionMd(project, '''
+Lead-Satz.
+
+## Links
+
+- [GitHub Repo](https://github.com/example/pro-orc)
+- [Live App](https://pro-orc.example.com)
+- [Projektordner](/Users/rob/code/pro_orc)
+''');
+
+      final data = await VisionReader().read(project.path);
+
+      expect(data, isNotNull);
+      expect(data!.links, hasLength(3));
+      expect(data.links[0].title, 'GitHub Repo');
+      expect(data.links[0].target, 'https://github.com/example/pro-orc');
+      expect(data.links[0].isWeb, isTrue);
+      expect(data.links[1].isWeb, isTrue);
+      expect(data.links[2].title, 'Projektordner');
+      expect(data.links[2].target, '/Users/rob/code/pro_orc');
+      expect(data.links[2].isWeb, isFalse);
+    });
+
+    test('links section absent yields an empty list', () async {
+      final project = await _createTempProject();
+      addTearDown(() => project.delete(recursive: true));
+
+      await _writeVisionMd(project, 'Lead-Satz ohne Links-Sektion.');
+
+      final data = await VisionReader().read(project.path);
+
+      expect(data, isNotNull);
+      expect(data!.links, isEmpty);
+    });
+
+    test('links section present with zero entries yields an empty list', () async {
+      final project = await _createTempProject();
+      addTearDown(() => project.delete(recursive: true));
+
+      await _writeVisionMd(project, '''
+Lead-Satz.
+
+## Links
+
+''');
+
+      final data = await VisionReader().read(project.path);
+
+      expect(data, isNotNull);
+      expect(data!.links, isEmpty);
+    });
+
+    test('malformed link lines are skipped, not thrown', () async {
+      final project = await _createTempProject();
+      addTearDown(() => project.delete(recursive: true));
+
+      await _writeVisionMd(project, '''
+Lead-Satz.
+
+## Links
+
+- Kein Markdown-Link-Format hier.
+- [Valider Link](https://example.com)
+''');
+
+      final data = await VisionReader().read(project.path);
+
+      expect(data, isNotNull);
+      expect(data!.links, hasLength(1));
+      expect(data.links.single.title, 'Valider Link');
+    });
+  });
+
   group('VisionReader — file missing', () {
     test('returns null when docs/product/VISION.md does not exist', () async {
       final project = await _createTempProject();

@@ -21,11 +21,36 @@ class VisionPillar {
   const VisionPillar({required this.name, required this.description});
 }
 
+/// One product link, parsed from a `## Links` bullet of the form
+/// `- [<title>](<target>)`.
+class VisionLink {
+  /// The link's display title, e.g. `GitHub Repo`.
+  final String title;
+
+  /// The link target — either a URL or a local filesystem path.
+  final String target;
+
+  /// True when [target] starts with `http://` or `https://`; false for
+  /// local filesystem paths.
+  final bool isWeb;
+
+  const VisionLink({
+    required this.title,
+    required this.target,
+    required this.isWeb,
+  });
+}
+
 /// Parsed content of `docs/product/VISION.md`.
 class VisionData {
   /// The `# <Title>` heading, e.g. `Pro Orc — Vision`, or null if the file
   /// has no top-level heading.
   final String? title;
+
+  /// The product version, parsed from the frontmatter `version:` key
+  /// (e.g. `version: "2026.06 — Closed Beta"`), or null if absent or the
+  /// frontmatter block itself is missing/malformed.
+  final String? version;
 
   /// The lead paragraph — the first non-heading paragraph in the file
   /// (blockquote markers `>` are stripped), e.g. the one-paragraph vision
@@ -35,5 +60,15 @@ class VisionData {
   /// Pillars listed under `## Pillars`, in file order.
   final List<VisionPillar> pillars;
 
-  const VisionData({this.title, required this.lead, this.pillars = const []});
+  /// Links listed under `## Links`, in file order. Empty when the section
+  /// is absent or has zero entries.
+  final List<VisionLink> links;
+
+  const VisionData({
+    this.title,
+    this.version,
+    required this.lead,
+    this.pillars = const [],
+    this.links = const [],
+  });
 }
