@@ -37,6 +37,8 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
   final _gitController = TextEditingController();
   final _ignoreAddController = TextEditingController();
   final _vaultController = TextEditingController();
+  final _ignoreAddFocusNode = FocusNode();
+  bool _ignoreAddHighlighted = false;
 
   @override
   void initState() {
@@ -49,6 +51,7 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
     _gitController.dispose();
     _ignoreAddController.dispose();
     _vaultController.dispose();
+    _ignoreAddFocusNode.dispose();
     super.dispose();
   }
 
@@ -124,7 +127,17 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
 
   Future<void> _addIgnorePattern() async {
     final pattern = _ignoreAddController.text.trim();
-    if (pattern.isNotEmpty && !_ignorePatterns.contains(pattern)) {
+    if (pattern.isEmpty) {
+      // Clicking plus on an empty field must never be a silent no-op —
+      // send focus to the field and briefly highlight it so the user sees
+      // where input is expected.
+      _ignoreAddFocusNode.requestFocus();
+      setState(() => _ignoreAddHighlighted = true);
+      await Future.delayed(const Duration(milliseconds: 1200));
+      if (mounted) setState(() => _ignoreAddHighlighted = false);
+      return;
+    }
+    if (!_ignorePatterns.contains(pattern)) {
       setState(() => _ignorePatterns.add(pattern));
       _ignoreAddController.clear();
       await _saveIgnorePatterns();
@@ -334,18 +347,35 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
                 Row(
                   children: [
                     Expanded(
-                      child: TextField(
-                        controller: _ignoreAddController,
-                        style: TextStyle(
-                          color: colors.textPri,
-                          fontSize: 13,
-                          fontFamily: 'SF Mono',
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(8),
+                          boxShadow: _ignoreAddHighlighted
+                              ? [
+                                  BoxShadow(
+                                    color: colors.cyan.withValues(alpha: 0.6),
+                                    blurRadius: 8,
+                                    spreadRadius: 1,
+                                  ),
+                                ]
+                              : const [],
                         ),
-                        decoration: colors.glassInputDecoration(
-                          hintText: 'Muster eingeben...',
-                          isDense: true,
+                        child: TextField(
+                          key: const Key('ignoreAddField'),
+                          controller: _ignoreAddController,
+                          focusNode: _ignoreAddFocusNode,
+                          style: TextStyle(
+                            color: colors.textPri,
+                            fontSize: 13,
+                            fontFamily: 'SF Mono',
+                          ),
+                          decoration: colors.glassInputDecoration(
+                            hintText: 'Muster eingeben...',
+                            isDense: true,
+                          ),
+                          onSubmitted: (_) => _addIgnorePattern(),
                         ),
-                        onSubmitted: (_) => _addIgnorePattern(),
                       ),
                     ),
                     const SizedBox(width: 8),
