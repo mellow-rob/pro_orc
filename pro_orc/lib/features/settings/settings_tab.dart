@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:launch_at_startup/launch_at_startup.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:path/path.dart' as p;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:pro_orc/features/onboarding/onboarding_wizard.dart';
@@ -35,10 +36,7 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
   bool _loading = true;
 
   final _gitController = TextEditingController();
-  final _ignoreAddController = TextEditingController();
   final _vaultController = TextEditingController();
-  final _ignoreAddFocusNode = FocusNode();
-  bool _ignoreAddHighlighted = false;
 
   @override
   void initState() {
@@ -49,9 +47,7 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
   @override
   void dispose() {
     _gitController.dispose();
-    _ignoreAddController.dispose();
     _vaultController.dispose();
-    _ignoreAddFocusNode.dispose();
     super.dispose();
   }
 
@@ -125,23 +121,18 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
 
   // --- Ignore Patterns ---
 
+  /// Opens the native macOS folder picker and adds the picked folder's
+  /// basename as an ignore pattern. Cancelling the picker (null) is a no-op.
+  /// Free-text/wildcard patterns are not creatable via this UI anymore —
+  /// the basename is the exact unit `_matchesAnyIgnorePattern` compares
+  /// against (see project_scanner.dart).
   Future<void> _addIgnorePattern() async {
-    final pattern = _ignoreAddController.text.trim();
-    if (pattern.isEmpty) {
-      // Clicking plus on an empty field must never be a silent no-op —
-      // send focus to the field and briefly highlight it so the user sees
-      // where input is expected.
-      _ignoreAddFocusNode.requestFocus();
-      setState(() => _ignoreAddHighlighted = true);
-      await Future.delayed(const Duration(milliseconds: 1200));
-      if (mounted) setState(() => _ignoreAddHighlighted = false);
-      return;
-    }
-    if (!_ignorePatterns.contains(pattern)) {
-      setState(() => _ignorePatterns.add(pattern));
-      _ignoreAddController.clear();
-      await _saveIgnorePatterns();
-    }
+    final dir = await getDirectoryPath();
+    if (dir == null) return;
+    final pattern = p.basename(dir);
+    if (pattern.isEmpty || _ignorePatterns.contains(pattern)) return;
+    setState(() => _ignorePatterns.add(pattern));
+    await _saveIgnorePatterns();
   }
 
   Future<void> _removeIgnorePattern(int index) async {
@@ -312,7 +303,7 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
             colors: colors,
             icon: Icons.visibility_off_outlined,
             title: 'Ignorierte Ordner',
-            subtitle: 'Ordnernamen oder Prefixe mit * (z.B. build*)',
+            subtitle: 'Ordner, die von der Projekt-Suche ausgeschlossen werden',
             child: Column(
               children: [
                 if (_ignorePatterns.isNotEmpty)
@@ -347,38 +338,11 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
                 Row(
                   children: [
                     Expanded(
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(8),
-                          boxShadow: _ignoreAddHighlighted
-                              ? [
-                                  BoxShadow(
-                                    color: colors.cyan.withValues(alpha: 0.6),
-                                    blurRadius: 8,
-                                    spreadRadius: 1,
-                                  ),
-                                ]
-                              : const [],
-                        ),
-                        child: TextField(
-                          key: const Key('ignoreAddField'),
-                          controller: _ignoreAddController,
-                          focusNode: _ignoreAddFocusNode,
-                          style: TextStyle(
-                            color: colors.textPri,
-                            fontSize: 13,
-                            fontFamily: 'SF Mono',
-                          ),
-                          decoration: colors.glassInputDecoration(
-                            hintText: 'Muster eingeben...',
-                            isDense: true,
-                          ),
-                          onSubmitted: (_) => _addIgnorePattern(),
-                        ),
+                      child: Text(
+                        'Ordner per Auswahl-Dialog hinzufuegen',
+                        style: TextStyle(color: colors.textDim, fontSize: 12),
                       ),
                     ),
-                    const SizedBox(width: 8),
                     IconButton(
                       onPressed: _addIgnorePattern,
                       icon: Icon(
@@ -386,7 +350,7 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
                         color: colors.cyan,
                         size: 20,
                       ),
-                      tooltip: 'Hinzufuegen',
+                      tooltip: 'Ordner hinzufuegen',
                     ),
                   ],
                 ),
