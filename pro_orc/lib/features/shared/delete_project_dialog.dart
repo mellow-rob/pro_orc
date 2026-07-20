@@ -2,9 +2,11 @@ import 'dart:developer' as developer;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:pro_orc/data/models/deletion_result.dart';
 import 'package:pro_orc/data/models/external_resource.dart';
 import 'package:pro_orc/data/models/project_model.dart';
 import 'package:pro_orc/data/services/deletion_service.dart';
+import 'package:pro_orc/data/services/external_deletion_service.dart';
 import 'package:pro_orc/data/services/gh_detection_service.dart';
 import 'package:pro_orc/data/services/resource_detector.dart';
 import 'package:pro_orc/data/services/vercel_detection_service.dart';
@@ -64,11 +66,18 @@ class DeleteProjectDialog extends ConsumerStatefulWidget {
     required this.project,
     this.vercelDetectionService = const VercelDetectionService(),
     this.ghDetectionService = const GhDetectionService(),
+    this.ghRunner = defaultProcessRunner,
   });
 
   final ProjectModel project;
   final VercelDetectionService vercelDetectionService;
   final GhDetectionService ghDetectionService;
+
+  /// Injectable `gh` CLI process runner used for active GitHub deletion
+  /// (mirrors the `whichCommand` injection convention) — default real
+  /// `Process.run`, overridable in tests so `gh repo delete` outcomes can
+  /// be simulated without spawning real processes.
+  final ProcessRunner ghRunner;
 
   @override
   ConsumerState<DeleteProjectDialog> createState() =>
@@ -86,6 +95,19 @@ class _DeleteProjectDialogState extends ConsumerState<DeleteProjectDialog> {
 
   /// URIs of resources the user wants to clean up (unchecked by default)
   final Set<String> _selectedResources = {};
+
+  /// External-deletion outcomes keyed by resource URI, populated as each
+  /// [DeletionResult] arrives during [_DialogStep.running] — absent means
+  /// still in progress (spinner row), present means the row can flip to a
+  /// success/failure icon. Never contains an entry for a Figma resource
+  /// (FR-010 — never dispatched) or the local-folder deletion (surfaced
+  /// separately via [_localDeleteSucceeded]).
+  final Map<String, DeletionResult> _externalResults = {};
+
+  /// null = local folder/DB deletion not yet finished; true/false once
+  /// [deleteProject] has returned. Runs independently of the external
+  /// deletions (FR-008) — a failed/slow external deletion never blocks it.
+  bool? _localDeleteSucceeded;
 
   /// null = still resolving availability, true/false = resolved.
   /// Gates whether Vercel/GitHub resources render an active-delete
@@ -233,22 +255,47 @@ class _DeleteProjectDialogState extends ConsumerState<DeleteProjectDialog> {
   /// `_step == _DialogStep.destructiveWarning`, which is no longer true)
   /// (FR-015/FR-016).
   ///
-  /// External-resource execution wiring (Vercel/gh CLI calls, per-resource
-  /// success/failure) is stubbed here and completed in Wave 4 — this wave
-  /// only establishes the flow-control gate and the in-place result
-  /// container that Wave 4's per-resource rows will populate.
+  /// The local folder/DB deletion ([deleteProject]) and the selected
+  /// external-resource deletions ([deleteSelectedExternalResources]) are
+  /// launched CONCURRENTLY and awaited together — one being slow or
+  /// failing never delays or blocks the other (FR-008). Each external
+  /// result flips its row from spinner to success/failure in place via
+  /// [_externalResults] as soon as it arrives, without waiting for the
+  /// whole batch.
   Future<void> _startDeletionFlow() async {
     setState(() => _step = _DialogStep.running);
 
-    final success = await deleteProject(widget.project.path);
+    final resources = _resources ?? const <ExternalResource>[];
+    final selectedResources = resources
+        .where((r) => _selectedResources.contains(r.uri))
+        .toList();
+
+    final localDeleteFuture = deleteProject(widget.project.path);
+    final externalDeleteFuture = deleteSelectedExternalResources(
+      selectedResources,
+      ghRunner: widget.ghRunner,
+      onResult: (result) {
+        if (!mounted) return;
+        setState(() => _externalResults[result.uri] = result);
+      },
+    );
+
+    final results = await Future.wait([
+      localDeleteFuture,
+      externalDeleteFuture,
+    ]);
 
     if (!mounted) return;
 
+    final success = results[0] as bool;
     if (success) {
       ref.invalidate(projectsProvider);
     }
 
-    setState(() => _step = _DialogStep.result);
+    setState(() {
+      _localDeleteSucceeded = success;
+      _step = _DialogStep.result;
+    });
   }
 
   IconData _iconForType(ExternalResourceType type) {
@@ -642,11 +689,12 @@ class _DeleteProjectDialogState extends ConsumerState<DeleteProjectDialog> {
 
   /// In-place transitioning result container (Variant A): a single list
   /// whose per-resource rows show an in-progress state while
-  /// [_DialogStep.running] and will flip to a success/failure icon once
-  /// Wave 4 wires up the actual per-resource execution. Ends with an
-  /// explicit "Schliessen" action that only appears once [_DialogStep.result]
-  /// is reached, and never auto-closes (FR-018) — the dialog stays on this
-  /// step until that button is tapped.
+  /// [_DialogStep.running] and flip to a success/failure icon in place as
+  /// each [DeletionResult] arrives in [_externalResults] (Figma rows never
+  /// receive a result — FR-010 — and stay on their static hint). Ends with
+  /// an explicit "Schliessen" action that only appears once
+  /// [_DialogStep.result] is reached, and never auto-closes (FR-018) — the
+  /// dialog stays on this step until that button is tapped.
   Widget _buildResultContainer(AppColors colors) {
     final selectedList = _resources!
         .where((r) => _selectedResources.contains(r.uri))
@@ -666,14 +714,22 @@ class _DeleteProjectDialogState extends ConsumerState<DeleteProjectDialog> {
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
                 : Icon(
-                    Icons.check_circle_outline,
-                    color: Colors.green.shade400,
+                    _localDeleteSucceeded == false
+                        ? Icons.error_outline
+                        : Icons.check_circle_outline,
+                    color: _localDeleteSucceeded == false
+                        ? Colors.red.shade400
+                        : Colors.green.shade400,
                     size: 22,
                   ),
             const SizedBox(width: 8),
             Expanded(
               child: Text(
-                isRunning ? 'Projekt wird geloescht…' : 'Projekt geloescht',
+                isRunning
+                    ? 'Projekt wird geloescht…'
+                    : (_localDeleteSucceeded == false
+                          ? 'Projektordner konnte nicht geloescht werden'
+                          : 'Projekt geloescht'),
                 style: TextStyle(
                   color: colors.textPri,
                   fontSize: 18,
@@ -688,7 +744,7 @@ class _DeleteProjectDialogState extends ConsumerState<DeleteProjectDialog> {
           Text(
             isRunning
                 ? 'Ausgewaehlte Ressourcen:'
-                : 'Folgende Ressourcen muessen manuell bereinigt werden:',
+                : 'Ergebnis der ausgewaehlten Ressourcen:',
             style: TextStyle(color: colors.textSec, fontSize: 13),
           ),
           const SizedBox(height: 12),
@@ -704,25 +760,25 @@ class _DeleteProjectDialogState extends ConsumerState<DeleteProjectDialog> {
             padding: const EdgeInsets.all(12),
             child: Column(
               children: selectedList.map((resource) {
+                // Figma (and any other permanently hint-only type) is
+                // never dispatched to a runner (FR-010) — it always shows
+                // its static hint, never a spinner or a result icon.
+                final isDispatchable =
+                    resource.type != ExternalResourceType.figma &&
+                    resource.type != ExternalResourceType.other;
+                final result = _externalResults[resource.uri];
+                final pending = isDispatchable && isRunning && result == null;
+
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 12),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      isRunning
-                          ? SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.amber.shade600,
-                              ),
-                            )
-                          : Icon(
-                              _iconForType(resource.type),
-                              color: Colors.amber.shade600,
-                              size: 16,
-                            ),
+                      _buildResultRowIcon(
+                        pending: pending,
+                        result: result,
+                        fallbackIcon: _iconForType(resource.type),
+                      ),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Column(
@@ -746,9 +802,13 @@ class _DeleteProjectDialogState extends ConsumerState<DeleteProjectDialog> {
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              resource.hint,
+                              result?.reason ?? resource.hint,
                               style: TextStyle(
-                                color: colors.textDim,
+                                color: result == null
+                                    ? colors.textDim
+                                    : (result.succeeded
+                                          ? Colors.green.shade400
+                                          : Colors.red.shade400),
                                 fontSize: 12,
                               ),
                             ),
@@ -776,6 +836,35 @@ class _DeleteProjectDialogState extends ConsumerState<DeleteProjectDialog> {
             ),
           ),
       ],
+    );
+  }
+
+  /// The leading icon for one result row: a spinner while [pending], the
+  /// resource-type icon while the row has no result yet and isn't
+  /// dispatchable (Figma — always static), or a success/failure icon once
+  /// [result] has arrived.
+  Widget _buildResultRowIcon({
+    required bool pending,
+    required DeletionResult? result,
+    required IconData fallbackIcon,
+  }) {
+    if (pending) {
+      return SizedBox(
+        width: 16,
+        height: 16,
+        child: CircularProgressIndicator(
+          strokeWidth: 2,
+          color: Colors.amber.shade600,
+        ),
+      );
+    }
+    if (result == null) {
+      return Icon(fallbackIcon, color: Colors.amber.shade600, size: 16);
+    }
+    return Icon(
+      result.succeeded ? Icons.check_circle : Icons.error_outline,
+      color: result.succeeded ? Colors.green.shade400 : Colors.red.shade400,
+      size: 16,
     );
   }
 }

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:pro_orc/data/models/project_model.dart';
+import 'package:pro_orc/data/services/external_deletion_service.dart';
 import 'package:pro_orc/data/services/gh_detection_service.dart';
 import 'package:pro_orc/data/services/vercel_detection_service.dart';
 import 'package:pro_orc/features/shared/delete_project_dialog.dart';
@@ -26,6 +27,7 @@ Future<void> pumpDeleteProjectDialog(
   ProjectModel project, {
   required bool vercelAvailable,
   required bool ghAvailable,
+  ProcessRunner ghRunner = defaultProcessRunner,
 }) async {
   tester.view.physicalSize = const Size(1200, 900);
   tester.view.devicePixelRatio = 1.0;
@@ -48,6 +50,7 @@ Future<void> pumpDeleteProjectDialog(
                 whichCommand: ghAvailable ? 'true' : 'false',
                 ghCommand: 'true',
               ),
+              ghRunner: ghRunner,
             ),
           ),
         ),
