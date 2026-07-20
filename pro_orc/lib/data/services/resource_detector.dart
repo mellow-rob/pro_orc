@@ -168,7 +168,21 @@ ExternalResource _classifyUrl(String url, String host) {
     );
   }
 
-  if (host.contains('vercel.com')) {
+  if (host == 'vercel.com' || host.endsWith('.vercel.com')) {
+    return ExternalResource(
+      type: ExternalResourceType.vercel,
+      label: 'Vercel-Projekt',
+      uri: url,
+      hint:
+          'Vercel-Projekt via `vercel project remove` loeschen oder '
+          'manuell im Dashboard',
+    );
+  }
+
+  // Deployment URLs (<project>-<hash>.vercel.app) do not carry a derivable
+  // dashboard project name and stay hint-only (see
+  // external_deletion_service.dart::deriveVercelProjectName).
+  if (host.endsWith('.vercel.app') || host == 'vercel.app') {
     return ExternalResource(
       type: ExternalResourceType.other,
       label: 'Vercel-Deployment',

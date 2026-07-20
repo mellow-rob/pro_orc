@@ -98,6 +98,8 @@ class _DeleteProjectDialogState extends ConsumerState<DeleteProjectDialog> {
     switch (type) {
       case ExternalResourceType.github:
         return Icons.code;
+      case ExternalResourceType.vercel:
+        return Icons.cloud_outlined;
       case ExternalResourceType.figma:
         return Icons.palette_outlined;
       case ExternalResourceType.claudeMemory:
