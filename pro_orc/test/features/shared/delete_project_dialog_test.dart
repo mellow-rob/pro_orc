@@ -1,19 +1,16 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
 
 import 'package:pro_orc/data/models/git_data.dart';
 import 'package:pro_orc/data/models/project_model.dart';
 import 'package:pro_orc/data/models/project_type.dart';
-import 'package:pro_orc/data/services/gh_detection_service.dart';
 import 'package:pro_orc/data/services/memory_reader.dart'
     show encodeProjectPath;
-import 'package:pro_orc/data/services/vercel_detection_service.dart';
-import 'package:pro_orc/features/shared/delete_project_dialog.dart';
-import 'package:pro_orc/theme/n3_colors.dart';
+
+import 'delete_project_dialog_test_helpers.dart';
 
 /// [ExternalResource]-producing fixtures reuse the real
 /// `detectExternalResources` path — real project directories with a github
@@ -112,64 +109,11 @@ void main() {
       }
     });
 
-    Future<void> pumpDialog(
-      WidgetTester tester,
-      ProjectModel project, {
-      required bool vercelAvailable,
-      required bool ghAvailable,
-    }) async {
-      tester.view.physicalSize = const Size(1200, 900);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(tester.view.resetPhysicalSize);
-
-      // _loadResources() and _resolveAvailability() (started from
-      // initState) spawn real processes (Process.run) and do real file
-      // I/O. If pumpWidget itself is called outside tester.runAsync(),
-      // those real async operations start in the fake-async test zone and
-      // their completion callbacks never fire — the test hangs forever,
-      // not just fails. Wrapping pumpWidget in runAsync, then awaiting
-      // the dialog's exposed initialLoad future in a second runAsync,
-      // lets both operations actually run against the real event loop.
-      await tester.runAsync(() async {
-        await tester.pumpWidget(
-          UncontrolledProviderScope(
-            container: ProviderContainer(),
-            child: MaterialApp(
-              theme: ThemeData.dark().copyWith(
-                extensions: const [AppColors.dark],
-              ),
-              home: Scaffold(
-                body: DeleteProjectDialog(
-                  project: project,
-                  vercelDetectionService: VercelDetectionService(
-                    whichCommand: vercelAvailable ? 'true' : 'false',
-                    vercelCommand: 'true',
-                  ),
-                  ghDetectionService: GhDetectionService(
-                    whichCommand: ghAvailable ? 'true' : 'false',
-                    ghCommand: 'true',
-                  ),
-                ),
-              ),
-            ),
-          ),
-        );
-      });
-
-      final state = tester.state<State<DeleteProjectDialog>>(
-        find.byType(DeleteProjectDialog),
-      );
-      await tester.runAsync(
-        () => (state as dynamic).initialLoad as Future<void>,
-      );
-      await tester.pumpAndSettle();
-    }
-
     testWidgets(
       'two linked Vercel projects render two independent enabled checkboxes '
       'when VercelDetectionService is available (FR-003)',
       (tester) async {
-        await pumpDialog(
+        await pumpDeleteProjectDialog(
           tester,
           vercelTwoProject,
           vercelAvailable: true,
@@ -196,7 +140,7 @@ void main() {
       'a detected GitHub repo renders an enabled active-delete checkbox '
       'when GhDetectionService is available (FR-004)',
       (tester) async {
-        await pumpDialog(
+        await pumpDeleteProjectDialog(
           tester,
           githubProject,
           vercelAvailable: false,
@@ -210,7 +154,7 @@ void main() {
 
     testWidgets('a detected Claude memory directory always renders an enabled '
         'checkbox regardless of CLI availability (FR-005)', (tester) async {
-      await pumpDialog(
+      await pumpDeleteProjectDialog(
         tester,
         claudeMemoryProject,
         vercelAvailable: false,
@@ -228,7 +172,7 @@ void main() {
       'when gh is NOT installed/authenticated, the GitHub resource shows '
       'NO active-delete checkbox and the hint-only status text (FR-006)',
       (tester) async {
-        await pumpDialog(
+        await pumpDeleteProjectDialog(
           tester,
           githubProject,
           vercelAvailable: true,
@@ -245,7 +189,7 @@ void main() {
       'shows NO active-delete checkbox and the hint-only status text '
       '(FR-006)',
       (tester) async {
-        await pumpDialog(
+        await pumpDeleteProjectDialog(
           tester,
           vercelOneProject,
           vercelAvailable: false,
@@ -261,7 +205,7 @@ void main() {
       'checking an available Vercel resource flips its status text to '
       '"wird aktiv geloescht" (Variant A per-row status)',
       (tester) async {
-        await pumpDialog(
+        await pumpDeleteProjectDialog(
           tester,
           vercelOneProject,
           vercelAvailable: true,
@@ -282,7 +226,7 @@ void main() {
       'the dialog contains no token/credential input field and stores no '
       'secret — gating is solely CLI-availability driven (FR-013)',
       (tester) async {
-        await pumpDialog(
+        await pumpDeleteProjectDialog(
           tester,
           githubAndVercelProject,
           vercelAvailable: true,

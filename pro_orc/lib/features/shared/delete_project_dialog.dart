@@ -12,15 +12,45 @@ import 'package:pro_orc/features/shell/glass_dialog.dart';
 import 'package:pro_orc/providers/projects_provider.dart';
 import 'package:pro_orc/theme/n3_colors.dart';
 
+/// The dialog's current screen.
+///
+/// `form` → (checked destructive-external resource?) → `destructiveWarning`
+/// → `running` → `result`. A Claude-memory-only (or empty) selection skips
+/// straight from `form` to `running` — the extra "cannot be undone" warning
+/// (FR-007) is required only when a destructive-external resource
+/// (Vercel/GitHub) is checked. There is no code path that reaches `running`
+/// with a checked destructive-external resource except via
+/// `destructiveWarning` (SC-004 — no bypass).
+enum _DialogStep {
+  /// Main form: resource checkboxes, project-name confirmation, buttons.
+  form,
+
+  /// Dedicated full-step "cannot be undone" screen (Variant A), shown only
+  /// when at least one checked resource is destructive-external.
+  destructiveWarning,
+
+  /// Deletion flow in progress. The dialog is not closable (no close
+  /// button, no barrier dismiss, no cancel) and "Loeschen" cannot be
+  /// re-triggered (FR-015/FR-016) until [result].
+  running,
+
+  /// Final per-resource report. Ends with an explicit "Schliessen" action;
+  /// never auto-closes (FR-018).
+  result,
+}
+
 /// GitHub-style deletion confirmation dialog with external resource detection.
 ///
 /// Requires the user to type the exact project name before enabling
-/// the "Loeschen" button — prevents accidental permanent deletion.
+/// the "Loeschen" button — prevents accidental permanent deletion. If a
+/// checked resource is destructive-external (Vercel/GitHub), an additional
+/// "cannot be undone" step (FR-007) is required before the flow starts.
 ///
 /// On confirm: calls [deleteProject], invalidates [projectsProvider]
 /// for auto-refresh. If resources were selected, shows a post-deletion
-/// summary with cleanup hints before closing. Otherwise pops immediately.
-/// On cancel: pops with `false` — no side effects.
+/// result report before closing. Otherwise pops immediately.
+/// On cancel (from the main form only): pops with `false` — no side
+/// effects.
 ///
 /// [vercelDetectionService] and [ghDetectionService] gate whether Vercel/
 /// GitHub resources render an active-delete checkbox (default real
@@ -47,16 +77,15 @@ class DeleteProjectDialog extends ConsumerStatefulWidget {
 
 class _DeleteProjectDialogState extends ConsumerState<DeleteProjectDialog> {
   late final TextEditingController _textController;
-  bool _isDeleting = false;
+
+  /// Current screen. See [_DialogStep] for the allowed transitions.
+  _DialogStep _step = _DialogStep.form;
 
   /// null = still loading, empty = none found
   List<ExternalResource>? _resources;
 
   /// URIs of resources the user wants to clean up (unchecked by default)
   final Set<String> _selectedResources = {};
-
-  /// true after deletion — shows cleanup summary instead of the main form
-  bool _showSummary = false;
 
   /// null = still resolving availability, true/false = resolved.
   /// Gates whether Vercel/GitHub resources render an active-delete
@@ -145,27 +174,81 @@ class _DeleteProjectDialogState extends ConsumerState<DeleteProjectDialog> {
 
   bool get _nameMatches => _textController.text == widget.project.displayName;
 
-  Future<void> _onDelete() async {
-    if (!_nameMatches || _isDeleting) return;
-    setState(() => _isDeleting = true);
+  /// Types flagged as destructive-external (Vercel/GitHub) require the
+  /// additional "cannot be undone" confirmation step (FR-007) before any
+  /// external deletion call is made. Claude memory (filesystem-only) and
+  /// hint-only types (Figma/other, never actively deleted per FR-010) do
+  /// not.
+  bool _isDestructiveExternal(ExternalResourceType type) {
+    switch (type) {
+      case ExternalResourceType.vercel:
+      case ExternalResourceType.github:
+        return true;
+      case ExternalResourceType.claudeMemory:
+      case ExternalResourceType.figma:
+      case ExternalResourceType.other:
+        return false;
+    }
+  }
+
+  bool get _hasCheckedDestructiveExternal {
+    final resources = _resources;
+    if (resources == null) return false;
+    return resources.any(
+      (r) =>
+          _selectedResources.contains(r.uri) && _isDestructiveExternal(r.type),
+    );
+  }
+
+  /// Entry point from the "Loeschen" button on the main form. Routes to
+  /// the destructive-warning step (FR-007) when a checked resource is
+  /// destructive-external; otherwise starts the flow directly (a
+  /// Claude-memory-only or empty selection needs no extra warning). This
+  /// is the ONLY path from [_DialogStep.form] — there is no other call
+  /// site that starts the flow, so a destructive-external resource can
+  /// never be deleted with just the project-name confirmation (SC-004).
+  void _onDeleteButtonPressed() {
+    if (!_nameMatches || _step != _DialogStep.form) return;
+
+    if (_hasCheckedDestructiveExternal) {
+      setState(() => _step = _DialogStep.destructiveWarning);
+    } else {
+      _startDeletionFlow();
+    }
+  }
+
+  void _onDestructiveWarningBack() {
+    setState(() => _step = _DialogStep.form);
+  }
+
+  void _onDestructiveWarningConfirmed() {
+    _startDeletionFlow();
+  }
+
+  /// Starts the actual deletion. Once called, the step immediately becomes
+  /// [_DialogStep.running] — the button is disabled, the close affordance
+  /// is gone, and a second activation of either the main-form or
+  /// destructive-warning button can no longer reach this method (both
+  /// guard on `_step == _DialogStep.form` /
+  /// `_step == _DialogStep.destructiveWarning`, which is no longer true)
+  /// (FR-015/FR-016).
+  ///
+  /// External-resource execution wiring (Vercel/gh CLI calls, per-resource
+  /// success/failure) is stubbed here and completed in Wave 4 — this wave
+  /// only establishes the flow-control gate and the in-place result
+  /// container that Wave 4's per-resource rows will populate.
+  Future<void> _startDeletionFlow() async {
+    setState(() => _step = _DialogStep.running);
 
     final success = await deleteProject(widget.project.path);
 
     if (!mounted) return;
 
-    if (!success) {
-      setState(() => _isDeleting = false);
-      return;
+    if (success) {
+      ref.invalidate(projectsProvider);
     }
 
-    ref.invalidate(projectsProvider);
-
-    // If any resources were selected, show the summary screen
-    if (_selectedResources.isNotEmpty) {
-      setState(() => _showSummary = true);
-    } else {
-      Navigator.of(context).pop(true);
-    }
+    setState(() => _step = _DialogStep.result);
   }
 
   IconData _iconForType(ExternalResourceType type) {
@@ -187,10 +270,18 @@ class _DeleteProjectDialogState extends ConsumerState<DeleteProjectDialog> {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).extension<AppColors>()!;
 
-    return GlassDialog(
-      maxWidth: 440,
-      child: _showSummary ? _buildSummary(colors) : _buildMainForm(colors),
-    );
+    final Widget child;
+    switch (_step) {
+      case _DialogStep.form:
+        child = _buildMainForm(colors);
+      case _DialogStep.destructiveWarning:
+        child = _buildDestructiveWarning(colors);
+      case _DialogStep.running:
+      case _DialogStep.result:
+        child = _buildResultContainer(colors);
+    }
+
+    return GlassDialog(maxWidth: 440, child: child);
   }
 
   Widget _buildMainForm(AppColors colors) {
@@ -437,151 +528,253 @@ class _DeleteProjectDialogState extends ConsumerState<DeleteProjectDialog> {
   }
 
   Widget _buildButtons(AppColors colors) {
-    final deleteEnabled = _nameMatches && !_isDeleting;
+    // Once the button has been activated once, _step is no longer `form`
+    // (it moves to destructiveWarning or straight to running), so this
+    // button is disabled for the remainder of the flow — a second
+    // activation cannot start a duplicate run (FR-016).
+    final deleteEnabled = _nameMatches && _step == _DialogStep.form;
 
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.end,
+    return Wrap(
+      alignment: WrapAlignment.end,
+      spacing: 8,
+      runSpacing: 8,
       children: [
         TextButton(
-          onPressed: _isDeleting
-              ? null
-              : () => Navigator.of(context).pop(false),
+          onPressed: _step == _DialogStep.form
+              ? () => Navigator.of(context).pop(false)
+              : null,
           style: TextButton.styleFrom(
             foregroundColor: colors.textSec,
             disabledForegroundColor: colors.textDim.withValues(alpha: 0.4),
           ),
           child: const Text('Abbrechen'),
         ),
-        const SizedBox(width: 8),
         FilledButton(
-          onPressed: deleteEnabled ? _onDelete : null,
+          onPressed: deleteEnabled ? _onDeleteButtonPressed : null,
           style: FilledButton.styleFrom(
             backgroundColor: Colors.red.shade700,
             disabledBackgroundColor: colors.textDim.withValues(alpha: 0.2),
             foregroundColor: Colors.white,
             disabledForegroundColor: colors.textDim.withValues(alpha: 0.5),
           ),
-          child: _isDeleting
-              ? const SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: Colors.white,
-                  ),
-                )
-              : const Text('Loeschen'),
+          child: const Text('Loeschen'),
         ),
       ],
     );
   }
 
-  Widget _buildSummary(AppColors colors) {
+  /// Dedicated full-step "cannot be undone" screen (Variant A, FR-007).
+  /// Shown only when a checked resource is destructive-external (see
+  /// [_hasCheckedDestructiveExternal]); replaces the main form entirely
+  /// rather than overlaying it. No close IconButton here either — the
+  /// only ways out are the two explicit actions below.
+  Widget _buildDestructiveWarning(AppColors colors) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(
+              Icons.warning_amber_rounded,
+              color: Colors.red.shade400,
+              size: 22,
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'Endgueltige Loeschung bestaetigen',
+                style: TextStyle(
+                  color: colors.textPri,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.red.shade900.withValues(alpha: 0.25),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: Colors.red.shade700.withValues(alpha: 0.4),
+              width: 1,
+            ),
+          ),
+          child: Text(
+            'Diese Aktion kann NICHT rueckgaengig gemacht werden. Die '
+            'ausgewaehlten externen Ressourcen (Vercel-Projekt und/oder '
+            'GitHub-Repository) werden dauerhaft geloescht.',
+            style: TextStyle(
+              color: colors.textPri,
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ),
+        const SizedBox(height: 24),
+        Wrap(
+          alignment: WrapAlignment.end,
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            TextButton(
+              onPressed: _onDestructiveWarningBack,
+              style: TextButton.styleFrom(foregroundColor: colors.textSec),
+              child: const Text('Zurueck'),
+            ),
+            FilledButton(
+              onPressed: _onDestructiveWarningConfirmed,
+              style: FilledButton.styleFrom(
+                backgroundColor: Colors.red.shade700,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Ja, endgueltig loeschen'),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  /// In-place transitioning result container (Variant A): a single list
+  /// whose per-resource rows show an in-progress state while
+  /// [_DialogStep.running] and will flip to a success/failure icon once
+  /// Wave 4 wires up the actual per-resource execution. Ends with an
+  /// explicit "Schliessen" action that only appears once [_DialogStep.result]
+  /// is reached, and never auto-closes (FR-018) — the dialog stays on this
+  /// step until that button is tapped.
+  Widget _buildResultContainer(AppColors colors) {
     final selectedList = _resources!
         .where((r) => _selectedResources.contains(r.uri))
         .toList();
+    final isRunning = _step == _DialogStep.running;
 
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Header
         Row(
           children: [
-            Icon(
-              Icons.check_circle_outline,
-              color: Colors.green.shade400,
-              size: 22,
-            ),
+            isRunning
+                ? const SizedBox(
+                    width: 22,
+                    height: 22,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : Icon(
+                    Icons.check_circle_outline,
+                    color: Colors.green.shade400,
+                    size: 22,
+                  ),
             const SizedBox(width: 8),
-            Text(
-              'Projekt geloescht',
-              style: TextStyle(
-                color: colors.textPri,
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
+            Expanded(
+              child: Text(
+                isRunning ? 'Projekt wird geloescht…' : 'Projekt geloescht',
+                style: TextStyle(
+                  color: colors.textPri,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
           ],
         ),
         const SizedBox(height: 12),
-        Text(
-          'Folgende Ressourcen muessen manuell bereinigt werden:',
-          style: TextStyle(color: colors.textSec, fontSize: 13),
-        ),
-        const SizedBox(height: 12),
-        Container(
-          decoration: BoxDecoration(
-            color: colors.bgElev.withValues(alpha: 0.3),
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(
-              color: colors.textDim.withValues(alpha: 0.2),
-              width: 1,
-            ),
+        if (selectedList.isNotEmpty) ...[
+          Text(
+            isRunning
+                ? 'Ausgewaehlte Ressourcen:'
+                : 'Folgende Ressourcen muessen manuell bereinigt werden:',
+            style: TextStyle(color: colors.textSec, fontSize: 13),
           ),
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            children: selectedList.map((resource) {
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Icon(
-                      _iconForType(resource.type),
-                      color: Colors.amber.shade600,
-                      size: 16,
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            resource.label,
-                            style: TextStyle(
-                              color: colors.textPri,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w500,
+          const SizedBox(height: 12),
+          Container(
+            decoration: BoxDecoration(
+              color: colors.bgElev.withValues(alpha: 0.3),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: colors.textDim.withValues(alpha: 0.2),
+                width: 1,
+              ),
+            ),
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              children: selectedList.map((resource) {
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      isRunning
+                          ? SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.amber.shade600,
+                              ),
+                            )
+                          : Icon(
+                              _iconForType(resource.type),
+                              color: Colors.amber.shade600,
+                              size: 16,
                             ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            resource.uri,
-                            style: TextStyle(
-                              color: colors.textDim,
-                              fontSize: 11,
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              resource.label,
+                              style: TextStyle(
+                                color: colors.textPri,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500,
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            resource.hint,
-                            style: TextStyle(
-                              color: colors.textDim,
-                              fontSize: 12,
+                            const SizedBox(height: 2),
+                            Text(
+                              resource.uri,
+                              style: TextStyle(
+                                color: colors.textDim,
+                                fontSize: 11,
+                              ),
                             ),
-                          ),
-                        ],
+                            const SizedBox(height: 2),
+                            Text(
+                              resource.hint,
+                              style: TextStyle(
+                                color: colors.textDim,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-              );
-            }).toList(),
-          ),
-        ),
-        const SizedBox(height: 20),
-        Align(
-          alignment: Alignment.centerRight,
-          child: FilledButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            style: FilledButton.styleFrom(
-              backgroundColor: colors.textDim.withValues(alpha: 0.2),
-              foregroundColor: colors.textPri,
+                    ],
+                  ),
+                );
+              }).toList(),
             ),
-            child: const Text('Schliessen'),
           ),
-        ),
+          const SizedBox(height: 20),
+        ],
+        if (!isRunning)
+          Align(
+            alignment: Alignment.centerRight,
+            child: FilledButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              style: FilledButton.styleFrom(
+                backgroundColor: colors.textDim.withValues(alpha: 0.2),
+                foregroundColor: colors.textPri,
+              ),
+              child: const Text('Schliessen'),
+            ),
+          ),
       ],
     );
   }
