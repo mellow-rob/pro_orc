@@ -1,6 +1,10 @@
 import 'dart:developer' as developer;
 import 'dart:io';
 
+import 'package:pro_orc/data/models/deletion_result.dart';
+import 'package:pro_orc/data/models/external_resource.dart';
+import 'package:pro_orc/data/services/external_deletion_service.dart';
+
 /// Escapes a value to sit safely inside a double-quoted AppleScript string
 /// literal: backslashes first (so the later quote-escape isn't doubled),
 /// then double quotes.
@@ -51,4 +55,86 @@ Future<bool> deleteProject(String projectPath) async {
     );
     return false;
   }
+}
+
+/// Actively deletes each resource in [resources] via its matching CLI/
+/// filesystem call, INDEPENDENTLY of the others (FR-008) — one resource's
+/// failure never prevents another's attempt, and callers are expected to
+/// run [deleteProject] (local folder/Trash) and the DB row deletion
+/// regardless of these results, since this function's job is scoped
+/// entirely to the external resources.
+///
+/// Figma (and any other hint-only type) resources in [resources] are
+/// SKIPPED — no delete call is ever made for them (FR-010, permanent —
+/// the public Figma API does not support file deletion). Only
+/// `vercel`/`github`/`claudeMemory` are actually dispatched.
+///
+/// [onResult] fires once per attempted resource, in no particular order,
+/// as soon as its [DeletionResult] is available — the dialog uses this to
+/// flip each row from spinner to success/failure in place rather than
+/// waiting for the whole batch.
+///
+/// [ghRunner] and [vercelRunner] are injectable (mirroring the project's
+/// `whichCommand` convention) so tests can simulate CLI outcomes without
+/// spawning real processes.
+Future<List<DeletionResult>> deleteSelectedExternalResources(
+  List<ExternalResource> resources, {
+  void Function(DeletionResult result)? onResult,
+  ProcessRunner ghRunner = defaultProcessRunner,
+  VercelProcessRunner vercelRunner = defaultVercelProcessRunner,
+}) async {
+  final results = <DeletionResult>[];
+
+  for (final resource in resources) {
+    DeletionResult? result;
+
+    try {
+      switch (resource.type) {
+        case ExternalResourceType.github:
+          final ownerRepo = deriveGhOwnerRepo(resource.uri);
+          result = ownerRepo == null
+              ? DeletionResult.genericFailure(
+                  resource.uri,
+                  resource.type,
+                  'GitHub-Repository konnte aus der URL nicht abgeleitet werden',
+                )
+              : await deleteGh(resource.uri, ownerRepo, runner: ghRunner);
+        case ExternalResourceType.vercel:
+          final projectName = deriveVercelProjectName(resource.uri);
+          result = projectName == null
+              ? DeletionResult.genericFailure(
+                  resource.uri,
+                  resource.type,
+                  'Vercel-Projektname konnte aus der URL nicht abgeleitet werden',
+                )
+              : await deleteVercel(
+                  resource.uri,
+                  projectName,
+                  runner: vercelRunner,
+                );
+        case ExternalResourceType.claudeMemory:
+          result = await deleteClaudeMemory(resource.uri, resource.uri);
+        case ExternalResourceType.figma:
+        case ExternalResourceType.other:
+          // Figma/other (permanently hint-only per FR-010) are never
+          // dispatched here.
+          continue;
+      }
+    } catch (e) {
+      developer.log(
+        'Failed to delete external resource ${resource.uri}: $e',
+        name: 'deletion_service',
+      );
+      result = DeletionResult.genericFailure(
+        resource.uri,
+        resource.type,
+        e.toString(),
+      );
+    }
+
+    results.add(result);
+    onResult?.call(result);
+  }
+
+  return results;
 }

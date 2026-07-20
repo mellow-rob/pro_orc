@@ -82,5 +82,57 @@ void main() {
 
       expect(resources, isEmpty);
     });
+
+    test(
+      'classifies a vercel.com dashboard URL as ExternalResourceType.vercel',
+      () async {
+        final file = File(p.join(tmp.path, 'STATE.md'));
+        await file.writeAsString(
+          'Deployed at https://vercel.com/my-scope/my-project for prod.',
+        );
+
+        final project = projectWithMdFiles([
+          MdFileInfo(
+            name: 'STATE.md',
+            relativePath: 'STATE.md',
+            path: file.path,
+          ),
+        ]);
+
+        final resources = await detectExternalResources(project);
+
+        expect(resources, hasLength(1));
+        expect(resources.first.type, ExternalResourceType.vercel);
+        expect(
+          resources.first.uri,
+          equals('https://vercel.com/my-scope/my-project'),
+        );
+      },
+    );
+
+    test(
+      'classifies a *.vercel.app deployment URL as ExternalResourceType.other '
+      '(no derivable project name, distinct from ExternalResourceType.vercel)',
+      () async {
+        final file = File(p.join(tmp.path, 'STATE.md'));
+        await file.writeAsString(
+          'Preview at https://my-app-abc123xyz.vercel.app for QA.',
+        );
+
+        final project = projectWithMdFiles([
+          MdFileInfo(
+            name: 'STATE.md',
+            relativePath: 'STATE.md',
+            path: file.path,
+          ),
+        ]);
+
+        final resources = await detectExternalResources(project);
+
+        expect(resources, hasLength(1));
+        expect(resources.first.type, ExternalResourceType.other);
+        expect(resources.first.type, isNot(ExternalResourceType.vercel));
+      },
+    );
   });
 }

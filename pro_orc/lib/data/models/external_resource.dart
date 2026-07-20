@@ -3,6 +3,9 @@ enum ExternalResourceType {
   /// GitHub repository
   github,
 
+  /// Vercel project (dashboard URL with a derivable project name)
+  vercel,
+
   /// Figma design file
   figma,
 
