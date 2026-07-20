@@ -5,6 +5,8 @@ import 'package:path/path.dart' as p;
 
 import 'package:pro_orc/data/models/external_resource.dart';
 import 'package:pro_orc/data/models/project_model.dart';
+import 'package:pro_orc/data/services/external_deletion_service.dart'
+    show isVercelDashboardProjectUrl;
 import 'package:pro_orc/data/services/memory_reader.dart';
 
 /// Detects all external resources linked to [project].
@@ -87,6 +89,20 @@ Future<List<ExternalResource>> detectExternalResources(
 
 /// Extracts external URLs from the given [mdFiles] that are not already in
 /// [seenUris]. Stops after 10 URLs.
+///
+/// Only URLs matching a known resource domain (see [_classifyUrl]) are
+/// considered at all — generic documentation/marketing domains (e.g.
+/// nextjs.org) are not "resources to clean up" and are skipped entirely
+/// rather than listed as a generic hint-only entry (previously the
+/// `_classifyUrl` fallback branch; removed as part of
+/// 2026-07-20-delete-dialog-resource-over-detection — that fallback is what
+/// caused doc-link floods on every scaffold README). This also makes the
+/// previously-considered "dedup by domain" unnecessary: with the fallback
+/// gone, a domain only ever produces an entry when it matches a specific,
+/// cleanup-relevant resource pattern, and a project can legitimately link
+/// several distinct resources under the same domain (e.g. two different
+/// `vercel.com/{scope}/{project}` dashboards for prod + preview) — deduping
+/// by domain would incorrectly drop the second one.
 Future<List<ExternalResource>> _scanMdFilesForUrls(
   List<MdFileInfo>? mdFiles,
   Set<String> seenUris,
@@ -94,7 +110,6 @@ Future<List<ExternalResource>> _scanMdFilesForUrls(
   if (mdFiles == null || mdFiles.isEmpty) return [];
 
   final urlRegex = RegExp(r'https?://[^\s)>\]]+');
-  final skipDomains = {'localhost', '127.0.0.1', 'example.com'};
   final foundUrls = <String, ExternalResource>{};
 
   for (final mdFile in mdFiles) {
@@ -129,12 +144,9 @@ Future<List<ExternalResource>> _scanMdFilesForUrls(
         final host = parsed.host.toLowerCase();
         if (host.isEmpty) continue;
 
-        // Skip noise domains
-        if (skipDomains.any((d) => host == d || host.endsWith('.$d'))) {
-          continue;
-        }
+        final resource = _classifyUrl(url, host, parsed);
+        if (resource == null) continue; // not a known resource domain
 
-        final resource = _classifyUrl(url, host);
         foundUrls[url] = resource;
       }
     } catch (e) {
@@ -148,9 +160,19 @@ Future<List<ExternalResource>> _scanMdFilesForUrls(
   return foundUrls.values.toList();
 }
 
-/// Classifies a URL by its domain into an [ExternalResource].
-ExternalResource _classifyUrl(String url, String host) {
-  if (host.contains('figma.com')) {
+/// Classifies a URL by its domain into an [ExternalResource], or returns
+/// `null` if the domain is not a known, cleanup-relevant resource service.
+///
+/// Deliberately an allowlist (Figma, Vercel, Firebase — GitHub is sourced
+/// separately from `GitData.githubUrl`, never from `.md` text) rather than a
+/// denylist of "noise" domains: a denylist grows forever and still lets any
+/// unlisted documentation/marketing domain (nextjs.org, MDN, npm, etc.)
+/// through as a generic `other` entry. Framework scaffold READMEs
+/// (`create-next-app` and similar) routinely link many such doc pages, which
+/// flooded the deletion dialog before this fix
+/// (2026-07-20-delete-dialog-resource-over-detection).
+ExternalResource? _classifyUrl(String url, String host, Uri parsed) {
+  if (host == 'figma.com' || host.endsWith('.figma.com')) {
     return ExternalResource(
       type: ExternalResourceType.figma,
       label: 'Figma-Design',
@@ -159,7 +181,18 @@ ExternalResource _classifyUrl(String url, String host) {
     );
   }
 
-  if (host.contains('firebase')) {
+  // Real Firebase project consoles/hosting only — exact/suffix host
+  // matching. The previous `host.contains('firebase')` also matched
+  // `firebase.google.com/docs/...` documentation links, misclassifying them
+  // as "Firebase-Projekt" entries.
+  if (host == 'firebase.google.com' ||
+      host == 'console.firebase.google.com' ||
+      host.endsWith('.firebaseapp.com') ||
+      host.endsWith('.web.app')) {
+    // firebase.google.com itself is the marketing/docs site, not a project
+    // console — only its console subdomain and hosted-project domains
+    // count as a real, cleanup-relevant resource.
+    if (host == 'firebase.google.com') return null;
     return ExternalResource(
       type: ExternalResourceType.other,
       label: 'Firebase-Projekt',
@@ -169,6 +202,13 @@ ExternalResource _classifyUrl(String url, String host) {
   }
 
   if (host == 'vercel.com' || host.endsWith('.vercel.com')) {
+    // Path-validated: only a real `<scope>/<project>` dashboard URL
+    // classifies as an actively-deletable Vercel project. Boilerplate
+    // links like `vercel.com/new?utm_...` (shipped by every
+    // create-next-app README) do not validate and are dropped entirely —
+    // they are not a linked project, just a generic "deploy" call to
+    // action.
+    if (!isVercelDashboardProjectUrl(url)) return null;
     return ExternalResource(
       type: ExternalResourceType.vercel,
       label: 'Vercel-Projekt',
@@ -191,13 +231,6 @@ ExternalResource _classifyUrl(String url, String host) {
     );
   }
 
-  // Default: use domain as label
-  // Strip leading "www." for cleaner display
-  final label = host.startsWith('www.') ? host.substring(4) : host;
-  return ExternalResource(
-    type: ExternalResourceType.other,
-    label: label,
-    uri: url,
-    hint: 'Manuell im Browser oeffnen und ggf. loeschen',
-  );
+  // Not a known resource domain — skip entirely (see doc comment above).
+  return null;
 }
