@@ -4,7 +4,7 @@ type: roadmap
 project: pro-orc
 title: "Pro Orc"
 status: active
-updated: 2026-07-16
+updated: 2026-07-20
 source: "scaffolded by a1-tools product init"
 milestones:
   - id: m1-stabilization
@@ -118,6 +118,16 @@ features:
     finished: 2026-07-16
     spec_path: null
     plan_path: null
+  - id: 009-complete-project-deletion
+    milestone: m8-project-organization
+    title: "Complete Project Deletion (incl. Vercel)"
+    status: done
+    stage: done
+    depends_on: []
+    started: 2026-07-20
+    finished: 2026-07-20
+    spec_path: projects/pro-orc/spec/007-complete-project-deletion.md
+    plan_path: null
 next: null
 ---
 
@@ -192,6 +202,9 @@ None.
 - **2026-07-16** — 008-files-tokens-own-tabs -> merge — stage transition via `product stage`
 - **2026-07-16** — 008-files-tokens-own-tabs -> origin-cleanup — stage transition via `product stage`
 - **2026-07-16** — 008-files-tokens-own-tabs -> done — stage transition via `product stage`
+- **2026-07-19** — feature '009-complete-project-deletion' added — new feature via `product add-feature`
+- **2026-07-19** — feature.md created for '009-complete-project-deletion' — formal spec/plan attached via `product feature-init`
+- **2026-07-20** — 009-complete-project-deletion -> done — stage transition via `product stage`
 
 ## Appendix — migrated details
 

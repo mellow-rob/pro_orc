@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated": "2026-07-16T15:58:59.327Z",
+  "generated": "2026-07-20T14:55:19.541Z",
   "project": {
     "id": "pro-orc",
     "title": "Pro Orc",
@@ -151,6 +151,18 @@
       "started": "2026-07-16",
       "finished": "2026-07-16",
       "spec_path": null,
+      "plan_path": null
+    },
+    {
+      "id": "009-complete-project-deletion",
+      "milestone": "m8-project-organization",
+      "title": "Complete Project Deletion (incl. Vercel)",
+      "status": "done",
+      "stage": "done",
+      "depends_on": [],
+      "started": "2026-07-20",
+      "finished": "2026-07-20",
+      "spec_path": "projects/pro-orc/spec/007-complete-project-deletion.md",
       "plan_path": null
     }
   ],
