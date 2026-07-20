@@ -220,6 +220,17 @@ typedef VercelProcessRunner =
 /// differently and "y\n" doesn't answer it), the process is killed and
 /// [VercelProcessOutcome.timedOut] is true — this function never blocks
 /// indefinitely.
+///
+/// Runs under `runInShell: true` (required so the spawned process inherits
+/// Homebrew's PATH — see the project's `Process.run` convention), which
+/// means the PID `Process.start` returns is the intermediate shell, not
+/// `vercel` itself. A plain SIGTERM `process.kill()` on that PID would not
+/// reliably reach the `vercel` child, leaving it running as an orphan if
+/// it doesn't exit on its own. To avoid that: on timeout this sends
+/// SIGKILL (which macOS also delivers to the shell's child on `sh -c`
+/// termination in practice) and then always awaits [Process.exitCode] —
+/// with its own short guard timeout — so the process is reaped rather
+/// than left as a zombie either way.
 Future<VercelProcessOutcome> defaultVercelProcessRunner(
   List<String> arguments, {
   Duration timeout = const Duration(seconds: 15),
@@ -238,26 +249,41 @@ Future<VercelProcessOutcome> defaultVercelProcessRunner(
   // versions; drain it so the process is never blocked on a full pipe.
   final stdoutSub = process.stdout.listen((_) {});
 
-  process.stdin.writeln('y');
-  await process.stdin.close();
-
   try {
-    final exitCode = await process.exitCode.timeout(timeout);
+    try {
+      process.stdin.writeln('y');
+      await process.stdin.close();
+    } catch (_) {
+      // The process may have already exited (e.g. an immediate auth
+      // failure) before we could write/close stdin — a broken pipe here
+      // is not a runner failure, the exit-code/stderr read below still
+      // determines the real outcome.
+    }
+
+    try {
+      final exitCode = await process.exitCode.timeout(timeout);
+      return VercelProcessOutcome(
+        exitCode: exitCode,
+        stderr: stderrBuffer.toString(),
+      );
+    } on TimeoutException {
+      process.kill(ProcessSignal.sigkill);
+      // Always reap after kill so the child never lingers as a zombie —
+      // bounded by its own short guard in case even SIGKILL doesn't land
+      // (e.g. a wedged shell wrapper).
+      await process.exitCode.timeout(
+        const Duration(seconds: 5),
+        onTimeout: () => -1,
+      );
+      return VercelProcessOutcome(
+        exitCode: -1,
+        stderr: stderrBuffer.toString(),
+        timedOut: true,
+      );
+    }
+  } finally {
     await stderrSub.cancel();
     await stdoutSub.cancel();
-    return VercelProcessOutcome(
-      exitCode: exitCode,
-      stderr: stderrBuffer.toString(),
-    );
-  } on TimeoutException {
-    process.kill();
-    await stderrSub.cancel();
-    await stdoutSub.cancel();
-    return VercelProcessOutcome(
-      exitCode: -1,
-      stderr: stderrBuffer.toString(),
-      timedOut: true,
-    );
   }
 }
 
@@ -304,12 +330,15 @@ Future<DeletionResult> deleteVercel(
 
     final stderrLower = outcome.stderr.toLowerCase();
 
-    if (stderrLower.contains('not valid') ||
+    if (stderrLower.contains('not logged in') ||
         stderrLower.contains('not authorized') ||
-        stderrLower.contains('not logged in')) {
+        stderrLower.contains('token provided') ||
+        stderrLower.contains('credentials')) {
       return DeletionResult.notAuthenticated(uri, ExternalResourceType.vercel);
     }
-    if (stderrLower.contains('no such project exists')) {
+    if (stderrLower.contains('no such project exists') ||
+        stderrLower.contains('project not found') ||
+        stderrLower.contains('does not exist')) {
       return DeletionResult.alreadyDeleted(uri, ExternalResourceType.vercel);
     }
 
