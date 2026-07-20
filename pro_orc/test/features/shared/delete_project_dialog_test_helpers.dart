@@ -28,6 +28,7 @@ Future<void> pumpDeleteProjectDialog(
   required bool vercelAvailable,
   required bool ghAvailable,
   ProcessRunner ghRunner = defaultProcessRunner,
+  VercelProcessRunner vercelRunner = defaultVercelProcessRunner,
 }) async {
   tester.view.physicalSize = const Size(1200, 900);
   tester.view.devicePixelRatio = 1.0;
@@ -51,6 +52,7 @@ Future<void> pumpDeleteProjectDialog(
                 ghCommand: 'true',
               ),
               ghRunner: ghRunner,
+              vercelRunner: vercelRunner,
             ),
           ),
         ),

@@ -74,13 +74,14 @@ Future<bool> deleteProject(String projectPath) async {
 /// flip each row from spinner to success/failure in place rather than
 /// waiting for the whole batch.
 ///
-/// [ghRunner] is injectable (mirroring the project's `whichCommand`
-/// convention) so tests can simulate CLI outcomes without spawning real
-/// processes.
+/// [ghRunner] and [vercelRunner] are injectable (mirroring the project's
+/// `whichCommand` convention) so tests can simulate CLI outcomes without
+/// spawning real processes.
 Future<List<DeletionResult>> deleteSelectedExternalResources(
   List<ExternalResource> resources, {
   void Function(DeletionResult result)? onResult,
   ProcessRunner ghRunner = defaultProcessRunner,
+  VercelProcessRunner vercelRunner = defaultVercelProcessRunner,
 }) async {
   final results = <DeletionResult>[];
 
@@ -98,13 +99,25 @@ Future<List<DeletionResult>> deleteSelectedExternalResources(
                   'GitHub-Repository konnte aus der URL nicht abgeleitet werden',
                 )
               : await deleteGh(resource.uri, ownerRepo, runner: ghRunner);
+        case ExternalResourceType.vercel:
+          final projectName = deriveVercelProjectName(resource.uri);
+          result = projectName == null
+              ? DeletionResult.genericFailure(
+                  resource.uri,
+                  resource.type,
+                  'Vercel-Projektname konnte aus der URL nicht abgeleitet werden',
+                )
+              : await deleteVercel(
+                  resource.uri,
+                  projectName,
+                  runner: vercelRunner,
+                );
         case ExternalResourceType.claudeMemory:
           result = await deleteClaudeMemory(resource.uri, resource.uri);
-        case ExternalResourceType.vercel:
         case ExternalResourceType.figma:
         case ExternalResourceType.other:
-          // Vercel active deletion, and Figma/other (permanently
-          // hint-only per FR-010), are not dispatched here.
+          // Figma/other (permanently hint-only per FR-010) are never
+          // dispatched here.
           continue;
       }
     } catch (e) {

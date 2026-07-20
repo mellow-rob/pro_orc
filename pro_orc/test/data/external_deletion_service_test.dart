@@ -20,10 +20,12 @@ ProcessRunner fakeRunner({required int exitCode, String stderr = ''}) {
 
 void main() {
   group('buildVercelDeleteArgs', () {
-    test('builds the exact expected argument list', () {
+    test('builds the exact expected argument list (no --yes: FR-014 '
+        'deviation, see doc comment — the installed vercel CLI 51.8.0 does '
+        'not accept that flag)', () {
       final args = buildVercelDeleteArgs('my-project');
 
-      expect(args, ['project', 'remove', 'my-project', '--yes']);
+      expect(args, ['project', 'remove', 'my-project']);
     });
 
     test('a project name containing shell metacharacters is passed as a '
@@ -37,8 +39,8 @@ void main() {
       // long as it stays a single element passed via Process.run's args
       // list (not runInShell string interpolation), the shell never
       // parses its metacharacters.
-      expect(args, ['project', 'remove', malicious, '--yes']);
-      expect(args.length, 4);
+      expect(args, ['project', 'remove', malicious]);
+      expect(args.length, 3);
       expect(args, isNot(contains(';')));
       expect(args, isNot(contains('rm')));
     });
@@ -311,4 +313,131 @@ void main() {
       expect(result.reason, 'war bereits geloescht');
     });
   });
+
+  group('deleteVercel', () {
+    VercelProcessRunner fixedVercelRunner({
+      required int exitCode,
+      String stderr = '',
+      bool timedOut = false,
+    }) {
+      return (List<String> arguments) async {
+        return VercelProcessOutcome(
+          exitCode: exitCode,
+          stderr: stderr,
+          timedOut: timedOut,
+        );
+      };
+    }
+
+    test('exit 0 returns DeletionResult.success', () async {
+      final result = await deleteVercel(
+        'https://vercel.com/scope/my-project',
+        'my-project',
+        runner: fixedVercelRunner(exitCode: 0),
+      );
+
+      expect(result.succeeded, isTrue);
+      expect(result.outcome, DeletionOutcome.success);
+    });
+
+    test(
+      'a not-authenticated/invalid-token error maps to notAuthenticated '
+      'even when the stderr ALSO happens to mention the project not '
+      'existing — the auth check takes priority so an auth failure is '
+      'never misreported as already-deleted success (mirrors deleteGh\'s '
+      'scope-before-not-found ordering discipline for the same reason)',
+      () async {
+        final result = await deleteVercel(
+          'https://vercel.com/scope/my-project',
+          'my-project',
+          runner: fixedVercelRunner(
+            exitCode: 1,
+            stderr:
+                'Error: The token provided via `--token` argument is not '
+                'valid. Please provide a valid token. No such project exists.',
+          ),
+        );
+
+        expect(result.succeeded, isFalse);
+        expect(result.outcome, DeletionOutcome.notAuthenticated);
+        expect(result.outcome, isNot(DeletionOutcome.alreadyDeleted));
+      },
+    );
+
+    test(
+      'a genuine not-found error (no auth failure) maps to alreadyDeleted '
+      'success, labelled "war bereits geloescht" (FR-017) — verified '
+      'against the real installed vercel CLI\'s exact stderr text',
+      () async {
+        final result = await deleteVercel(
+          'https://vercel.com/scope/my-project',
+          'my-project',
+          runner: fixedVercelRunner(
+            exitCode: 1,
+            stderr: 'Error: No such project exists',
+          ),
+        );
+
+        expect(result.succeeded, isTrue);
+        expect(result.outcome, DeletionOutcome.alreadyDeleted);
+        expect(result.reason, 'war bereits geloescht');
+      },
+    );
+
+    test(
+      'an unrecognized failure maps to genericFailure with a stderr gist',
+      () async {
+        final result = await deleteVercel(
+          'https://vercel.com/scope/my-project',
+          'my-project',
+          runner: fixedVercelRunner(
+            exitCode: 1,
+            stderr: 'Error: some unexpected Vercel API error',
+          ),
+        );
+
+        expect(result.succeeded, isFalse);
+        expect(result.outcome, DeletionOutcome.genericFailure);
+        expect(result.reason, contains('some unexpected Vercel API error'));
+      },
+    );
+
+    test(
+      'a timed-out process (the "y\\n" answer did not work, e.g. a future '
+      'CLI version prompts differently) maps to genericFailure with a '
+      'readable German reason, never hangs the caller',
+      () async {
+        final result = await deleteVercel(
+          'https://vercel.com/scope/my-project',
+          'my-project',
+          runner: fixedVercelRunner(exitCode: -1, timedOut: true),
+        );
+
+        expect(result.succeeded, isFalse);
+        expect(result.outcome, DeletionOutcome.genericFailure);
+        expect(
+          result.reason,
+          contains('Vercel-CLI hat nicht wie erwartet reagiert'),
+        );
+      },
+    );
+
+    test('a runner that throws is caught and mapped to genericFailure', () async {
+      Future<VercelProcessOutcome> throwingRunner(
+        List<String> arguments,
+      ) async {
+        throw Exception('process spawn failed');
+      }
+
+      final result = await deleteVercel(
+        'https://vercel.com/scope/my-project',
+        'my-project',
+        runner: throwingRunner,
+      );
+
+      expect(result.succeeded, isFalse);
+      expect(result.outcome, DeletionOutcome.genericFailure);
+    });
+  });
+
 }

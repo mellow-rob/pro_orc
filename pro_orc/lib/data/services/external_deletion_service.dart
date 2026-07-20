@@ -13,20 +13,32 @@
 /// per the project's 2026-07-13 command-injection lesson.
 library;
 
+import 'dart:async';
 import 'dart:developer' as developer;
 import 'dart:io';
 
 import 'package:pro_orc/data/models/deletion_result.dart';
 import 'package:pro_orc/data/models/external_resource.dart';
 
-/// Builds the argument list for `vercel project remove <name> --yes`.
+/// Builds the argument list for `vercel project remove <name>`.
 ///
 /// [projectName] is passed as a single, discrete argument — it is never
 /// concatenated into a shell string, so metacharacters (`;`, `"`, `` ` ``,
 /// `$()`) in the name cannot escape the argument boundary or chain an
 /// additional command.
+///
+/// NOTE (FR-014 deviation, 2026-07-20): the spec's `--yes` flag does not
+/// exist on the locally verified `vercel` CLI (51.8.0) — `vercel project
+/// remove --help` lists no `--yes`/`--force`/`--confirm` flag, and
+/// `--non-interactive` does not suppress the "Are you sure? (y/N)" prompt
+/// either. [deleteVercel] answers that interactive prompt itself by
+/// writing `"y\n"` to the child process's stdin (verified: piping `y`
+/// answers it and the command then completes and exits). The orchestrator
+/// approved this workaround as consistent with FR-013 (CLI-auth-only, no
+/// new token) since the destructive action was already double-confirmed
+/// in the dialog before this command ever runs.
 List<String> buildVercelDeleteArgs(String projectName) {
-  return ['project', 'remove', projectName, '--yes'];
+  return ['project', 'remove', projectName];
 }
 
 /// Builds the argument list for `gh repo delete <owner>/<repo> --yes`.
@@ -169,6 +181,151 @@ Future<DeletionResult> deleteGh(
     return DeletionResult.genericFailure(
       uri,
       ExternalResourceType.github,
+      e.toString(),
+    );
+  }
+}
+
+/// The outcome of running a Vercel deletion child process to completion —
+/// mirrors the fields of [ProcessResult] that [deleteVercel] needs.
+class VercelProcessOutcome {
+  final int exitCode;
+  final String stderr;
+
+  /// True if the process was killed after not finishing within the
+  /// timeout — a distinct condition from a normal non-zero exit, since it
+  /// means the CLI's interactive prompt behavior changed and the "y\n"
+  /// answer no longer worked.
+  final bool timedOut;
+
+  const VercelProcessOutcome({
+    required this.exitCode,
+    required this.stderr,
+    this.timedOut = false,
+  });
+}
+
+/// Runs `vercel <arguments>`, answering its interactive "Are you sure?"
+/// confirmation prompt by writing `"y\n"` to stdin (see the doc comment on
+/// [buildVercelDeleteArgs] for why this is needed instead of a flag).
+/// Injectable so tests can simulate CLI outcomes — including a timeout —
+/// without spawning a real process or depending on the machine's actual
+/// `vercel` login state.
+typedef VercelProcessRunner =
+    Future<VercelProcessOutcome> Function(List<String> arguments);
+
+/// Default [VercelProcessRunner]: starts the real `vercel` CLI, writes
+/// `"y\n"` to its stdin once, and waits up to [timeout] for it to exit.
+/// If it has not exited by then (e.g. a future CLI version prompts
+/// differently and "y\n" doesn't answer it), the process is killed and
+/// [VercelProcessOutcome.timedOut] is true — this function never blocks
+/// indefinitely.
+Future<VercelProcessOutcome> defaultVercelProcessRunner(
+  List<String> arguments, {
+  Duration timeout = const Duration(seconds: 15),
+}) async {
+  final process = await Process.start(
+    'vercel',
+    arguments,
+    runInShell: true,
+  );
+
+  final stderrBuffer = StringBuffer();
+  final stderrSub = process.stderr
+      .transform(const SystemEncoding().decoder)
+      .listen(stderrBuffer.write);
+  // vercel also prints the confirmation prompt to stdout in some
+  // versions; drain it so the process is never blocked on a full pipe.
+  final stdoutSub = process.stdout.listen((_) {});
+
+  process.stdin.writeln('y');
+  await process.stdin.close();
+
+  try {
+    final exitCode = await process.exitCode.timeout(timeout);
+    await stderrSub.cancel();
+    await stdoutSub.cancel();
+    return VercelProcessOutcome(
+      exitCode: exitCode,
+      stderr: stderrBuffer.toString(),
+    );
+  } on TimeoutException {
+    process.kill();
+    await stderrSub.cancel();
+    await stdoutSub.cancel();
+    return VercelProcessOutcome(
+      exitCode: -1,
+      stderr: stderrBuffer.toString(),
+      timedOut: true,
+    );
+  }
+}
+
+/// Deletes the Vercel project [projectName] via
+/// `vercel project remove <name>` (see [buildVercelDeleteArgs] for the
+/// FR-014 `--yes` deviation). [runner] defaults to
+/// [defaultVercelProcessRunner] and is overridable for tests.
+///
+/// Maps the CLI's exit code/stderr to a [DeletionResult]:
+/// - [VercelProcessOutcome.timedOut] → [DeletionResult.genericFailure]
+///   with the reason "Vercel-CLI hat nicht wie erwartet reagiert" (the
+///   CLI's prompt behavior changed and the "y\n" answer no longer works —
+///   never blocks the flow indefinitely).
+/// - exit 0 → [DeletionResult.success]
+/// - stderr indicates no valid login/token ("not valid" / "not
+///   authorized" / "not logged in") → [DeletionResult.notAuthenticated]
+///   (checked BEFORE the not-found check, mirroring [deleteGh]'s ordering
+///   discipline — an auth failure must never be misread as
+///   already-deleted just because the CLI also can't confirm the project
+///   exists).
+/// - stderr indicates the project doesn't exist ("no such project
+///   exists") → [DeletionResult.alreadyDeleted] (FR-017 — idempotent
+///   success)
+/// - anything else → [DeletionResult.genericFailure] with a stderr gist
+Future<DeletionResult> deleteVercel(
+  String uri,
+  String projectName, {
+  VercelProcessRunner runner = defaultVercelProcessRunner,
+}) async {
+  try {
+    final outcome = await runner(buildVercelDeleteArgs(projectName));
+
+    if (outcome.timedOut) {
+      return DeletionResult.genericFailure(
+        uri,
+        ExternalResourceType.vercel,
+        'Vercel-CLI hat nicht wie erwartet reagiert',
+      );
+    }
+
+    if (outcome.exitCode == 0) {
+      return DeletionResult.success(uri, ExternalResourceType.vercel);
+    }
+
+    final stderrLower = outcome.stderr.toLowerCase();
+
+    if (stderrLower.contains('not valid') ||
+        stderrLower.contains('not authorized') ||
+        stderrLower.contains('not logged in')) {
+      return DeletionResult.notAuthenticated(uri, ExternalResourceType.vercel);
+    }
+    if (stderrLower.contains('no such project exists')) {
+      return DeletionResult.alreadyDeleted(uri, ExternalResourceType.vercel);
+    }
+
+    return DeletionResult.genericFailure(
+      uri,
+      ExternalResourceType.vercel,
+      outcome.stderr,
+    );
+  } catch (e) {
+    developer.log(
+      'Failed to delete Vercel project $projectName: $e',
+      name: 'external_deletion_service',
+    );
+    return DeletionResult.genericFailure(
+      uri,
+      ExternalResourceType.vercel,
       e.toString(),
     );
   }

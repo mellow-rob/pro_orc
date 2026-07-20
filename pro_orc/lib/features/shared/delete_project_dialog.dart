@@ -67,6 +67,7 @@ class DeleteProjectDialog extends ConsumerStatefulWidget {
     this.vercelDetectionService = const VercelDetectionService(),
     this.ghDetectionService = const GhDetectionService(),
     this.ghRunner = defaultProcessRunner,
+    this.vercelRunner = defaultVercelProcessRunner,
   });
 
   final ProjectModel project;
@@ -78,6 +79,13 @@ class DeleteProjectDialog extends ConsumerStatefulWidget {
   /// `Process.run`, overridable in tests so `gh repo delete` outcomes can
   /// be simulated without spawning real processes.
   final ProcessRunner ghRunner;
+
+  /// Injectable Vercel CLI process runner used for active Vercel project
+  /// deletion — default real (spawns `vercel`, answers its confirmation
+  /// prompt via stdin, times out after 15s — see [defaultVercelProcessRunner]),
+  /// overridable in tests so `vercel project remove` outcomes can be
+  /// simulated without spawning real processes.
+  final VercelProcessRunner vercelRunner;
 
   @override
   ConsumerState<DeleteProjectDialog> createState() =>
@@ -274,6 +282,7 @@ class _DeleteProjectDialogState extends ConsumerState<DeleteProjectDialog> {
     final externalDeleteFuture = deleteSelectedExternalResources(
       selectedResources,
       ghRunner: widget.ghRunner,
+      vercelRunner: widget.vercelRunner,
       onResult: (result) {
         if (!mounted) return;
         setState(() => _externalResults[result.uri] = result);
