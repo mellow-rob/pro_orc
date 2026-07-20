@@ -112,6 +112,39 @@ void main() {
 
       expect(name, isNull);
     });
+
+    test('returns null for the vercel.com/new boilerplate link — a '
+        'create-next-app README ships this by default and it is not a real '
+        'project (2026-07-20-delete-dialog-resource-over-detection)', () {
+      final name = deriveVercelProjectName(
+        'https://vercel.com/new?utm_medium=default-template&filter=next.js'
+        '&utm_source=create-next-app&utm_campaign=create-next-app-readme',
+      );
+
+      expect(name, isNull);
+    });
+
+    test('returns null for vercel.com/new with no query string either', () {
+      final name = deriveVercelProjectName('https://vercel.com/new');
+
+      expect(name, isNull);
+    });
+
+    test('returns null when the URL carries query parameters — a real '
+        'dashboard project URL never has a query string', () {
+      final name = deriveVercelProjectName(
+        'https://vercel.com/my-scope/my-project?tab=deployments',
+      );
+
+      expect(name, isNull);
+    });
+
+    test('returns null for a single-segment path — a real dashboard project '
+        'URL always has scope AND project (at least two segments)', () {
+      final name = deriveVercelProjectName('https://vercel.com/my-scope');
+
+      expect(name, isNull);
+    });
   });
 
   group('deriveGhOwnerRepo', () {
@@ -364,25 +397,22 @@ void main() {
       },
     );
 
-    test(
-      'a genuine not-found error (no auth failure) maps to alreadyDeleted '
-      'success, labelled "war bereits geloescht" (FR-017) — verified '
-      'against the real installed vercel CLI\'s exact stderr text',
-      () async {
-        final result = await deleteVercel(
-          'https://vercel.com/scope/my-project',
-          'my-project',
-          runner: fixedVercelRunner(
-            exitCode: 1,
-            stderr: 'Error: No such project exists',
-          ),
-        );
+    test('a genuine not-found error (no auth failure) maps to alreadyDeleted '
+        'success, labelled "war bereits geloescht" (FR-017) — verified '
+        'against the real installed vercel CLI\'s exact stderr text', () async {
+      final result = await deleteVercel(
+        'https://vercel.com/scope/my-project',
+        'my-project',
+        runner: fixedVercelRunner(
+          exitCode: 1,
+          stderr: 'Error: No such project exists',
+        ),
+      );
 
-        expect(result.succeeded, isTrue);
-        expect(result.outcome, DeletionOutcome.alreadyDeleted);
-        expect(result.reason, 'war bereits geloescht');
-      },
-    );
+      expect(result.succeeded, isTrue);
+      expect(result.outcome, DeletionOutcome.alreadyDeleted);
+      expect(result.reason, 'war bereits geloescht');
+    });
 
     test(
       'an unrecognized failure maps to genericFailure with a stderr gist',
@@ -402,42 +432,41 @@ void main() {
       },
     );
 
-    test(
-      'a timed-out process (the "y\\n" answer did not work, e.g. a future '
-      'CLI version prompts differently) maps to genericFailure with a '
-      'readable German reason, never hangs the caller',
-      () async {
-        final result = await deleteVercel(
-          'https://vercel.com/scope/my-project',
-          'my-project',
-          runner: fixedVercelRunner(exitCode: -1, timedOut: true),
-        );
-
-        expect(result.succeeded, isFalse);
-        expect(result.outcome, DeletionOutcome.genericFailure);
-        expect(
-          result.reason,
-          contains('Vercel-CLI hat nicht wie erwartet reagiert'),
-        );
-      },
-    );
-
-    test('a runner that throws is caught and mapped to genericFailure', () async {
-      Future<VercelProcessOutcome> throwingRunner(
-        List<String> arguments,
-      ) async {
-        throw Exception('process spawn failed');
-      }
-
+    test('a timed-out process (the "y\\n" answer did not work, e.g. a future '
+        'CLI version prompts differently) maps to genericFailure with a '
+        'readable German reason, never hangs the caller', () async {
       final result = await deleteVercel(
         'https://vercel.com/scope/my-project',
         'my-project',
-        runner: throwingRunner,
+        runner: fixedVercelRunner(exitCode: -1, timedOut: true),
       );
 
       expect(result.succeeded, isFalse);
       expect(result.outcome, DeletionOutcome.genericFailure);
+      expect(
+        result.reason,
+        contains('Vercel-CLI hat nicht wie erwartet reagiert'),
+      );
     });
-  });
 
+    test(
+      'a runner that throws is caught and mapped to genericFailure',
+      () async {
+        Future<VercelProcessOutcome> throwingRunner(
+          List<String> arguments,
+        ) async {
+          throw Exception('process spawn failed');
+        }
+
+        final result = await deleteVercel(
+          'https://vercel.com/scope/my-project',
+          'my-project',
+          runner: throwingRunner,
+        );
+
+        expect(result.succeeded, isFalse);
+        expect(result.outcome, DeletionOutcome.genericFailure);
+      },
+    );
+  });
 }

@@ -49,15 +49,58 @@ List<String> buildGhDeleteArgs(String ownerRepo) {
   return ['repo', 'delete', ownerRepo, '--yes'];
 }
 
-/// Derives the Vercel project name from a stored dashboard URL of the form
-/// `https://vercel.com/<scope>/<project-name>` (the last non-empty path
-/// segment).
+/// Path segments that are known Vercel routes rather than `<scope>/<project>`
+/// dashboard paths — e.g. `vercel.com/new` is the "create a new project"
+/// boilerplate link that every `create-next-app` README ships by default
+/// (`utm_campaign=create-next-app-readme`). A URL whose first segment
+/// matches one of these is never a real, deletable project.
+const _nonProjectVercelSegments = {'new', 'dashboard', 'login', 'signup'};
+
+/// Validates that [uri] (already confirmed to be a `vercel.com` /
+/// `*.vercel.com` host) points at a real `<scope>/<project>` dashboard page
+/// rather than a generic/boilerplate Vercel link, and returns the derived
+/// project name when it does.
 ///
-/// Returns `null` when the name cannot be reliably derived — in particular
-/// for deployment URLs of the form `<project>-<hash>.vercel.app`, which
-/// encode the project name in the hostname rather than the path and cannot
-/// be split from the deployment hash reliably. Callers MUST fall back to
-/// hint-only display when this returns `null`.
+/// This is the single source of truth for "is this a real Vercel project
+/// URL" — used by both [deriveVercelProjectName] (deletion-command
+/// generation) and `resource_detector.dart`'s classification, so the
+/// dialog's display and the generated deletion command can never diverge
+/// (2026-07-20-delete-dialog-resource-over-detection).
+///
+/// Returns `null` unless ALL of the following hold:
+/// - no query parameters (a real dashboard project URL never carries one;
+///   boilerplate/marketing links like `vercel.com/new?utm_...` do)
+/// - at least two non-empty path segments (`<scope>/<project>` — a single
+///   segment like `vercel.com/my-scope` names a scope, not a project)
+/// - the first segment is not a known non-project route (see
+///   [_nonProjectVercelSegments])
+///
+/// Deeper paths (e.g. `<scope>/<project>/deployments`) still validate — the
+/// last segment is returned, preserving the pre-existing behavior for
+/// nested dashboard pages (not part of this fix's scope).
+String? _validateVercelProjectPath(Uri uri) {
+  if (uri.query.isNotEmpty) return null;
+
+  final segments = uri.pathSegments.where((s) => s.isNotEmpty).toList();
+  if (segments.length < 2) return null;
+
+  if (_nonProjectVercelSegments.contains(segments.first.toLowerCase())) {
+    return null;
+  }
+
+  return segments.last;
+}
+
+/// Derives the Vercel project name from a stored dashboard URL of the form
+/// `https://vercel.com/<scope>/<project-name>`.
+///
+/// Returns `null` when the name cannot be reliably derived — for deployment
+/// URLs of the form `<project>-<hash>.vercel.app` (project name fused with a
+/// hash in the hostname), and for any URL that does not validate as a real
+/// dashboard project path per [_validateVercelProjectPath] (e.g. the
+/// `vercel.com/new?utm_...` boilerplate link every `create-next-app` README
+/// ships by default). Callers MUST fall back to hint-only display when this
+/// returns `null`.
 String? deriveVercelProjectName(String url) {
   final uri = Uri.tryParse(url);
   if (uri == null) return null;
@@ -75,10 +118,23 @@ String? deriveVercelProjectName(String url) {
     return null;
   }
 
-  final segments = uri.pathSegments.where((s) => s.isNotEmpty).toList();
-  if (segments.isEmpty) return null;
+  return _validateVercelProjectPath(uri);
+}
 
-  return segments.last;
+/// Returns `true` if [url] is a `vercel.com`/`*.vercel.com` URL that
+/// validates as a real `<scope>/<project>` dashboard project path (see
+/// [_validateVercelProjectPath]). Used by `resource_detector.dart` to
+/// classify URLs consistently with [deriveVercelProjectName] so a URL is
+/// never displayed as an active-delete "Vercel-Projekt" entry unless a
+/// deletion command can actually be derived from it.
+bool isVercelDashboardProjectUrl(String url) {
+  final uri = Uri.tryParse(url);
+  if (uri == null) return false;
+
+  final host = uri.host.toLowerCase();
+  if (host != 'vercel.com' && !host.endsWith('.vercel.com')) return false;
+
+  return _validateVercelProjectPath(uri) != null;
 }
 
 /// Derives the `<owner>/<repo>` argument from a stored GitHub URL such as
@@ -235,11 +291,7 @@ Future<VercelProcessOutcome> defaultVercelProcessRunner(
   List<String> arguments, {
   Duration timeout = const Duration(seconds: 15),
 }) async {
-  final process = await Process.start(
-    'vercel',
-    arguments,
-    runInShell: true,
-  );
+  final process = await Process.start('vercel', arguments, runInShell: true);
 
   final stderrBuffer = StringBuffer();
   final stderrSub = process.stderr
