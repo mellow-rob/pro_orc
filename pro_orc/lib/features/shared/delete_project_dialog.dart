@@ -5,7 +5,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pro_orc/data/models/external_resource.dart';
 import 'package:pro_orc/data/models/project_model.dart';
 import 'package:pro_orc/data/services/deletion_service.dart';
+import 'package:pro_orc/data/services/gh_detection_service.dart';
 import 'package:pro_orc/data/services/resource_detector.dart';
+import 'package:pro_orc/data/services/vercel_detection_service.dart';
 import 'package:pro_orc/features/shell/glass_dialog.dart';
 import 'package:pro_orc/providers/projects_provider.dart';
 import 'package:pro_orc/theme/n3_colors.dart';
@@ -19,10 +21,24 @@ import 'package:pro_orc/theme/n3_colors.dart';
 /// for auto-refresh. If resources were selected, shows a post-deletion
 /// summary with cleanup hints before closing. Otherwise pops immediately.
 /// On cancel: pops with `false` — no side effects.
+///
+/// [vercelDetectionService] and [ghDetectionService] gate whether Vercel/
+/// GitHub resources render an active-delete checkbox (default real
+/// services, overridable in tests — mirrors the project's `whichCommand`
+/// injection convention). Availability is resolved from the CLIs' own
+/// existing local login state only; no token is ever entered into or
+/// stored by Pro Orc (FR-013).
 class DeleteProjectDialog extends ConsumerStatefulWidget {
-  const DeleteProjectDialog({super.key, required this.project});
+  const DeleteProjectDialog({
+    super.key,
+    required this.project,
+    this.vercelDetectionService = const VercelDetectionService(),
+    this.ghDetectionService = const GhDetectionService(),
+  });
 
   final ProjectModel project;
+  final VercelDetectionService vercelDetectionService;
+  final GhDetectionService ghDetectionService;
 
   @override
   ConsumerState<DeleteProjectDialog> createState() =>
@@ -42,12 +58,27 @@ class _DeleteProjectDialogState extends ConsumerState<DeleteProjectDialog> {
   /// true after deletion — shows cleanup summary instead of the main form
   bool _showSummary = false;
 
+  /// null = still resolving availability, true/false = resolved.
+  /// Gates whether Vercel/GitHub resources render an active-delete
+  /// checkbox (FR-003/FR-004/FR-006) — never gated on a stored token
+  /// (FR-013).
+  bool? _vercelAvailable;
+  bool? _ghAvailable;
+
+  /// Resolves once both [_loadResources] and [_resolveAvailability] have
+  /// settled. Exposed only so widget tests can await the dialog's initial
+  /// async load (both spawn real processes / do real file I/O that
+  /// `tester.pumpAndSettle()` does not wait for) instead of polling or
+  /// guessing a fixed delay.
+  @visibleForTesting
+  late final Future<void> initialLoad;
+
   @override
   void initState() {
     super.initState();
     _textController = TextEditingController();
     _textController.addListener(() => setState(() {}));
-    _loadResources();
+    initialLoad = Future.wait([_loadResources(), _resolveAvailability()]);
   }
 
   Future<void> _loadResources() async {
@@ -60,6 +91,49 @@ class _DeleteProjectDialogState extends ConsumerState<DeleteProjectDialog> {
         name: 'delete_project_dialog',
       );
       if (mounted) setState(() => _resources = []);
+    }
+  }
+
+  Future<void> _resolveAvailability() async {
+    try {
+      final vercelAvailable = await widget.vercelDetectionService.isAvailable();
+      if (mounted) setState(() => _vercelAvailable = vercelAvailable);
+    } catch (e) {
+      developer.log(
+        'Failed to resolve Vercel CLI availability: $e',
+        name: 'delete_project_dialog',
+      );
+      if (mounted) setState(() => _vercelAvailable = false);
+    }
+
+    try {
+      final ghAvailable = await widget.ghDetectionService.isAvailable();
+      if (mounted) setState(() => _ghAvailable = ghAvailable);
+    } catch (e) {
+      developer.log(
+        'Failed to resolve gh CLI availability: $e',
+        name: 'delete_project_dialog',
+      );
+      if (mounted) setState(() => _ghAvailable = false);
+    }
+  }
+
+  /// Whether [resource] is eligible for active (real) deletion rather than
+  /// hint-only display. Claude memory has no CLI dependency (FR-005);
+  /// Vercel/GitHub are gated on the matching CLI's resolved availability
+  /// (FR-003/FR-004/FR-006). Figma and other URL types are permanently
+  /// hint-only (FR-010, out of scope for active deletion in any wave).
+  bool _isActivelyDeletable(ExternalResource resource) {
+    switch (resource.type) {
+      case ExternalResourceType.claudeMemory:
+        return true;
+      case ExternalResourceType.vercel:
+        return _vercelAvailable == true;
+      case ExternalResourceType.github:
+        return _ghAvailable == true;
+      case ExternalResourceType.figma:
+      case ExternalResourceType.other:
+        return false;
     }
   }
 
@@ -219,6 +293,14 @@ class _DeleteProjectDialogState extends ConsumerState<DeleteProjectDialog> {
                   final displayUri = resource.uri.length > 50
                       ? '${resource.uri.substring(0, 50)}…'
                       : resource.uri;
+                  final canActivelyDelete = _isActivelyDeletable(resource);
+
+                  // Variant A: a per-row status text distinguishes active
+                  // deletion from hint-only, instead of a separate visual
+                  // element (FR-003/FR-004/FR-005/FR-006).
+                  final statusText = canActivelyDelete
+                      ? (isSelected ? 'wird aktiv geloescht' : 'nur Hinweis')
+                      : 'Token fehlt / nur Hinweis';
 
                   return Row(
                     crossAxisAlignment: CrossAxisAlignment.center,
@@ -226,27 +308,29 @@ class _DeleteProjectDialogState extends ConsumerState<DeleteProjectDialog> {
                       SizedBox(
                         width: 24,
                         height: 24,
-                        child: Checkbox(
-                          value: isSelected,
-                          onChanged: (val) {
-                            setState(() {
-                              if (val == true) {
-                                _selectedResources.add(resource.uri);
-                              } else {
-                                _selectedResources.remove(resource.uri);
-                              }
-                            });
-                          },
-                          side: BorderSide(
-                            color: isSelected
-                                ? Colors.amber.shade600
-                                : colors.textDim,
-                            width: 1.5,
-                          ),
-                          activeColor: Colors.amber.shade600,
-                          materialTapTargetSize:
-                              MaterialTapTargetSize.shrinkWrap,
-                        ),
+                        child: canActivelyDelete
+                            ? Checkbox(
+                                value: isSelected,
+                                onChanged: (val) {
+                                  setState(() {
+                                    if (val == true) {
+                                      _selectedResources.add(resource.uri);
+                                    } else {
+                                      _selectedResources.remove(resource.uri);
+                                    }
+                                  });
+                                },
+                                side: BorderSide(
+                                  color: isSelected
+                                      ? Colors.amber.shade600
+                                      : colors.textDim,
+                                  width: 1.5,
+                                ),
+                                activeColor: Colors.amber.shade600,
+                                materialTapTargetSize:
+                                    MaterialTapTargetSize.shrinkWrap,
+                              )
+                            : null,
                       ),
                       const SizedBox(width: 8),
                       Icon(
@@ -275,14 +359,15 @@ class _DeleteProjectDialogState extends ConsumerState<DeleteProjectDialog> {
                                 fontSize: 11,
                               ),
                             ),
-                            if (isSelected)
-                              Text(
-                                resource.hint,
-                                style: TextStyle(
-                                  color: Colors.amber.shade600,
-                                  fontSize: 11,
-                                ),
+                            Text(
+                              statusText,
+                              style: TextStyle(
+                                color: canActivelyDelete && isSelected
+                                    ? Colors.amber.shade600
+                                    : colors.textDim,
+                                fontSize: 11,
                               ),
+                            ),
                           ],
                         ),
                       ),
