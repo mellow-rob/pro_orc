@@ -388,6 +388,57 @@ Production: https://vercel.com/my-scope/my-project
       );
     });
 
+    test(
+      'a project with .vercel/project.json AND a boilerplate '
+      'vercel.com/new md-file link produces exactly one Vercel entry — '
+      'from .vercel/project.json, the boilerplate link contributes nothing '
+      '(2026-07-21-vercel-detection-requires-md-link)',
+      () async {
+        await writeVercelProjectJson(
+          tmp,
+          '{"projectId":"prj_nRO4D2ZbHyO8v5XvuREdMZEOyw0P",'
+          '"orgId":"team_yABWsykG53iYgFAWXpvnYn7m",'
+          '"projectName":"steuerberater-scheinemann"}',
+        );
+
+        final file = File(p.join(tmp.path, 'README.md'));
+        await file.writeAsString(
+          'Deploy on Vercel: '
+          'https://vercel.com/new?utm_medium=default-template&filter=next.js'
+          '&utm_source=create-next-app&utm_campaign=create-next-app-readme',
+        );
+
+        final project = projectAt(
+          tmp,
+          mdFiles: [
+            MdFileInfo(
+              name: 'README.md',
+              relativePath: 'README.md',
+              path: file.path,
+            ),
+          ],
+        );
+
+        final resources = await detectExternalResources(project);
+
+        final vercelResources = resources.where(
+          (r) => r.type == ExternalResourceType.vercel,
+        );
+        expect(
+          vercelResources,
+          hasLength(1),
+          reason:
+              'exactly one Vercel entry expected: from .vercel/project.json. '
+              'The boilerplate md-link must not add a second entry, and '
+              'must not suppress the .vercel/project.json entry either.',
+        );
+        expect(
+          deriveVercelProjectName(vercelResources.first.uri),
+          equals('steuerberater-scheinemann'),
+        );
+      },
+    );
+
     test('a project without a .vercel/ folder produces no Vercel resource from '
         'this path (existing md-scan behavior unchanged)', () async {
       final project = projectAt(tmp);
