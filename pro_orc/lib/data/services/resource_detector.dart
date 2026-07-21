@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:developer' as developer;
 import 'dart:io';
 
@@ -15,6 +16,7 @@ import 'package:pro_orc/data/services/memory_reader.dart';
 /// - CLN-02: GitHub repository (from GitData.githubUrl)
 /// - CLN-03: Figma and other external URLs (scanned from .md files)
 /// - CLN-04: Claude Memory directory (~/.claude/projects/...)
+/// - CLN-05: Vercel project (from the CLI's own `.vercel/project.json`)
 ///
 /// Returns an empty list on any error. Individual detection steps are
 /// wrapped separately so one failure does not abort the rest.
@@ -42,6 +44,26 @@ Future<List<ExternalResource>> detectExternalResources(
   } catch (e) {
     developer.log(
       'Failed to detect GitHub resource: $e',
+      name: 'resource_detector',
+    );
+  }
+
+  // CLN-05: Vercel, from the CLI's own `.vercel/project.json` — a
+  // structured ground-truth source (written by `vercel link`), unlike the
+  // .md text scan below which only ever finds a Vercel project if a README
+  // happens to self-link its own deployment URL (the uncommon case, not the
+  // common one — see 2026-07-21-vercel-detection-requires-md-link). Read
+  // directly via project.path: ProjectScanner skips hidden directories
+  // during scan, so `.vercel/` is never reachable via project.mdFiles.
+  try {
+    final vercelResource = await _detectVercelProjectJson(project.path);
+    if (vercelResource != null && !seenUris.contains(vercelResource.uri)) {
+      resources.add(vercelResource);
+      seenUris.add(vercelResource.uri);
+    }
+  } catch (e) {
+    developer.log(
+      'Failed to detect .vercel/project.json resource: $e',
       name: 'resource_detector',
     );
   }
@@ -233,4 +255,64 @@ ExternalResource? _classifyUrl(String url, String host, Uri parsed) {
 
   // Not a known resource domain — skip entirely (see doc comment above).
   return null;
+}
+
+/// Reads `<projectPath>/.vercel/project.json` (written by `vercel link`) and,
+/// if present and valid, returns an actively-deletable Vercel resource.
+///
+/// Unlike [_classifyUrl] (which only ever fires on a literal URL found in
+/// project prose), this reads Vercel's own structured link metadata
+/// directly from disk — so it works even when the project's `.md` files
+/// never mention the deployment URL at all, which is the common case, not
+/// the exception (2026-07-21-vercel-detection-requires-md-link).
+///
+/// The resource's `uri` is a synthetic `https://vercel.com/<orgId>/<name>`
+/// dashboard URL rather than a made-up custom scheme: this keeps it a
+/// perfectly ordinary input to [isVercelDashboardProjectUrl] /
+/// `deriveVercelProjectName` (both already validate and parse
+/// `vercel.com/<scope>/<project>` paths — no separate code path needed for
+/// deletion), and it also means an *identical* dashboard URL later found in
+/// a `.md` file dedups naturally via the caller's `seenUris` set. Falls
+/// back to a `projectId`-keyed synthetic URI when `orgId` is absent (still
+/// unique per project, though not a browsable dashboard link).
+///
+/// Returns `null` (silently, no throw) when `.vercel/project.json` does not
+/// exist, is not valid JSON, or has no non-empty `projectName` — mirroring
+/// the error-tolerance of the other detection steps in
+/// [detectExternalResources].
+Future<ExternalResource?> _detectVercelProjectJson(String projectPath) async {
+  final file = File(p.join(projectPath, '.vercel', 'project.json'));
+  if (!await file.exists()) return null;
+
+  Map<String, dynamic> data;
+  try {
+    final content = await file.readAsString();
+    final decoded = jsonDecode(content);
+    if (decoded is! Map<String, dynamic>) return null;
+    data = decoded;
+  } catch (e) {
+    developer.log(
+      'Skipping invalid ${file.path}: $e',
+      name: 'resource_detector',
+    );
+    return null;
+  }
+
+  final projectName = data['projectName'];
+  if (projectName is! String || projectName.isEmpty) return null;
+
+  final orgId = data['orgId'];
+  final scope = (orgId is String && orgId.isNotEmpty) ? orgId : null;
+  final uri = scope != null
+      ? 'https://vercel.com/$scope/$projectName'
+      : 'https://vercel.com/_/$projectName';
+
+  return ExternalResource(
+    type: ExternalResourceType.vercel,
+    label: 'Vercel-Projekt',
+    uri: uri,
+    hint:
+        'Vercel-Projekt via `vercel project remove` loeschen oder '
+        'manuell im Dashboard',
+  );
 }

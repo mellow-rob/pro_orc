@@ -6,6 +6,8 @@ import 'package:test/test.dart';
 import 'package:pro_orc/data/models/external_resource.dart';
 import 'package:pro_orc/data/models/project_model.dart';
 import 'package:pro_orc/data/models/project_type.dart';
+import 'package:pro_orc/data/services/external_deletion_service.dart'
+    show deriveVercelProjectName;
 import 'package:pro_orc/data/services/resource_detector.dart';
 
 void main() {
@@ -329,5 +331,210 @@ Production: https://vercel.com/my-scope/my-project
       expect(resources, hasLength(1));
       expect(resources.first.label, equals('Firebase-Projekt'));
     });
+  });
+
+  group('detectExternalResources — .vercel/project.json', () {
+    late Directory tmp;
+
+    setUp(() async {
+      tmp = await Directory.systemTemp.createTemp('resource_detector_test_');
+    });
+
+    tearDown(() async {
+      if (await tmp.exists()) await tmp.delete(recursive: true);
+    });
+
+    ProjectModel projectAt(Directory dir, {List<MdFileInfo>? mdFiles}) {
+      return ProjectModel(
+        folderId: p.basename(dir.path),
+        displayName: 'Test Project',
+        path: dir.path,
+        projectType: ProjectType.code,
+        mdFiles: mdFiles ?? const [],
+      );
+    }
+
+    Future<void> writeVercelProjectJson(Directory dir, String content) async {
+      final vercelDir = Directory(p.join(dir.path, '.vercel'));
+      await vercelDir.create(recursive: true);
+      await File(p.join(vercelDir.path, 'project.json')).writeAsString(content);
+    }
+
+    test('a project with .vercel/project.json but no md-file link is still '
+        'detected as an actively-deletable Vercel resource '
+        '(2026-07-21-vercel-detection-requires-md-link)', () async {
+      await writeVercelProjectJson(
+        tmp,
+        '{"projectId":"prj_nRO4D2ZbHyO8v5XvuREdMZEOyw0P",'
+        '"orgId":"team_yABWsykG53iYgFAWXpvnYn7m",'
+        '"projectName":"steuerberater-scheinemann"}',
+      );
+
+      final project = projectAt(tmp);
+
+      final resources = await detectExternalResources(project);
+
+      final vercelResources = resources.where(
+        (r) => r.type == ExternalResourceType.vercel,
+      );
+      expect(vercelResources, hasLength(1));
+      expect(
+        deriveVercelProjectName(vercelResources.first.uri),
+        equals('steuerberater-scheinemann'),
+        reason:
+            'the produced resource must be actively-deletable — its uri '
+            'must resolve to a real project name via '
+            'deriveVercelProjectName, not stay hint-only',
+      );
+    });
+
+    test(
+      'a project with .vercel/project.json AND a boilerplate '
+      'vercel.com/new md-file link produces exactly one Vercel entry — '
+      'from .vercel/project.json, the boilerplate link contributes nothing '
+      '(2026-07-21-vercel-detection-requires-md-link)',
+      () async {
+        await writeVercelProjectJson(
+          tmp,
+          '{"projectId":"prj_nRO4D2ZbHyO8v5XvuREdMZEOyw0P",'
+          '"orgId":"team_yABWsykG53iYgFAWXpvnYn7m",'
+          '"projectName":"steuerberater-scheinemann"}',
+        );
+
+        final file = File(p.join(tmp.path, 'README.md'));
+        await file.writeAsString(
+          'Deploy on Vercel: '
+          'https://vercel.com/new?utm_medium=default-template&filter=next.js'
+          '&utm_source=create-next-app&utm_campaign=create-next-app-readme',
+        );
+
+        final project = projectAt(
+          tmp,
+          mdFiles: [
+            MdFileInfo(
+              name: 'README.md',
+              relativePath: 'README.md',
+              path: file.path,
+            ),
+          ],
+        );
+
+        final resources = await detectExternalResources(project);
+
+        final vercelResources = resources.where(
+          (r) => r.type == ExternalResourceType.vercel,
+        );
+        expect(
+          vercelResources,
+          hasLength(1),
+          reason:
+              'exactly one Vercel entry expected: from .vercel/project.json. '
+              'The boilerplate md-link must not add a second entry, and '
+              'must not suppress the .vercel/project.json entry either.',
+        );
+        expect(
+          deriveVercelProjectName(vercelResources.first.uri),
+          equals('steuerberater-scheinemann'),
+        );
+      },
+    );
+
+    test('a project without a .vercel/ folder produces no Vercel resource from '
+        'this path (existing md-scan behavior unchanged)', () async {
+      final project = projectAt(tmp);
+
+      final resources = await detectExternalResources(project);
+
+      expect(
+        resources.where((r) => r.type == ExternalResourceType.vercel),
+        isEmpty,
+      );
+    });
+
+    test(
+      'dedups: a real vercel.com dashboard URL in a .md file for the same '
+      'project as .vercel/project.json produces exactly one Vercel entry',
+      () async {
+        await writeVercelProjectJson(
+          tmp,
+          '{"projectId":"prj_x","orgId":"team_yABWsykG53iYgFAWXpvnYn7m",'
+          '"projectName":"my-project"}',
+        );
+
+        final file = File(p.join(tmp.path, 'STATE.md'));
+        await file.writeAsString(
+          'Deployed at https://vercel.com/team_yABWsykG53iYgFAWXpvnYn7m/my-project.',
+        );
+
+        final project = projectAt(
+          tmp,
+          mdFiles: [
+            MdFileInfo(
+              name: 'STATE.md',
+              relativePath: 'STATE.md',
+              path: file.path,
+            ),
+          ],
+        );
+
+        final resources = await detectExternalResources(project);
+
+        expect(
+          resources.where((r) => r.type == ExternalResourceType.vercel),
+          hasLength(1),
+        );
+      },
+    );
+
+    test('a corrupt/invalid .vercel/project.json is silently skipped — no '
+        'crash, rest of detection still runs', () async {
+      await writeVercelProjectJson(tmp, '{not valid json');
+
+      final file = File(p.join(tmp.path, 'STATE.md'));
+      await file.writeAsString(
+        'Design lives at https://figma.com/file/abc123 for reference.',
+      );
+
+      final project = projectAt(
+        tmp,
+        mdFiles: [
+          MdFileInfo(
+            name: 'STATE.md',
+            relativePath: 'STATE.md',
+            path: file.path,
+          ),
+        ],
+      );
+
+      final resources = await detectExternalResources(project);
+
+      expect(
+        resources.where((r) => r.type == ExternalResourceType.vercel),
+        isEmpty,
+      );
+      expect(
+        resources.where((r) => r.type == ExternalResourceType.figma),
+        hasLength(1),
+      );
+    });
+
+    test(
+      'a .vercel/project.json missing projectName is silently skipped',
+      () async {
+        await writeVercelProjectJson(
+          tmp,
+          '{"projectId":"prj_x","orgId":"team_y"}',
+        );
+
+        final project = projectAt(tmp);
+
+        final resources = await detectExternalResources(project);
+
+        expect(
+          resources.where((r) => r.type == ExternalResourceType.vercel),
+          isEmpty,
+        );
+      },
+    );
   });
 }
