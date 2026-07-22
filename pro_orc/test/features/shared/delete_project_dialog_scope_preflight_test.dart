@@ -92,6 +92,54 @@ void main() {
     });
 
     testWidgets(
+      'missing: the popup receives the owner extracted from resource.uri '
+      '(Spec 009, FR-001)',
+      (tester) async {
+        await pumpDeleteProjectDialog(
+          tester,
+          githubProject,
+          vercelAvailable: false,
+          ghAvailable: true,
+          checkDeleteRepoScope: () async => GhScopeStatus.missing,
+        );
+
+        await tester.tap(find.byType(Checkbox));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Berechtigung fehlt'), findsOneWidget);
+        expect(
+          tester
+              .widget<GithubPermissionPopup>(find.byType(GithubPermissionPopup))
+              .repoOwner,
+          'n3urala1-rob',
+        );
+        expect(find.textContaining('n3urala1-rob'), findsWidgets);
+      },
+    );
+
+    testWidgets('cliUnavailable: the popup receives the owner extracted from '
+        'resource.uri (Spec 009, FR-001)', (tester) async {
+      await pumpDeleteProjectDialog(
+        tester,
+        githubProject,
+        vercelAvailable: false,
+        ghAvailable: true,
+        checkDeleteRepoScope: () async => GhScopeStatus.cliUnavailable,
+      );
+
+      await tester.tap(find.byType(Checkbox));
+      await tester.pumpAndSettle();
+
+      expect(
+        tester
+            .widget<GithubPermissionPopup>(find.byType(GithubPermissionPopup))
+            .repoOwner,
+        'n3urala1-rob',
+      );
+      expect(find.textContaining('n3urala1-rob'), findsWidgets);
+    });
+
+    testWidgets(
       'checkFailed: checking the GitHub checkbox shows the popup and the '
       'checkbox is NOT checked (treated like missing)',
       (tester) async {
@@ -125,8 +173,13 @@ void main() {
       await tester.tap(find.byType(Checkbox));
       await tester.pumpAndSettle();
 
+      // The fixture's githubUrl parses to a valid owner ('n3urala1-rob'),
+      // so the popup body now weaves in the owner hint (Spec 009) ahead of
+      // this text — assert containment rather than an exact standalone
+      // Text widget match, since the string is now one TextSpan among
+      // several inside a single Text.rich.
       expect(
-        find.text(
+        find.textContaining(
           'GitHub CLI (gh) ist nicht installiert oder nicht angemeldet',
         ),
         findsOneWidget,

@@ -319,6 +319,7 @@ class _DeleteProjectDialogState extends ConsumerState<DeleteProjectDialog> {
       context: context,
       builder: (_) => GithubPermissionPopup(
         status: status,
+        repoOwner: extractGithubOwner(resource.uri),
         onOpenTerminal: () {
           unawaited(_resolveOnOpenTerminalForGhScopeRefresh()());
         },
