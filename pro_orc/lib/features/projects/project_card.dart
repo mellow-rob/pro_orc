@@ -83,35 +83,61 @@ class _ProjectCardState extends ConsumerState<ProjectCard> {
     );
   }
 
+  /// Builds the card body as a fixed bottom block (Claude button +
+  /// quick actions, 72px total) that is always fully visible, with the
+  /// variable-height top content (badges, title, optional a1 progress,
+  /// description, memory indicator) confined to whatever space remains.
+  ///
+  /// The grid cell height is fixed (`mainAxisExtent: 240` in
+  /// group_section.dart) and [GlassCard] does not clip vertical overflow,
+  /// so without this the bottom block could be pushed out of the card by
+  /// a long description combined with the optional a1 block. Wrapping the
+  /// top section in [Expanded] + a non-scrolling [SingleChildScrollView]
+  /// guarantees the bottom block never gets displaced: the top section
+  /// only ever receives the leftover space, and any content that still
+  /// doesn't fit is clipped there instead of overflowing the card.
   Widget _buildContent(BuildContext context, AppColors colors, Color accent) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildBadgeRow(),
-        const SizedBox(height: 8),
-        _buildTitleRow(colors, accent),
-        const SizedBox(height: 10),
-        if (_a1Progress != null) ...[
-          _buildA1Block(colors, accent, _a1Progress!),
-          const SizedBox(height: 10),
-        ],
-        if (widget.project.description != null) ...[
-          Text(
-            widget.project.description!,
-            style: TextStyle(color: colors.textSec, fontSize: 13),
-            maxLines: 3,
-            overflow: TextOverflow.ellipsis,
+        Expanded(
+          child: ClipRect(
+            child: SingleChildScrollView(
+              physics: const NeverScrollableScrollPhysics(),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildBadgeRow(),
+                  const SizedBox(height: 8),
+                  _buildTitleRow(colors, accent),
+                  const SizedBox(height: 10),
+                  if (_a1Progress != null) ...[
+                    _buildA1Block(colors, accent, _a1Progress!),
+                    const SizedBox(height: 10),
+                  ],
+                  if (widget.project.description != null) ...[
+                    Text(
+                      widget.project.description!,
+                      style: TextStyle(color: colors.textSec, fontSize: 13),
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 8),
+                  ],
+                  const SizedBox(height: 4),
+                  MemoryIndicator(
+                    memory: widget.project.memory,
+                    colors: colors,
+                    onTap: () => ref
+                        .read(quickActionsProvider)
+                        .openRemSleep(widget.project.path),
+                  ),
+                ],
+              ),
+            ),
           ),
-          const SizedBox(height: 8),
-        ],
-        const SizedBox(height: 4),
-        MemoryIndicator(
-          memory: widget.project.memory,
-          colors: colors,
-          onTap: () =>
-              ref.read(quickActionsProvider).openRemSleep(widget.project.path),
         ),
-        const Spacer(),
         _buildClaudeButton(colors, accent),
         const SizedBox(height: 8),
         buildQuickActionRow(
