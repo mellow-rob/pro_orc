@@ -139,6 +139,37 @@ class QuickActionsService {
     await Process.run('open', ['-a', 'Terminal'], runInShell: true);
   }
 
+  /// The exact, hard-coded command run to re-request the GitHub `delete_repo`
+  /// OAuth scope. A Dart string literal — never built from interpolation —
+  /// so "no dynamic value in this command" is structurally guaranteed, not
+  /// just documented (FR-004a).
+  static const String ghScopeRefreshCommand = 'gh auth refresh -s delete_repo';
+
+  /// Builds the AppleScript to run [ghScopeRefreshCommand] in a new Terminal
+  /// window. Unlike the other terminal builders above, this command is not
+  /// project-scoped — there is no `cd` into a project directory, since
+  /// granting a `gh` OAuth scope is not tied to any working directory.
+  ///
+  /// The constant command is still routed through [_terminalScript] (which
+  /// applies the same AppleScript-escaping as every other terminal builder
+  /// in this class) rather than being inlined directly into the osascript
+  /// call — consistency with the 2026-07-13 command-injection hardening, so
+  /// a future edit that adds a dynamic segment to this command inherits the
+  /// escaping automatically instead of having to remember to add it.
+  String buildGhScopeRefreshScript() {
+    return _terminalScript(ghScopeRefreshCommand);
+  }
+
+  /// Opens Terminal.app and runs the constant `gh auth refresh -s
+  /// delete_repo` command to re-request the GitHub `delete_repo` OAuth
+  /// scope. Uses the same osascript `do script` + `open -a Terminal`
+  /// execution path as every other terminal-opening action in this class.
+  Future<void> openTerminalWithGhScopeRefresh() async {
+    final script = buildGhScopeRefreshScript();
+    await Process.run('osascript', ['-e', script], runInShell: true);
+    await Process.run('open', ['-a', 'Terminal'], runInShell: true);
+  }
+
   /// Builds AppleScript to run a command in a new Terminal window.
   String _terminalScript(String command) {
     // Escape backslashes and double quotes for AppleScript string

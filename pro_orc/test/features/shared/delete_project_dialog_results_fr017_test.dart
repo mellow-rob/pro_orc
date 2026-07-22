@@ -7,6 +7,7 @@ import 'package:path/path.dart' as p;
 import 'package:pro_orc/data/models/git_data.dart';
 import 'package:pro_orc/data/models/project_model.dart';
 import 'package:pro_orc/data/models/project_type.dart';
+import 'package:pro_orc/data/services/gh_detection_service.dart';
 
 import 'delete_project_dialog_test_helpers.dart';
 
@@ -81,10 +82,15 @@ void main() {
                 'GraphQL: Could not resolve to a Repository (repository) (Not Found)',
               );
             },
+        // This test is about the FR-017 gh-result mapping, not the Wave 3
+        // scope pre-flight check — inject a `present` result so the
+        // checkbox stays checked and the flow proceeds exactly as before
+        // Wave 3 wired the check in.
+        checkDeleteRepoScope: () async => GhScopeStatus.present,
       );
 
       await tester.tap(find.byType(Checkbox));
-      await tester.pump();
+      await tester.pumpAndSettle();
       await tester.enterText(find.byType(TextField), 'Test Project');
       await tester.pump();
 

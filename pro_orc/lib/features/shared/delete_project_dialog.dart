@@ -1,3 +1,4 @@
+import 'dart:async' show unawaited;
 import 'dart:developer' as developer;
 
 import 'package:flutter/material.dart';
@@ -8,11 +9,20 @@ import 'package:pro_orc/data/models/project_model.dart';
 import 'package:pro_orc/data/services/deletion_service.dart';
 import 'package:pro_orc/data/services/external_deletion_service.dart';
 import 'package:pro_orc/data/services/gh_detection_service.dart';
+import 'package:pro_orc/data/services/quick_actions_service.dart';
 import 'package:pro_orc/data/services/resource_detector.dart';
 import 'package:pro_orc/data/services/vercel_detection_service.dart';
+import 'package:pro_orc/features/shared/github_permission_popup.dart';
 import 'package:pro_orc/features/shell/glass_dialog.dart';
 import 'package:pro_orc/providers/projects_provider.dart';
 import 'package:pro_orc/theme/n3_colors.dart';
+
+/// Runs the GitHub `delete_repo` OAuth scope pre-flight check. Matches
+/// [GhDetectionService.checkDeleteRepoScope]'s signature so the real service
+/// method can be passed directly as the default; tests inject a fake that
+/// returns a canned [GhScopeStatus] (and can count calls) without spawning a
+/// real `gh` process (Spec 008, FR-002/FR-003/FR-006).
+typedef GhScopeChecker = Future<GhScopeStatus> Function();
 
 /// The dialog's current screen.
 ///
@@ -68,6 +78,8 @@ class DeleteProjectDialog extends ConsumerStatefulWidget {
     this.ghDetectionService = const GhDetectionService(),
     this.ghRunner = defaultProcessRunner,
     this.vercelRunner = defaultVercelProcessRunner,
+    this.checkDeleteRepoScope,
+    this.onOpenTerminalForGhScopeRefresh,
   });
 
   final ProjectModel project;
@@ -86,6 +98,23 @@ class DeleteProjectDialog extends ConsumerStatefulWidget {
   /// overridable in tests so `vercel project remove` outcomes can be
   /// simulated without spawning real processes.
   final VercelProcessRunner vercelRunner;
+
+  /// Injectable GitHub `delete_repo` OAuth scope pre-flight checker (Spec
+  /// 008, Wave 1's `GhDetectionService.checkDeleteRepoScope`). `null` (the
+  /// default) resolves to `ghDetectionService.checkDeleteRepoScope` at call
+  /// time in the state, mirroring the `ghDetectionService`/`vercelRunner`
+  /// injection convention — overridable in tests so present/missing/
+  /// checkFailed/cliUnavailable outcomes can be simulated without spawning
+  /// a real `gh` process.
+  final GhScopeChecker? checkDeleteRepoScope;
+
+  /// Invoked when the user taps the missing-permission popup's action
+  /// button to open a terminal and re-request the `delete_repo` scope.
+  /// `null` (the default) resolves to
+  /// `QuickActionsService().openTerminalWithGhScopeRefresh` at call time —
+  /// overridable in tests so the real AppleScript/Terminal launch never
+  /// runs during widget tests.
+  final Future<void> Function()? onOpenTerminalForGhScopeRefresh;
 
   @override
   ConsumerState<DeleteProjectDialog> createState() =>
@@ -123,6 +152,39 @@ class _DeleteProjectDialogState extends ConsumerState<DeleteProjectDialog> {
   /// (FR-013).
   bool? _vercelAvailable;
   bool? _ghAvailable;
+
+  /// Last-known GitHub `delete_repo` scope pre-flight result per GitHub
+  /// resource URI (Spec 008, Wave 3). Absent means "not yet checked in this
+  /// dialog session" — treated as blocked/not-actively-checkable, the same
+  /// as [GhScopeStatus.missing], never as [GhScopeStatus.present]. This map
+  /// is informational only (drives no caching/short-circuit logic): every
+  /// checkbox tick to `true` runs a brand-new [_checkGithubScope] call
+  /// regardless of what is stored here (FR-006 — no stale/cached reuse
+  /// within the same dialog session).
+  final Map<String, GhScopeStatus> _ghScopeResults = {};
+
+  /// URIs of GitHub resources with a [_checkGithubScope] call currently in
+  /// flight (Spec 008 review fix — In-flight-Race Finding 1). Non-empty
+  /// means at least one selected resource's active-delete eligibility is
+  /// still unconfirmed:
+  /// - [_onDeleteButtonPressed] must not start the deletion flow while a
+  ///   pending check exists for a currently-selected resource (Finding
+  ///   1a) — the "Loeschen" button is disabled for the duration instead
+  ///   (immediate visible feedback).
+  /// - [_checkGithubScope] must not show [GithubPermissionPopup] once the
+  ///   check resolves if the user already unchecked the resource in the
+  ///   meantime (Finding 1b) — the late popup would contradict the user's
+  ///   own already-reverted decision.
+  final Set<String> _pendingScopeChecks = {};
+
+  /// Whether any currently *selected* resource still has a GitHub scope
+  /// check in flight. Only resources still in [_selectedResources] count —
+  /// a pending check for a resource the user already unchecked does not
+  /// block deletion (there is nothing destructive-external left to guard).
+  bool get _hasPendingScopeCheckForSelected {
+    if (_pendingScopeChecks.isEmpty) return false;
+    return _pendingScopeChecks.any(_selectedResources.contains);
+  }
 
   /// Resolves once both [_loadResources] and [_resolveAvailability] have
   /// settled. Exposed only so widget tests can await the dialog's initial
@@ -196,6 +258,84 @@ class _DeleteProjectDialogState extends ConsumerState<DeleteProjectDialog> {
     }
   }
 
+  /// Runs a brand-new GitHub `delete_repo` scope pre-flight check for
+  /// [resource] and reacts to the result (Spec 008, FR-002/FR-003/FR-005/
+  /// FR-006/FR-011/FR-012).
+  ///
+  /// Called ONLY when the user just ticked the GitHub checkbox to `true`
+  /// (see the `onChanged` callback in [_buildResources]). Never called on
+  /// uncheck, and never short-circuited by [_ghScopeResults] — every call
+  /// site is a fresh invocation of [_resolveCheckDeleteRepoScope], so two
+  /// consecutive checkbox ticks always produce two calls (FR-006, no
+  /// caching within the dialog session).
+  ///
+  /// - [GhScopeStatus.present]: the optimistic `_selectedResources.add`
+  ///   already performed by the caller stays in place — no popup.
+  /// - [GhScopeStatus.missing] / [GhScopeStatus.checkFailed] /
+  ///   [GhScopeStatus.cliUnavailable]: the optimistic selection is rolled
+  ///   back (checkbox returns to unchecked) and
+  ///   [GithubPermissionPopup] is shown with the matching status. Tapping
+  ///   its action button (only offered for missing/checkFailed) opens a
+  ///   terminal via [_resolveOnOpenTerminalForGhScopeRefresh] and closes
+  ///   the popup immediately (FR-011) — the checkbox is already unchecked
+  ///   at that point, so no further state change is needed there.
+  Future<void> _checkGithubScope(ExternalResource resource) async {
+    _pendingScopeChecks.add(resource.uri);
+
+    final GhScopeStatus status;
+    try {
+      status = await _resolveCheckDeleteRepoScope()();
+    } finally {
+      if (mounted) {
+        setState(() => _pendingScopeChecks.remove(resource.uri));
+      } else {
+        _pendingScopeChecks.remove(resource.uri);
+      }
+    }
+
+    if (!mounted) return;
+
+    // Review fix (In-flight-Race Finding 1b): if the user already
+    // unchecked this resource while the check was still running, their
+    // decision already stands — a late popup (or a late result-map write)
+    // would be misleading, so bail out before touching either.
+    if (!_selectedResources.contains(resource.uri)) {
+      return;
+    }
+
+    setState(() => _ghScopeResults[resource.uri] = status);
+
+    if (status == GhScopeStatus.present) {
+      return;
+    }
+
+    // Blocked (missing/checkFailed/cliUnavailable): roll back the
+    // optimistic check so the checkbox reflects "not actively deletable
+    // yet" (FR-005).
+    setState(() => _selectedResources.remove(resource.uri));
+
+    if (!mounted) return;
+    await showDialog<void>(
+      context: context,
+      builder: (_) => GithubPermissionPopup(
+        status: status,
+        onOpenTerminal: () {
+          unawaited(_resolveOnOpenTerminalForGhScopeRefresh()());
+        },
+      ),
+    );
+  }
+
+  GhScopeChecker _resolveCheckDeleteRepoScope() {
+    return widget.checkDeleteRepoScope ??
+        widget.ghDetectionService.checkDeleteRepoScope;
+  }
+
+  Future<void> Function() _resolveOnOpenTerminalForGhScopeRefresh() {
+    return widget.onOpenTerminalForGhScopeRefresh ??
+        QuickActionsService().openTerminalWithGhScopeRefresh;
+  }
+
   @override
   void dispose() {
     _textController.dispose();
@@ -237,8 +377,18 @@ class _DeleteProjectDialogState extends ConsumerState<DeleteProjectDialog> {
   /// is the ONLY path from [_DialogStep.form] — there is no other call
   /// site that starts the flow, so a destructive-external resource can
   /// never be deleted with just the project-name confirmation (SC-004).
+  ///
+  /// Review fix (In-flight-Race Finding 1a): also guarded on
+  /// [_hasPendingScopeCheckForSelected] — the "Loeschen" button is
+  /// disabled for the same condition in [_buildButtons], so this check is
+  /// belt-and-suspenders in case the button is ever reached while
+  /// technically still enabled (e.g. a race between rebuild and tap).
   void _onDeleteButtonPressed() {
-    if (!_nameMatches || _step != _DialogStep.form) return;
+    if (!_nameMatches ||
+        _step != _DialogStep.form ||
+        _hasPendingScopeCheckForSelected) {
+      return;
+    }
 
     if (_hasCheckedDestructiveExternal) {
       setState(() => _step = _DialogStep.destructiveWarning);
@@ -459,13 +609,31 @@ class _DeleteProjectDialogState extends ConsumerState<DeleteProjectDialog> {
                             ? Checkbox(
                                 value: isSelected,
                                 onChanged: (val) {
-                                  setState(() {
-                                    if (val == true) {
-                                      _selectedResources.add(resource.uri);
-                                    } else {
-                                      _selectedResources.remove(resource.uri);
+                                  if (val == true) {
+                                    setState(
+                                      () =>
+                                          _selectedResources.add(resource.uri),
+                                    );
+                                    // GitHub-repo checkboxes require a
+                                    // brand-new delete_repo scope
+                                    // pre-flight check on every tick to
+                                    // `true` (Spec 008, FR-002/FR-003/
+                                    // FR-006) — the optimistic add above
+                                    // is rolled back inside
+                                    // _checkGithubScope if the result is
+                                    // not `present`. Other resource
+                                    // types have no pre-flight step.
+                                    if (resource.type ==
+                                        ExternalResourceType.github) {
+                                      unawaited(_checkGithubScope(resource));
                                     }
-                                  });
+                                  } else {
+                                    setState(
+                                      () => _selectedResources.remove(
+                                        resource.uri,
+                                      ),
+                                    );
+                                  }
                                 },
                                 side: BorderSide(
                                   color: isSelected
@@ -587,8 +755,15 @@ class _DeleteProjectDialogState extends ConsumerState<DeleteProjectDialog> {
     // Once the button has been activated once, _step is no longer `form`
     // (it moves to destructiveWarning or straight to running), so this
     // button is disabled for the remainder of the flow — a second
-    // activation cannot start a duplicate run (FR-016).
-    final deleteEnabled = _nameMatches && _step == _DialogStep.form;
+    // activation cannot start a duplicate run (FR-016). Also disabled
+    // while a GitHub scope check for a currently-selected resource is
+    // still in flight (review fix — In-flight-Race Finding 1a): starting
+    // the flow before the check settles would bypass the whole point of
+    // the pre-flight check.
+    final deleteEnabled =
+        _nameMatches &&
+        _step == _DialogStep.form &&
+        !_hasPendingScopeCheckForSelected;
 
     return Wrap(
       alignment: WrapAlignment.end,
