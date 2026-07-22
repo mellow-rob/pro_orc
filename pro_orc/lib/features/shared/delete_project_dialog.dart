@@ -80,6 +80,8 @@ class DeleteProjectDialog extends ConsumerStatefulWidget {
     this.vercelRunner = defaultVercelProcessRunner,
     this.checkDeleteRepoScope,
     this.onOpenTerminalForGhScopeRefresh,
+    this.onOpenTerminalForGhScopeLogin,
+    this.getActiveGhAccount,
   });
 
   final ProjectModel project;
@@ -115,6 +117,26 @@ class DeleteProjectDialog extends ConsumerStatefulWidget {
   /// overridable in tests so the real AppleScript/Terminal launch never
   /// runs during widget tests.
   final Future<void> Function()? onOpenTerminalForGhScopeRefresh;
+
+  /// Invoked when the user taps the missing-permission popup's action
+  /// button in the account-MISMATCH case (active `gh` account differs from
+  /// the repo owner) to open a terminal and run `gh auth login -s
+  /// delete_repo` instead of `gh auth refresh` — `gh auth refresh`
+  /// structurally cannot target a different account
+  /// (2026-07-22-gh-auth-refresh-wrong-account). `null` (the default)
+  /// resolves to `QuickActionsService().openTerminalWithGhScopeLogin` at
+  /// call time — overridable in tests so the real AppleScript/Terminal
+  /// launch never runs during widget tests.
+  final Future<void> Function()? onOpenTerminalForGhScopeLogin;
+
+  /// Resolves the currently active `gh` CLI account's login, used to
+  /// detect a mismatch against the repo owner before showing the
+  /// missing-permission popup (2026-07-22-gh-auth-refresh-wrong-account).
+  /// `null` (the default) resolves to
+  /// `ghDetectionService.getActiveAccountLogin` at call time — overridable
+  /// in tests so present/absent/unknown outcomes can be simulated without
+  /// spawning a real `gh` process.
+  final Future<String?> Function()? getActiveGhAccount;
 
   @override
   ConsumerState<DeleteProjectDialog> createState() =>
@@ -314,14 +336,24 @@ class _DeleteProjectDialogState extends ConsumerState<DeleteProjectDialog> {
     // yet" (FR-005).
     setState(() => _selectedResources.remove(resource.uri));
 
+    // Resolve the active gh account to detect a mismatch against the repo
+    // owner before showing the popup (2026-07-22-gh-auth-refresh-wrong-
+    // account). A failed/unknown lookup resolves to null, which
+    // GithubPermissionPopup treats conservatively as "no mismatch".
+    final activeAccount = await _resolveGetActiveGhAccount()();
+
     if (!mounted) return;
     await showDialog<void>(
       context: context,
       builder: (_) => GithubPermissionPopup(
         status: status,
         repoOwner: extractGithubOwner(resource.uri),
+        activeAccount: activeAccount,
         onOpenTerminal: () {
           unawaited(_resolveOnOpenTerminalForGhScopeRefresh()());
+        },
+        onOpenTerminalLogin: () {
+          unawaited(_resolveOnOpenTerminalForGhScopeLogin()());
         },
       ),
     );
@@ -335,6 +367,16 @@ class _DeleteProjectDialogState extends ConsumerState<DeleteProjectDialog> {
   Future<void> Function() _resolveOnOpenTerminalForGhScopeRefresh() {
     return widget.onOpenTerminalForGhScopeRefresh ??
         QuickActionsService().openTerminalWithGhScopeRefresh;
+  }
+
+  Future<void> Function() _resolveOnOpenTerminalForGhScopeLogin() {
+    return widget.onOpenTerminalForGhScopeLogin ??
+        QuickActionsService().openTerminalWithGhScopeLogin;
+  }
+
+  Future<String?> Function() _resolveGetActiveGhAccount() {
+    return widget.getActiveGhAccount ??
+        widget.ghDetectionService.getActiveAccountLogin;
   }
 
   @override

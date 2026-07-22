@@ -31,6 +31,8 @@ Future<void> pumpDeleteProjectDialog(
   VercelProcessRunner vercelRunner = defaultVercelProcessRunner,
   GhScopeChecker? checkDeleteRepoScope,
   Future<void> Function()? onOpenTerminalForGhScopeRefresh,
+  Future<void> Function()? onOpenTerminalForGhScopeLogin,
+  Future<String?> Function()? getActiveGhAccount,
 }) async {
   tester.view.physicalSize = const Size(1200, 900);
   tester.view.devicePixelRatio = 1.0;
@@ -57,6 +59,16 @@ Future<void> pumpDeleteProjectDialog(
               vercelRunner: vercelRunner,
               checkDeleteRepoScope: checkDeleteRepoScope,
               onOpenTerminalForGhScopeRefresh: onOpenTerminalForGhScopeRefresh,
+              onOpenTerminalForGhScopeLogin: onOpenTerminalForGhScopeLogin,
+              // Defaults to a no-op resolving null (no mismatch) instead of
+              // leaving this null: null on the widget itself would resolve
+              // to the REAL GhDetectionService.getActiveAccountLogin, which
+              // spawns a real process — the exact hang class documented
+              // above for _loadResources/_resolveAvailability, but reached
+              // from a button-tap callback outside pumpDeleteProjectDialog's
+              // own runAsync wrapping. Tests that care about the mismatch
+              // path inject their own value explicitly.
+              getActiveGhAccount: getActiveGhAccount ?? (() async => null),
             ),
           ),
         ),

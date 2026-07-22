@@ -160,6 +160,25 @@ void main() {
       });
     });
 
+    group('buildGhScopeLoginScript / openTerminalWithGhScopeLogin '
+        '(2026-07-22-gh-auth-refresh-wrong-account)', () {
+      test('command is the constant gh auth login -s delete_repo string '
+          '(account-agnostic — gh prompts interactively)', () {
+        final script = service.buildGhScopeLoginScript();
+
+        expect(script, contains(r'gh auth login -s delete_repo'));
+        expect(script, contains('tell application "Terminal"'));
+        expect(script, contains('do script'));
+        expect(script, isNot(contains('cd ')));
+      });
+
+      test('does not run gh auth refresh (wrong command for a mismatch)', () {
+        final script = service.buildGhScopeLoginScript();
+
+        expect(script, isNot(contains('gh auth refresh')));
+      });
+    });
+
     group('isValidSkillName', () {
       test('accepts plausible skill names, with or without leading slash', () {
         expect(isValidSkillName('a1-fix'), isTrue);

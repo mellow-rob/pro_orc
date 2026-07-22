@@ -443,4 +443,147 @@ void main() {
       },
     );
   });
+
+  group('DeleteProjectDialog — active-account-vs-owner mismatch wiring '
+      '(2026-07-22-gh-auth-refresh-wrong-account)', () {
+    late Directory root;
+    late ProjectModel githubProject;
+
+    setUpAll(() async {
+      root = await Directory.systemTemp.createTemp(
+        'delete_dialog_account_mismatch_test_',
+      );
+
+      final githubDir = Directory(p.join(root.path, 'github_only'));
+      await githubDir.create(recursive: true);
+      githubProject = ProjectModel(
+        folderId: 'github_only',
+        displayName: 'Test Project',
+        path: githubDir.path,
+        projectType: ProjectType.code,
+        git: const GitData(
+          githubUrl: 'https://github.com/mellow-rob/some-repo',
+        ),
+        mdFiles: const [],
+      );
+    });
+
+    tearDownAll(() async {
+      if (await root.exists()) await root.delete(recursive: true);
+    });
+
+    testWidgets(
+      'active account differs from owner: popup receives both names and '
+      'the mismatch is detected — action button runs the login flow, not '
+      'the refresh flow',
+      (tester) async {
+        var refreshCalls = 0;
+        var loginCalls = 0;
+
+        await pumpDeleteProjectDialog(
+          tester,
+          githubProject,
+          vercelAvailable: false,
+          ghAvailable: true,
+          checkDeleteRepoScope: () async => GhScopeStatus.missing,
+          getActiveGhAccount: () async => 'n3urala1-rob',
+          onOpenTerminalForGhScopeRefresh: () async => refreshCalls++,
+          onOpenTerminalForGhScopeLogin: () async => loginCalls++,
+        );
+
+        await tester.tap(find.byType(Checkbox));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Berechtigung fehlt'), findsOneWidget);
+        final popup = tester.widget<GithubPermissionPopup>(
+          find.byType(GithubPermissionPopup),
+        );
+        expect(popup.repoOwner, 'mellow-rob');
+        expect(popup.activeAccount, 'n3urala1-rob');
+        expect(find.textContaining('mellow-rob'), findsWidgets);
+        expect(find.textContaining('n3urala1-rob'), findsWidgets);
+
+        await tester.tap(
+          find.text('Terminal oeffnen & Berechtigung nachfordern'),
+        );
+        await tester.pumpAndSettle();
+
+        expect(loginCalls, 1);
+        expect(refreshCalls, 0);
+      },
+    );
+
+    testWidgets(
+      'active account matches owner: no mismatch, action button runs the '
+      'refresh flow unchanged',
+      (tester) async {
+        var refreshCalls = 0;
+        var loginCalls = 0;
+
+        await pumpDeleteProjectDialog(
+          tester,
+          githubProject,
+          vercelAvailable: false,
+          ghAvailable: true,
+          checkDeleteRepoScope: () async => GhScopeStatus.missing,
+          getActiveGhAccount: () async => 'mellow-rob',
+          onOpenTerminalForGhScopeRefresh: () async => refreshCalls++,
+          onOpenTerminalForGhScopeLogin: () async => loginCalls++,
+        );
+
+        await tester.tap(find.byType(Checkbox));
+        await tester.pumpAndSettle();
+
+        final popup = tester.widget<GithubPermissionPopup>(
+          find.byType(GithubPermissionPopup),
+        );
+        expect(popup.repoOwner, 'mellow-rob');
+        expect(popup.activeAccount, 'mellow-rob');
+
+        await tester.tap(
+          find.text('Terminal oeffnen & Berechtigung nachfordern'),
+        );
+        await tester.pumpAndSettle();
+
+        expect(refreshCalls, 1);
+        expect(loginCalls, 0);
+      },
+    );
+
+    testWidgets(
+      'active account lookup fails/unknown (null): treated conservatively '
+      'as no mismatch — refresh flow still offered',
+      (tester) async {
+        var refreshCalls = 0;
+        var loginCalls = 0;
+
+        await pumpDeleteProjectDialog(
+          tester,
+          githubProject,
+          vercelAvailable: false,
+          ghAvailable: true,
+          checkDeleteRepoScope: () async => GhScopeStatus.missing,
+          getActiveGhAccount: () async => null,
+          onOpenTerminalForGhScopeRefresh: () async => refreshCalls++,
+          onOpenTerminalForGhScopeLogin: () async => loginCalls++,
+        );
+
+        await tester.tap(find.byType(Checkbox));
+        await tester.pumpAndSettle();
+
+        final popup = tester.widget<GithubPermissionPopup>(
+          find.byType(GithubPermissionPopup),
+        );
+        expect(popup.activeAccount, isNull);
+
+        await tester.tap(
+          find.text('Terminal oeffnen & Berechtigung nachfordern'),
+        );
+        await tester.pumpAndSettle();
+
+        expect(refreshCalls, 1);
+        expect(loginCalls, 0);
+      },
+    );
+  });
 }

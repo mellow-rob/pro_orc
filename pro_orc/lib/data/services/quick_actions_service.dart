@@ -170,6 +170,38 @@ class QuickActionsService {
     await Process.run('open', ['-a', 'Terminal'], runInShell: true);
   }
 
+  /// The exact, hard-coded command run to log in to (and grant the
+  /// `delete_repo` scope for) a GitHub account other than the currently
+  /// active `gh` session — the correct action when the repo's owning
+  /// account differs from the active account, since `gh auth refresh` can
+  /// only ever operate on the currently active account (verified against
+  /// `gh auth refresh --help`, no `--user` flag; see
+  /// 2026-07-22-gh-auth-refresh-wrong-account). Deliberately
+  /// account-agnostic — `gh` prompts interactively in the browser for which
+  /// account to authenticate as, so no owner name is interpolated into this
+  /// command. A Dart string literal, never built from interpolation, same
+  /// "no dynamic value" guarantee as [ghScopeRefreshCommand].
+  static const String ghScopeLoginCommand = 'gh auth login -s delete_repo';
+
+  /// Builds the AppleScript to run [ghScopeLoginCommand] in a new Terminal
+  /// window. Not project-scoped, same shape as [buildGhScopeRefreshScript].
+  String buildGhScopeLoginScript() {
+    return _terminalScript(ghScopeLoginCommand);
+  }
+
+  /// Opens Terminal.app and runs the constant `gh auth login -s
+  /// delete_repo` command — logs in (and activates) the account the user
+  /// authenticates as in the browser, granting the `delete_repo` scope in
+  /// the same step. Used instead of [openTerminalWithGhScopeRefresh] when
+  /// the repo owner does not match the currently active `gh` account, since
+  /// `gh auth refresh` cannot target a different account
+  /// (2026-07-22-gh-auth-refresh-wrong-account).
+  Future<void> openTerminalWithGhScopeLogin() async {
+    final script = buildGhScopeLoginScript();
+    await Process.run('osascript', ['-e', script], runInShell: true);
+    await Process.run('open', ['-a', 'Terminal'], runInShell: true);
+  }
+
   /// Builds AppleScript to run a command in a new Terminal window.
   String _terminalScript(String command) {
     // Escape backslashes and double quotes for AppleScript string

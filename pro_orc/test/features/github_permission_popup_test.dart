@@ -14,14 +14,19 @@ void main() {
   }
 
   /// Pumps a Scaffold with a button that opens [GithubPermissionPopup] via
-  /// [showDialog] for [status], recording every call to [onOpenTerminal].
-  /// Returns the count of calls so tests can assert exactly how many times
-  /// (0 or 1) the runner fired.
+  /// [showDialog] for [status], recording every call to [onOpenTerminal] /
+  /// [onOpenTerminalLogin]. Returns the count of calls so tests can assert
+  /// exactly how many times (0 or 1) each runner fired — and, crucially,
+  /// which ONE of the two actually ran (2026-07-22-gh-auth-refresh-wrong-
+  /// account: the mismatch case must invoke the login callback, never the
+  /// refresh callback, and vice versa).
   Future<void> pumpAndOpenPopup(
     WidgetTester tester, {
     required GhScopeStatus status,
     required void Function() onOpenTerminal,
+    void Function()? onOpenTerminalLogin,
     String? repoOwner,
+    String? activeAccount,
   }) async {
     await tester.pumpWidget(
       wrapInMaterial(
@@ -32,7 +37,9 @@ void main() {
               builder: (_) => GithubPermissionPopup(
                 status: status,
                 onOpenTerminal: onOpenTerminal,
+                onOpenTerminalLogin: onOpenTerminalLogin ?? () {},
                 repoOwner: repoOwner,
+                activeAccount: activeAccount,
               ),
             ),
             child: const Text('open'),
@@ -405,6 +412,239 @@ void main() {
       );
       expect(find.textContaining('gehoert zu'), findsNothing);
     });
+  });
+
+  group('GithubPermissionPopup — active-account-vs-owner mismatch '
+      '(2026-07-22-gh-auth-refresh-wrong-account)', () {
+    testWidgets(
+      'no mismatch (active == owner): unchanged old text, tapping the '
+      'action button invokes the OLD refresh callback, never the new '
+      'login callback (discriminating call-capture)',
+      (tester) async {
+        var refreshCalls = 0;
+        var loginCalls = 0;
+
+        await pumpAndOpenPopup(
+          tester,
+          status: GhScopeStatus.missing,
+          onOpenTerminal: () => refreshCalls++,
+          onOpenTerminalLogin: () => loginCalls++,
+          repoOwner: 'n3urala1-rob',
+          activeAccount: 'n3urala1-rob',
+        );
+
+        expect(
+          find.textContaining('melde dich im Terminal mit einem Account'),
+          findsWidgets,
+          reason: 'same-account case keeps the original call-to-action',
+        );
+
+        await tester.tap(
+          find.text('Terminal oeffnen & Berechtigung nachfordern'),
+        );
+        await tester.pumpAndSettle();
+
+        expect(
+          refreshCalls,
+          1,
+          reason: 'same-account case must still run gh auth refresh',
+        );
+        expect(
+          loginCalls,
+          0,
+          reason: 'the login callback must not fire in the no-mismatch case',
+        );
+      },
+    );
+
+    testWidgets(
+      'no mismatch (activeAccount unknown/null): treated conservatively '
+      'as no mismatch — unchanged old text and old refresh callback',
+      (tester) async {
+        var refreshCalls = 0;
+        var loginCalls = 0;
+
+        await pumpAndOpenPopup(
+          tester,
+          status: GhScopeStatus.missing,
+          onOpenTerminal: () => refreshCalls++,
+          onOpenTerminalLogin: () => loginCalls++,
+          repoOwner: 'mellow-rob',
+          activeAccount: null,
+        );
+
+        expect(
+          find.textContaining('melde dich im Terminal mit einem Account'),
+          findsWidgets,
+        );
+
+        await tester.tap(
+          find.text('Terminal oeffnen & Berechtigung nachfordern'),
+        );
+        await tester.pumpAndSettle();
+
+        expect(refreshCalls, 1);
+        expect(loginCalls, 0);
+      },
+    );
+
+    testWidgets(
+      'mismatch (active != owner): body names BOTH accounts, tapping the '
+      'action button invokes the NEW login callback, never the old '
+      'refresh callback (discriminating call-capture)',
+      (tester) async {
+        var refreshCalls = 0;
+        var loginCalls = 0;
+
+        await pumpAndOpenPopup(
+          tester,
+          status: GhScopeStatus.missing,
+          onOpenTerminal: () => refreshCalls++,
+          onOpenTerminalLogin: () => loginCalls++,
+          repoOwner: 'mellow-rob',
+          activeAccount: 'n3urala1-rob',
+        );
+
+        expect(find.textContaining('n3urala1-rob'), findsWidgets);
+        expect(find.textContaining('mellow-rob'), findsWidgets);
+
+        final actionButton = find.text(
+          'Terminal oeffnen & Berechtigung nachfordern',
+        );
+        await tester.tap(actionButton);
+        await tester.pumpAndSettle();
+
+        expect(
+          loginCalls,
+          1,
+          reason:
+              'mismatch case must run gh auth login, not gh auth refresh '
+              '(gh auth refresh structurally cannot target another '
+              'account — see bug report evidence)',
+        );
+        expect(
+          refreshCalls,
+          0,
+          reason:
+              'the old refresh callback must NOT fire in the mismatch '
+              'case — it would reproduce the exact bug',
+        );
+      },
+    );
+
+    testWidgets(
+      'mismatch: the old "melde dich im Terminal mit einem Account an" '
+      'call-to-action is gone (would tell the user to run the wrong flow)',
+      (tester) async {
+        await pumpAndOpenPopup(
+          tester,
+          status: GhScopeStatus.missing,
+          onOpenTerminal: () {},
+          repoOwner: 'mellow-rob',
+          activeAccount: 'n3urala1-rob',
+        );
+
+        expect(
+          find.textContaining('melde dich im Terminal mit einem Account'),
+          findsNothing,
+        );
+      },
+    );
+
+    testWidgets(
+      'mismatch: body includes a switch-back hint mentioning the previous '
+      '(currently active) account for after the scope is granted',
+      (tester) async {
+        await pumpAndOpenPopup(
+          tester,
+          status: GhScopeStatus.missing,
+          onOpenTerminal: () {},
+          repoOwner: 'mellow-rob',
+          activeAccount: 'n3urala1-rob',
+        );
+
+        expect(find.textContaining('gh auth switch'), findsWidgets);
+        expect(
+          find.textContaining('n3urala1-rob'),
+          findsWidgets,
+          reason:
+              'the switch-back hint must name the account to switch back '
+              'to',
+        );
+      },
+    );
+
+    testWidgets(
+      'mismatch with checkFailed status: same mismatch branch applies '
+      '(missing/checkFailed share the same body shape)',
+      (tester) async {
+        var refreshCalls = 0;
+        var loginCalls = 0;
+
+        await pumpAndOpenPopup(
+          tester,
+          status: GhScopeStatus.checkFailed,
+          onOpenTerminal: () => refreshCalls++,
+          onOpenTerminalLogin: () => loginCalls++,
+          repoOwner: 'mellow-rob',
+          activeAccount: 'n3urala1-rob',
+        );
+
+        await tester.tap(
+          find.text('Terminal oeffnen & Berechtigung nachfordern'),
+        );
+        await tester.pumpAndSettle();
+
+        expect(loginCalls, 1);
+        expect(refreshCalls, 0);
+      },
+    );
+
+    testWidgets('mismatch: action button still closes the popup immediately '
+        '(FR-011 behavior preserved)', (tester) async {
+      await pumpAndOpenPopup(
+        tester,
+        status: GhScopeStatus.missing,
+        onOpenTerminal: () {},
+        repoOwner: 'mellow-rob',
+        activeAccount: 'n3urala1-rob',
+      );
+
+      expect(find.text('Berechtigung fehlt'), findsOneWidget);
+
+      await tester.tap(
+        find.text('Terminal oeffnen & Berechtigung nachfordern'),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Berechtigung fehlt'), findsNothing);
+    });
+
+    testWidgets(
+      'no mismatch when repoOwner is null (cannot compare) — old text, '
+      'old callback',
+      (tester) async {
+        var refreshCalls = 0;
+        var loginCalls = 0;
+
+        await pumpAndOpenPopup(
+          tester,
+          status: GhScopeStatus.missing,
+          onOpenTerminal: () => refreshCalls++,
+          onOpenTerminalLogin: () => loginCalls++,
+          repoOwner: null,
+          activeAccount: 'n3urala1-rob',
+        );
+
+        await tester.tap(
+          find.text('Terminal oeffnen & Berechtigung nachfordern'),
+        );
+        await tester.pumpAndSettle();
+
+        expect(refreshCalls, 1);
+        expect(loginCalls, 0);
+      },
+    );
   });
 
   group('extractGithubOwner (Spec 009, FR-001/FR-002)', () {

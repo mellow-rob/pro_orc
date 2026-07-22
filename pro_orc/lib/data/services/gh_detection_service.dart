@@ -150,6 +150,74 @@ class GhDetectionService {
     }
   }
 
+  /// Returns the login name of the currently active `gh` account (the
+  /// account `gh auth refresh` would actually operate on), or `null` if it
+  /// cannot be determined (`gh` unavailable, output unparseable, no line
+  /// marked as active, or the runner throws).
+  ///
+  /// `gh auth status` can list several accounts per host when multiple are
+  /// logged in; only the one followed by `- Active account: true` is the
+  /// one `gh auth refresh` would touch. Callers must treat `null`
+  /// conservatively — as "cannot determine, assume no mismatch" — never as
+  /// evidence of a mismatch (2026-07-22-gh-auth-refresh-wrong-account).
+  ///
+  /// Never throws.
+  Future<String?> getActiveAccountLogin() async {
+    if (!await isAvailable()) {
+      return null;
+    }
+
+    try {
+      final result = await _authStatusRunner(_ghCommand, [
+        'auth',
+        'status',
+      ], timeout: _authStatusTimeout).timeout(_authStatusTimeout);
+
+      final combinedOutput = '${result.stdout}\n${result.stderr}';
+      return _parseActiveAccountLogin(combinedOutput);
+    } catch (e) {
+      developer.log(
+        'Failed to determine active gh account: $e',
+        name: 'gh_detection_service',
+      );
+      return null;
+    }
+  }
+
+  /// Parses a `gh auth status` text block for the account block that is
+  /// immediately followed by `- Active account: true` and returns its login
+  /// name (the token after `account ` and before the trailing `(...)`).
+  ///
+  /// `gh` prints one block per logged-in account, e.g.:
+  /// ```
+  ///   ✓ Logged in to github.com account octocat (keyring)
+  ///   - Active account: true
+  /// ```
+  /// and can print several such blocks when multiple accounts are logged in
+  /// on the same host. Splits the output at each `account <login> (...)`
+  /// login line first, so each candidate's own `Active account:` marker is
+  /// only matched within ITS OWN block — never bleeding into the next
+  /// account's block, which is what a single non-greedy `[\s\S]*?` regex
+  /// across the whole output would do once more than one account is logged
+  /// in.
+  static String? _parseActiveAccountLogin(String output) {
+    final loginLine = RegExp(r'account\s+(\S+)\s*\([^)]*\)');
+    final matches = loginLine.allMatches(output).toList();
+    if (matches.isEmpty) return null;
+
+    for (var i = 0; i < matches.length; i++) {
+      final blockStart = matches[i].end;
+      final blockEnd = i + 1 < matches.length
+          ? matches[i + 1].start
+          : output.length;
+      final block = output.substring(blockStart, blockEnd);
+      if (RegExp(r'-\s*Active account:\s*true').hasMatch(block)) {
+        return matches[i].group(1);
+      }
+    }
+    return null;
+  }
+
   /// Parses a `gh auth status` text block for the `Token scopes:` line and
   /// checks whether `delete_repo` appears as a whole scope token.
   static GhScopeStatus _parseScopeStatus(String output) {

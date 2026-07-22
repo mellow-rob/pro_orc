@@ -56,7 +56,9 @@ class GithubPermissionPopup extends StatelessWidget {
     super.key,
     required this.status,
     required this.onOpenTerminal,
+    this.onOpenTerminalLogin,
     this.repoOwner,
+    this.activeAccount,
   });
 
   /// The pre-flight result driving which body/action this popup shows.
@@ -74,14 +76,38 @@ class GithubPermissionPopup extends StatelessWidget {
   /// affected states.
   final String? repoOwner;
 
-  /// Invoked when the user taps the action button (only ever shown for
-  /// [GhScopeStatus.missing] / [GhScopeStatus.checkFailed]). The caller
-  /// supplies the terminal runner (e.g.
+  /// The login of the currently active `gh` CLI account, already resolved
+  /// by the caller via `GhDetectionService.getActiveAccountLogin()`
+  /// (2026-07-22-gh-auth-refresh-wrong-account). `null` means "could not be
+  /// determined" and is treated the SAME as "no mismatch" — [_accountMismatch]
+  /// only becomes `true` when both [activeAccount] and [repoOwner] are
+  /// known AND differ. This is a conservative default: an unknown active
+  /// account must never trigger the mismatch copy/flow, since that flow
+  /// would be wrong if there actually is no mismatch.
+  final String? activeAccount;
+
+  /// Invoked when the user taps the action button in the NO-mismatch case
+  /// (only ever shown for [GhScopeStatus.missing] / [GhScopeStatus.checkFailed]).
+  /// The caller supplies the terminal runner (e.g.
   /// `QuickActionsService().openTerminalWithGhScopeRefresh`) — this widget
   /// never constructs a command string itself, so the constant,
   /// hard-coded `gh auth refresh -s delete_repo` command lives in exactly
   /// one place (FR-004a).
+  ///
+  /// NOT invoked when [_accountMismatch] is `true` — see
+  /// [onOpenTerminalLogin].
   final VoidCallback onOpenTerminal;
+
+  /// Invoked when the user taps the action button in the account-MISMATCH
+  /// case instead of [onOpenTerminal] — `gh auth refresh` structurally
+  /// cannot target a different account (verified against `gh auth refresh
+  /// --help`, no `--user` flag), so the mismatch case must run a different
+  /// command (`gh auth login -s delete_repo`, see
+  /// `QuickActionsService().openTerminalWithGhScopeLogin`) instead
+  /// (2026-07-22-gh-auth-refresh-wrong-account). `null` is only safe when
+  /// the caller never passes `activeAccount`/`repoOwner` combinations that
+  /// can produce a mismatch; callers that do must supply this.
+  final VoidCallback? onOpenTerminalLogin;
 
   static const String _title = 'Berechtigung fehlt';
   static const String _actionLabel =
@@ -94,6 +120,22 @@ class GithubPermissionPopup extends StatelessWidget {
       'das Repository geloescht werden kann.';
 
   bool get _showsRefreshAction => status != GhScopeStatus.cliUnavailable;
+
+  /// `true` only when both [activeAccount] and [repoOwner] are known and
+  /// they differ — the case where `gh auth refresh` would fail with
+  /// "error refreshing credentials for X, received credentials for Y"
+  /// (2026-07-22-gh-auth-refresh-wrong-account). An unknown [activeAccount]
+  /// (lookup failed) is conservatively treated as "no mismatch": the
+  /// original `gh auth refresh` copy/flow stays in place, which is exactly
+  /// today's pre-existing behavior for anyone whose active account happens
+  /// to match, and merely non-actionable (not actively misleading) for the
+  /// rare case where it doesn't and the lookup also failed.
+  bool get _accountMismatch {
+    final active = activeAccount;
+    final owner = repoOwner;
+    if (active == null || owner == null) return false;
+    return active != owner;
+  }
 
   /// The owner-less fallback body text for the current [status] (FR-002)
   /// — unchanged from the pre-Spec-009 behaviour.
@@ -112,7 +154,9 @@ class GithubPermissionPopup extends StatelessWidget {
     }
   }
 
-  /// Builds the body's rich-text spans (Spec 009, FR-001/FR-002).
+  /// Builds the body's rich-text spans (Spec 009, FR-001/FR-002; extended
+  /// 2026-07-22-gh-auth-refresh-wrong-account for the account-mismatch
+  /// case).
   ///
   /// When [repoOwner] is present, weaves in an owner hint ahead of the
   /// existing status-specific explanation, with the owner name in its own
@@ -121,22 +165,30 @@ class GithubPermissionPopup extends StatelessWidget {
   /// previous owner-less text as a single plain span — no bold span, no
   /// empty placeholder.
   ///
-  /// The trailing prose after the owner name differs by [status] (review
-  /// fix, Spec 009): for [GhScopeStatus.missing]/[GhScopeStatus.checkFailed]
-  /// — where `gh` is already running and only the scope is missing — it
-  /// keeps the "melde dich mit einem Account an, der Loeschrechte hat"
-  /// call-to-action. For [GhScopeStatus.cliUnavailable] — where `gh` isn't
-  /// even installed/logged in yet — that account-specific call-to-action
-  /// would be premature and contradictory, so the sentence stays neutral
-  /// ("Dieses Repository gehoert zu **{owner}**.") and the actual
-  /// instruction comes from [_cliUnavailableBody] / the `gh auth login`
-  /// hint that follow.
+  /// The trailing prose after the owner name has THREE shapes:
+  /// - [_accountMismatch]: names both accounts and explains the active one
+  ///   must be switched first, since `gh auth refresh` cannot target a
+  ///   different account (see [_accountMismatchSpans]).
+  /// - No mismatch, [GhScopeStatus.missing]/[GhScopeStatus.checkFailed] —
+  ///   where `gh` is already running and only the scope is missing — keeps
+  ///   the original "melde dich mit einem Account an, der Loeschrechte hat"
+  ///   call-to-action.
+  /// - No mismatch, [GhScopeStatus.cliUnavailable] — where `gh` isn't even
+  ///   installed/logged in yet — that account-specific call-to-action would
+  ///   be premature and contradictory, so the sentence stays neutral
+  ///   ("Dieses Repository gehoert zu **{owner}**.") and the actual
+  ///   instruction comes from [_cliUnavailableBody] / the `gh auth login`
+  ///   hint that follows.
   List<TextSpan> _bodySpans(AppColors colors) {
     final proseStyle = TextStyle(color: colors.textSec, fontSize: 13);
     final owner = repoOwner;
 
     if (owner == null) {
       return [TextSpan(text: _bodyTextFallback, style: proseStyle)];
+    }
+
+    if (_accountMismatch) {
+      return _accountMismatchSpans(owner, activeAccount!);
     }
 
     final TextSpan trailingSpan = status == GhScopeStatus.cliUnavailable
@@ -158,12 +210,54 @@ class GithubPermissionPopup extends StatelessWidget {
     ];
   }
 
+  /// Body spans for the account-mismatch case
+  /// (2026-07-22-gh-auth-refresh-wrong-account): names both the repo
+  /// [owner] and the currently [active] `gh` account, explains that the
+  /// right account must be activated first (since `gh auth refresh`
+  /// structurally cannot refresh a different account's credentials — see
+  /// `gh auth refresh --help`), and adds an informational switch-back hint
+  /// (`gh auth switch --user <active>`) for after the scope is granted —
+  /// stated as a hint only, never executed automatically.
+  List<TextSpan> _accountMismatchSpans(String owner, String active) {
+    return [
+      const TextSpan(text: 'Dieses Repository gehoert '),
+      TextSpan(
+        text: owner,
+        style: const TextStyle(fontWeight: FontWeight.bold),
+      ),
+      const TextSpan(text: ', der aktive GitHub-CLI-Account ist aber '),
+      TextSpan(
+        text: active,
+        style: const TextStyle(fontWeight: FontWeight.bold),
+      ),
+      const TextSpan(text: '. Melde dich im Browser als '),
+      TextSpan(
+        text: owner,
+        style: const TextStyle(fontWeight: FontWeight.bold),
+      ),
+      const TextSpan(
+        text:
+            ' an — der Terminal-Button startet dafuer "gh auth login -s '
+            'delete_repo". Danach kannst du mit "gh auth switch --user ',
+      ),
+      TextSpan(
+        text: active,
+        style: const TextStyle(fontWeight: FontWeight.bold),
+      ),
+      const TextSpan(text: '" wieder zu deinem vorherigen Account wechseln.'),
+    ];
+  }
+
   void _dismiss(BuildContext context) {
     Navigator.of(context).pop();
   }
 
   void _onActionPressed(BuildContext context) {
-    onOpenTerminal();
+    if (_accountMismatch) {
+      onOpenTerminalLogin?.call();
+    } else {
+      onOpenTerminal();
+    }
     // FR-011: close immediately once the terminal opens — no lingering
     // "waiting for terminal" state while the user is outside the app.
     _dismiss(context);
