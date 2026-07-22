@@ -29,6 +29,8 @@ Future<void> pumpDeleteProjectDialog(
   required bool ghAvailable,
   ProcessRunner ghRunner = defaultProcessRunner,
   VercelProcessRunner vercelRunner = defaultVercelProcessRunner,
+  GhScopeChecker? checkDeleteRepoScope,
+  Future<void> Function()? onOpenTerminalForGhScopeRefresh,
 }) async {
   tester.view.physicalSize = const Size(1200, 900);
   tester.view.devicePixelRatio = 1.0;
@@ -53,6 +55,8 @@ Future<void> pumpDeleteProjectDialog(
               ),
               ghRunner: ghRunner,
               vercelRunner: vercelRunner,
+              checkDeleteRepoScope: checkDeleteRepoScope,
+              onOpenTerminalForGhScopeRefresh: onOpenTerminalForGhScopeRefresh,
             ),
           ),
         ),

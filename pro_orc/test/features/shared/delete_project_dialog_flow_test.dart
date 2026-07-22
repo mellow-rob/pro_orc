@@ -7,6 +7,7 @@ import 'package:path/path.dart' as p;
 import 'package:pro_orc/data/models/git_data.dart';
 import 'package:pro_orc/data/models/project_model.dart';
 import 'package:pro_orc/data/models/project_type.dart';
+import 'package:pro_orc/data/services/gh_detection_service.dart';
 import 'package:pro_orc/features/shared/delete_project_dialog.dart';
 
 import 'delete_project_dialog_test_helpers.dart';
@@ -87,10 +88,15 @@ void main() {
         githubProject,
         vercelAvailable: false,
         ghAvailable: true,
+        // This test is about the FR-007 destructive-warning step, not the
+        // Wave 3 scope pre-flight check — inject a `present` result so the
+        // checkbox stays checked and the flow proceeds exactly as before
+        // Wave 3 wired the check in.
+        checkDeleteRepoScope: () async => GhScopeStatus.present,
       );
 
       await tester.tap(find.byType(Checkbox));
-      await tester.pump();
+      await tester.pumpAndSettle();
       await typeProjectName(tester);
 
       await tester.tap(find.widgetWithText(FilledButton, 'Loeschen'));
@@ -117,10 +123,13 @@ void main() {
           githubProject,
           vercelAvailable: false,
           ghAvailable: true,
+          // Not about the Wave 3 scope pre-flight check — see the doc
+          // comment on the previous test in this file.
+          checkDeleteRepoScope: () async => GhScopeStatus.present,
         );
 
         await tester.tap(find.byType(Checkbox));
-        await tester.pump();
+        await tester.pumpAndSettle();
         await typeProjectName(tester);
         await tester.tap(find.widgetWithText(FilledButton, 'Loeschen'));
         await tester.pump();
