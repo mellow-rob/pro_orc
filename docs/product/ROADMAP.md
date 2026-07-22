@@ -131,13 +131,24 @@ features:
   - id: 010-deletion-scope-preflight-check
     milestone: m8-project-organization
     title: "Pre-Flight Permission Check for Destructive External Deletions"
-    status: in-flight
-    stage: verify
+    status: done
+    stage: done
     depends_on:
       - 009-complete-project-deletion
     started: 2026-07-21
-    finished: null
+    finished: 2026-07-22
     spec_path: projects/pro-orc/spec/008-deletion-scope-preflight-check.md
+    plan_path: null
+  - id: 011-permission-popup-repo-owner
+    milestone: m8-project-organization
+    title: "Show Repo Owner in the Missing-Permission Popup"
+    status: in-flight
+    stage: verify
+    depends_on:
+      - 010-deletion-scope-preflight-check
+    started: 2026-07-22
+    finished: null
+    spec_path: projects/pro-orc/spec/009-permission-popup-repo-owner.md
     plan_path: null
 next: null
 ---
@@ -222,6 +233,15 @@ None.
 - **2026-07-22** — 010-deletion-scope-preflight-check -> complete — stage transition via `product stage`
 - **2026-07-22** — 010-deletion-scope-preflight-check -> review — stage transition via `product stage`
 - **2026-07-22** — 010-deletion-scope-preflight-check -> verify — stage transition via `product stage`
+- **2026-07-22** — 010-deletion-scope-preflight-check -> merge — stage transition via `product stage`
+- **2026-07-22** — 010-deletion-scope-preflight-check -> origin-cleanup — stage transition via `product stage`
+- **2026-07-22** — 010-deletion-scope-preflight-check -> done — stage transition via `product stage`
+- **2026-07-22** — feature '011-permission-popup-repo-owner' added — Display the GitHub repository owner in the missing-permission popup so users with multiple accounts know which one to authenticate with
+- **2026-07-22** — feature.md created for '011-permission-popup-repo-owner' — formal spec/plan attached via `product feature-init`
+- **2026-07-22** — 011-permission-popup-repo-owner -> started — stage transition via `product stage`
+- **2026-07-22** — 011-permission-popup-repo-owner -> complete — stage transition via `product stage`
+- **2026-07-22** — 011-permission-popup-repo-owner -> review — stage transition via `product stage`
+- **2026-07-22** — 011-permission-popup-repo-owner -> verify — stage transition via `product stage`
 
 ## Appendix — migrated details
 

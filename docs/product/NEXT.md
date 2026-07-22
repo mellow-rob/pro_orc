@@ -12,11 +12,11 @@ updated: 2026-07-22
 
 ## In-flight features
 
-- **010-deletion-scope-preflight-check** — Pre-Flight Permission Check for Destructive External Deletions (milestone: m8-project-organization, stage: verify) — scope: projects/pro-orc/spec/008-deletion-scope-preflight-check.md
+- **011-permission-popup-repo-owner** — Show Repo Owner in the Missing-Permission Popup (milestone: m8-project-organization, stage: verify) — scope: projects/pro-orc/spec/009-permission-popup-repo-owner.md
 
 ## Next cursor
 
-**010-deletion-scope-preflight-check** — recommended next feature (all dependencies (009-complete-project-deletion) are done).
+**011-permission-popup-repo-owner** — recommended next feature (all dependencies (010-deletion-scope-preflight-check) are done).
 
 ## How to continue
 

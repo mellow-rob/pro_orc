@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated": "2026-07-22T07:13:50.628Z",
+  "generated": "2026-07-22T13:27:53.872Z",
   "project": {
     "id": "pro-orc",
     "title": "Pro Orc",
@@ -169,17 +169,37 @@
       "id": "010-deletion-scope-preflight-check",
       "milestone": "m8-project-organization",
       "title": "Pre-Flight Permission Check for Destructive External Deletions",
-      "status": "in-flight",
-      "stage": "verify",
+      "status": "done",
+      "stage": "done",
       "depends_on": [
         "009-complete-project-deletion"
       ],
       "started": "2026-07-21",
-      "finished": null,
+      "finished": "2026-07-22",
       "spec_path": "projects/pro-orc/spec/008-deletion-scope-preflight-check.md",
+      "plan_path": null
+    },
+    {
+      "id": "011-permission-popup-repo-owner",
+      "milestone": "m8-project-organization",
+      "title": "Show Repo Owner in the Missing-Permission Popup",
+      "status": "in-flight",
+      "stage": "verify",
+      "depends_on": [
+        "010-deletion-scope-preflight-check"
+      ],
+      "started": "2026-07-22",
+      "finished": null,
+      "spec_path": "projects/pro-orc/spec/009-permission-popup-repo-owner.md",
       "plan_path": null
     }
   ],
   "next": null,
-  "cursor": "010-deletion-scope-preflight-check"
+  "cursor": "011-permission-popup-repo-owner",
+  "vision": {
+    "path": "docs/product/VISION.md",
+    "updated": "2026-07-15",
+    "pillars": []
+  },
+  "audits": []
 }
