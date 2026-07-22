@@ -63,6 +63,36 @@ class _GhAuthStatusFixtures {
     '',
     'unexpected garbage output',
   );
+
+  /// Multiple accounts logged in on the same host; the second one
+  /// (`n3urala1-rob`) is the active one. Mirrors the real `gh auth status`
+  /// shape when several accounts share a host block.
+  static final multiAccountSecondActive = ProcessResult(
+    0,
+    0,
+    '',
+    "github.com\n"
+        "  ✓ Logged in to github.com account mellow-rob (keyring)\n"
+        "  - Active account: false\n"
+        "  - Git operations protocol: https\n"
+        "  - Token scopes: 'gist', 'repo'\n"
+        "  ✓ Logged in to github.com account n3urala1-rob (keyring)\n"
+        "  - Active account: true\n"
+        "  - Git operations protocol: https\n"
+        "  - Token scopes: 'gist', 'read:org', 'repo', 'delete_repo'\n",
+  );
+
+  /// Logged in, but no line is explicitly marked as the active account
+  /// (unexpected `gh` output shape) — the parser must not guess.
+  static final noActiveAccountMarked = ProcessResult(
+    0,
+    0,
+    '',
+    "github.com\n"
+        "  ✓ Logged in to github.com account octocat (keyring)\n"
+        "  - Git operations protocol: https\n"
+        "  - Token scopes: 'gist', 'repo'\n",
+  );
 }
 
 /// Injects a fixed [ProcessResult] regardless of the command invoked, so the
@@ -315,4 +345,89 @@ void main() {
       );
     },
   );
+
+  group('GhDetectionService.getActiveAccountLogin() '
+      '(2026-07-22-gh-auth-refresh-wrong-account)', () {
+    test(
+      'returns the login of the account marked "Active account: true"',
+      () async {
+        final service = GhDetectionService(
+          whichCommand: 'true',
+          authStatusRunner: _fixedRunner(
+            _GhAuthStatusFixtures.withDeleteRepoScope,
+          ),
+        );
+
+        final login = await service.getActiveAccountLogin();
+
+        expect(login, 'octocat');
+      },
+    );
+
+    test('with multiple accounts logged in, returns the one marked active '
+        '(not the first line)', () async {
+      final service = GhDetectionService(
+        whichCommand: 'true',
+        authStatusRunner: _fixedRunner(
+          _GhAuthStatusFixtures.multiAccountSecondActive,
+        ),
+      );
+
+      final login = await service.getActiveAccountLogin();
+
+      expect(login, 'n3urala1-rob');
+    });
+
+    test(
+      'returns null when gh is not installed/logged in (isAvailable() false)',
+      () async {
+        final service = GhDetectionService(
+          whichCommand: 'false',
+          authStatusRunner: _fixedRunner(
+            _GhAuthStatusFixtures.withDeleteRepoScope,
+          ),
+        );
+
+        final login = await service.getActiveAccountLogin();
+
+        expect(login, isNull);
+      },
+    );
+
+    test('returns null when no line is marked as the active account '
+        '(conservative: cannot determine, do not guess)', () async {
+      final service = GhDetectionService(
+        whichCommand: 'true',
+        authStatusRunner: _fixedRunner(
+          _GhAuthStatusFixtures.noActiveAccountMarked,
+        ),
+      );
+
+      final login = await service.getActiveAccountLogin();
+
+      expect(login, isNull);
+    });
+
+    test('returns null on garbage/unparseable output', () async {
+      final service = GhDetectionService(
+        whichCommand: 'true',
+        authStatusRunner: _fixedRunner(_GhAuthStatusFixtures.garbageOutput),
+      );
+
+      final login = await service.getActiveAccountLogin();
+
+      expect(login, isNull);
+    });
+
+    test('returns null (never throws) when the runner throws', () async {
+      final service = GhDetectionService(
+        whichCommand: 'true',
+        authStatusRunner: _throwingRunner(),
+      );
+
+      await expectLater(service.getActiveAccountLogin(), completes);
+      final login = await service.getActiveAccountLogin();
+      expect(login, isNull);
+    });
+  });
 }
