@@ -267,6 +267,44 @@ void main() {
       },
     );
 
+    testWidgets('cliUnavailable: owner sentence stays neutral (no "melde dich" '
+        'call-to-action) since gh is not even running yet (review fix)', (
+      tester,
+    ) async {
+      await pumpAndOpenPopup(
+        tester,
+        status: GhScopeStatus.cliUnavailable,
+        onOpenTerminal: () {},
+        repoOwner: 'acme-corp',
+      );
+
+      expect(find.textContaining('gehoert zu'), findsWidgets);
+      expect(
+        find.textContaining('melde dich im Terminal mit einem Account'),
+        findsNothing,
+        reason:
+            'gh is not installed/logged in yet in this state — asking '
+            'the user to sign in with a SPECIFIC account is premature '
+            'and contradicts the cli-unavailable body text that follows',
+      );
+    });
+
+    testWidgets('missing: owner sentence keeps the "melde dich" call-to-action '
+        '(unchanged — gh is already running here, only the scope is '
+        'missing)', (tester) async {
+      await pumpAndOpenPopup(
+        tester,
+        status: GhScopeStatus.missing,
+        onOpenTerminal: () {},
+        repoOwner: 'acme-corp',
+      );
+
+      expect(
+        find.textContaining('melde dich im Terminal mit einem Account'),
+        findsWidgets,
+      );
+    });
+
     testWidgets(
       'the owner span is bold while the surrounding prose is NOT bold '
       '(discriminating — proves emphasis is scoped to the owner only)',

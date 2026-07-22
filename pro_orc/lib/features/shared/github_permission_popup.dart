@@ -114,14 +114,23 @@ class GithubPermissionPopup extends StatelessWidget {
 
   /// Builds the body's rich-text spans (Spec 009, FR-001/FR-002).
   ///
-  /// When [repoOwner] is present, weaves in the approved owner hint
-  /// ("Dieses Repository gehoert zu **{owner}** — melde dich im Terminal
-  /// mit einem Account an, der Loeschrechte fuer dieses Repo hat.") ahead
-  /// of the existing status-specific explanation, with the owner name in
-  /// its own bold [TextSpan] — the surrounding prose spans stay at the
-  /// default (non-bold) style. When [repoOwner] is `null`, falls back to
-  /// the previous owner-less text as a single plain span — no bold span,
-  /// no empty placeholder.
+  /// When [repoOwner] is present, weaves in an owner hint ahead of the
+  /// existing status-specific explanation, with the owner name in its own
+  /// bold [TextSpan] — the surrounding prose spans stay at the default
+  /// (non-bold) style. When [repoOwner] is `null`, falls back to the
+  /// previous owner-less text as a single plain span — no bold span, no
+  /// empty placeholder.
+  ///
+  /// The trailing prose after the owner name differs by [status] (review
+  /// fix, Spec 009): for [GhScopeStatus.missing]/[GhScopeStatus.checkFailed]
+  /// — where `gh` is already running and only the scope is missing — it
+  /// keeps the "melde dich mit einem Account an, der Loeschrechte hat"
+  /// call-to-action. For [GhScopeStatus.cliUnavailable] — where `gh` isn't
+  /// even installed/logged in yet — that account-specific call-to-action
+  /// would be premature and contradictory, so the sentence stays neutral
+  /// ("Dieses Repository gehoert zu **{owner}**.") and the actual
+  /// instruction comes from [_cliUnavailableBody] / the `gh auth login`
+  /// hint that follow.
   List<TextSpan> _bodySpans(AppColors colors) {
     final proseStyle = TextStyle(color: colors.textSec, fontSize: 13);
     final owner = repoOwner;
@@ -130,17 +139,21 @@ class GithubPermissionPopup extends StatelessWidget {
       return [TextSpan(text: _bodyTextFallback, style: proseStyle)];
     }
 
+    final TextSpan trailingSpan = status == GhScopeStatus.cliUnavailable
+        ? const TextSpan(text: '. ')
+        : const TextSpan(
+            text:
+                ' — melde dich im Terminal mit einem Account an, der '
+                'Loeschrechte fuer dieses Repo hat. ',
+          );
+
     return [
       const TextSpan(text: 'Dieses Repository gehoert zu '),
       TextSpan(
         text: owner,
         style: const TextStyle(fontWeight: FontWeight.bold),
       ),
-      const TextSpan(
-        text:
-            ' — melde dich im Terminal mit einem Account an, der '
-            'Loeschrechte fuer dieses Repo hat. ',
-      ),
+      trailingSpan,
       TextSpan(text: _bodyTextFallback),
     ];
   }
