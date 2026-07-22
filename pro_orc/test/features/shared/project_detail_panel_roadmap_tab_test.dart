@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:pro_orc/data/db/app_database.dart';
+import 'package:pro_orc/data/models/external_resource.dart';
+import 'package:pro_orc/data/models/git_data.dart';
 import 'package:pro_orc/data/models/project_model.dart'
     show MdFileInfo, ProjectModel;
 import 'package:pro_orc/data/models/project_type.dart';
@@ -11,6 +13,7 @@ import 'package:pro_orc/data/models/roadmap_data.dart';
 import 'package:pro_orc/data/models/session_data.dart';
 import 'package:pro_orc/data/models/vision_data.dart';
 import 'package:pro_orc/data/services/roadmap/roadmap_repository.dart';
+import 'package:pro_orc/features/shared/detail/links_tab_content.dart';
 import 'package:pro_orc/features/shared/project_detail_panel.dart';
 import 'package:pro_orc/features/shared/roadmap/feature_card.dart';
 import 'package:pro_orc/features/shared/roadmap/milestone_lane.dart';
@@ -19,6 +22,7 @@ import 'package:pro_orc/features/shared/vision/vision_links_section.dart';
 import 'package:pro_orc/features/shared/vision/vision_scorecard.dart';
 import 'package:pro_orc/features/shared/vision/vision_section.dart';
 import 'package:pro_orc/providers/database_provider.dart';
+import 'package:pro_orc/providers/external_resources_provider.dart';
 import 'package:pro_orc/providers/roadmap_provider.dart';
 import 'package:pro_orc/providers/session_provider.dart';
 import 'package:pro_orc/providers/vision_provider.dart';
@@ -60,6 +64,7 @@ void main() {
     VisionData? vision,
     ProjectModel? project,
     ProjectSessionData? sessionData,
+    List<ExternalResource>? externalResources,
   }) async {
     final activeProject = project ?? defaultProject;
 
@@ -95,6 +100,14 @@ void main() {
           projectSessionsProvider(activeProject.path).overrideWith(
             (ref) async => sessionData ?? ProjectSessionData.empty,
           ),
+          // externalResourcesProvider does real disk I/O (detectExternalResources
+          // reads .vercel/project.json, scans mdFiles, checks the Claude Memory
+          // dir) — overridden the same way, default empty so existing tests
+          // that don't care about the Links tab's auto-detected source stay
+          // unaffected.
+          externalResourcesProvider(
+            activeProject,
+          ).overrideWith((ref) async => externalResources ?? const []),
         ],
         child: MaterialApp(
           theme: ThemeData.dark().copyWith(extensions: const [AppColors.dark]),
@@ -434,29 +447,28 @@ void main() {
       },
     );
 
-    testWidgets(
-      'the Links tab is present even for a legacy project with no '
-      'docs/product/ at all (FR-002)',
-      (tester) async {
-        await pumpPanel(tester, roadmapResult: legacyResult, vision: null);
+    testWidgets('the Links tab is present even for a legacy project with no '
+        'docs/product/ at all (FR-002)', (tester) async {
+      await pumpPanel(tester, roadmapResult: legacyResult, vision: null);
 
-        expect(find.text('Links'), findsOneWidget);
-      },
-    );
+      expect(find.text('Links'), findsOneWidget);
+    });
 
-    testWidgets(
-      'selecting the Links tab renders the same VisionLinksSection with '
-      'the vision fixture\'s links',
-      (tester) async {
-        await pumpPanel(tester, roadmapResult: legacyResult, vision: vision);
+    testWidgets('selecting the Links tab renders the vision fixture\'s links '
+        '(2026-07-22-links-tab-missing-sources-3: rendering consolidated '
+        'into LinksTabContent, which merges manual VisionData.links with '
+        'auto-detected resources — VisionLinksSection itself moved back to '
+        'Vision-tab-only usage, no longer used by the Links tab)', (
+      tester,
+    ) async {
+      await pumpPanel(tester, roadmapResult: legacyResult, vision: vision);
 
-        await tester.tap(find.text('Links'));
-        await _pumpIgnoringOverflow(tester);
+      await tester.tap(find.text('Links'));
+      await _pumpIgnoringOverflow(tester);
 
-        expect(find.byType(VisionLinksSection), findsOneWidget);
-        expect(find.text('GitHub Repo'), findsOneWidget);
-      },
-    );
+      expect(find.byType(LinksTabContent), findsOneWidget);
+      expect(find.text('GitHub Repo'), findsOneWidget);
+    });
 
     testWidgets(
       'selecting the Links tab shows a visible empty state when the vision '
@@ -495,24 +507,169 @@ void main() {
       },
     );
 
+    testWidgets('switching from Links to Roadmap and back preserves the '
+        'selection-persistence contract (no crash, tab content restored)', (
+      tester,
+    ) async {
+      await pumpPanel(tester, roadmapResult: legacyResult, vision: vision);
+
+      await tester.tap(find.text('Links'));
+      await _pumpIgnoringOverflow(tester);
+      expect(find.text('GitHub Repo'), findsOneWidget);
+
+      await tester.tap(find.text('Roadmap'));
+      await _pumpIgnoringOverflow(tester);
+      expect(find.text('M1 — Fundament'), findsOneWidget);
+      expect(find.text('GitHub Repo'), findsNothing);
+
+      await tester.tap(find.text('Links'));
+      await _pumpIgnoringOverflow(tester);
+      expect(find.text('GitHub Repo'), findsOneWidget);
+    });
+  });
+
+  group('ProjectDetailPanel — Links tab: auto-detected external resources '
+      '(2026-07-22-links-tab-missing-sources-3)', () {
+    const legacyResult = RoadmapResult(
+      data: RoadmapData(
+        milestones: [
+          RoadmapMilestone(
+            name: 'M1 — Fundament',
+            status: 'done',
+            phases: [RoadmapPhase(name: 'Phase 1', status: 'done')],
+          ),
+        ],
+      ),
+      source: RoadmapSource.local,
+    );
+
+    // The "Niimo shape" from the bug report: a project with a git remote
+    // (githubUrl set) but no docs/product/VISION.md at all.
+    final niimoShapedProject = ProjectModel(
+      folderId: 'niimo',
+      displayName: 'Niimo',
+      path: '/tmp/niimo',
+      projectType: ProjectType.code,
+      git: const GitData(githubUrl: 'https://github.com/N3URAL-A1/niimo'),
+    );
+
+    testWidgets('a project with a git remote but no VISION.md shows the '
+        'GitHub chip on the Links tab, not the empty state', (tester) async {
+      await pumpPanel(
+        tester,
+        roadmapResult: legacyResult,
+        vision: null,
+        project: niimoShapedProject,
+        externalResources: const [
+          ExternalResource(
+            type: ExternalResourceType.github,
+            label: 'GitHub-Repository',
+            uri: 'https://github.com/N3URAL-A1/niimo',
+            hint: 'x',
+          ),
+        ],
+      );
+
+      await tester.tap(find.text('Links'));
+      await _pumpIgnoringOverflow(tester);
+
+      expect(find.text('GitHub-Repository'), findsOneWidget);
+      expect(find.text('Keine Links konfiguriert'), findsNothing);
+      expect(find.byType(LinksTabContent), findsOneWidget);
+    });
+
     testWidgets(
-      'switching from Links to Roadmap and back preserves the '
-      'selection-persistence contract (no crash, tab content restored)',
+      'an auto-detected resource and a VisionData.links entry pointing '
+      'at the same URI produce only one chip (dedup)',
       (tester) async {
-        await pumpPanel(tester, roadmapResult: legacyResult, vision: vision);
+        const visionWithDuplicateLink = VisionData(
+          title: 'Pro Orc — Vision',
+          lead: 'Der Ueberblick ueber alle Projekte.',
+          links: [
+            VisionLink(
+              title: 'GitHub Repo',
+              target: 'https://github.com/N3URAL-A1/niimo',
+              isWeb: true,
+            ),
+          ],
+        );
+
+        await pumpPanel(
+          tester,
+          roadmapResult: legacyResult,
+          vision: visionWithDuplicateLink,
+          project: niimoShapedProject,
+          externalResources: const [
+            ExternalResource(
+              type: ExternalResourceType.github,
+              label: 'GitHub-Repository',
+              uri: 'https://github.com/N3URAL-A1/niimo',
+              hint: 'x',
+            ),
+          ],
+        );
 
         await tester.tap(find.text('Links'));
         await _pumpIgnoringOverflow(tester);
-        expect(find.text('GitHub Repo'), findsOneWidget);
 
-        await tester.tap(find.text('Roadmap'));
-        await _pumpIgnoringOverflow(tester);
-        expect(find.text('M1 — Fundament'), findsOneWidget);
+        // Exactly one chip for the shared URI — the auto-detected label
+        // wins, the manual duplicate ('GitHub Repo') does not also render.
+        expect(find.text('GitHub-Repository'), findsOneWidget);
         expect(find.text('GitHub Repo'), findsNothing);
+      },
+    );
+
+    testWidgets('the empty state only shows when BOTH the auto-detected and '
+        'manual sources are empty', (tester) async {
+      await pumpPanel(
+        tester,
+        roadmapResult: legacyResult,
+        vision: null,
+        externalResources: const [],
+      );
+
+      await tester.tap(find.text('Links'));
+      await _pumpIgnoringOverflow(tester);
+
+      expect(find.text('Keine Links konfiguriert'), findsOneWidget);
+    });
+
+    testWidgets(
+      'auto-detected resources render even when VisionData.links also '
+      'has entries — both sources are additive, not replacing',
+      (tester) async {
+        const visionWithOtherLink = VisionData(
+          title: 'Pro Orc — Vision',
+          lead: 'Der Ueberblick ueber alle Projekte.',
+          links: [
+            VisionLink(
+              title: 'Design-Doku',
+              target: 'https://example.com/design',
+              isWeb: true,
+            ),
+          ],
+        );
+
+        await pumpPanel(
+          tester,
+          roadmapResult: legacyResult,
+          vision: visionWithOtherLink,
+          project: niimoShapedProject,
+          externalResources: const [
+            ExternalResource(
+              type: ExternalResourceType.github,
+              label: 'GitHub-Repository',
+              uri: 'https://github.com/N3URAL-A1/niimo',
+              hint: 'x',
+            ),
+          ],
+        );
 
         await tester.tap(find.text('Links'));
         await _pumpIgnoringOverflow(tester);
-        expect(find.text('GitHub Repo'), findsOneWidget);
+
+        expect(find.text('GitHub-Repository'), findsOneWidget);
+        expect(find.text('Design-Doku'), findsOneWidget);
       },
     );
   });
@@ -538,7 +695,13 @@ void main() {
       path: '/tmp/my-folder',
       projectType: ProjectType.code,
       description: 'A test project description.',
-      mdFiles: [MdFileInfo(name: 'README.md', path: '/tmp/my-folder/README.md', relativePath: 'README.md')],
+      mdFiles: [
+        MdFileInfo(
+          name: 'README.md',
+          path: '/tmp/my-folder/README.md',
+          relativePath: 'README.md',
+        ),
+      ],
     );
 
     testWidgets(

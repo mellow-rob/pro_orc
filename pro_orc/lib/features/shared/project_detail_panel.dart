@@ -7,15 +7,16 @@ import 'package:pro_orc/data/models/roadmap_data.dart';
 import 'package:pro_orc/features/shared/detail/description_section.dart';
 import 'package:pro_orc/features/shared/detail/file_preview_section.dart';
 import 'package:pro_orc/features/shared/detail/links_section.dart';
+import 'package:pro_orc/features/shared/detail/links_tab_content.dart';
 import 'package:pro_orc/features/shared/detail/quick_actions_section.dart';
 import 'package:pro_orc/features/shared/detail/token_scorecard_section.dart';
 import 'package:pro_orc/features/shared/rename_project_dialog.dart';
 import 'package:pro_orc/features/shared/roadmap/roadmap_tab.dart';
 import 'package:pro_orc/features/shared/roadmap/roadmap_timeline_view.dart';
-import 'package:pro_orc/features/shared/vision/vision_links_section.dart';
 import 'package:pro_orc/features/shared/vision/vision_tab.dart';
 import 'package:pro_orc/features/shell/glass_card.dart';
 import 'package:pro_orc/providers/database_provider.dart';
+import 'package:pro_orc/providers/external_resources_provider.dart';
 import 'package:pro_orc/providers/project_detail_provider.dart';
 import 'package:pro_orc/providers/roadmap_provider.dart';
 import 'package:pro_orc/providers/vision_provider.dart';
@@ -134,7 +135,12 @@ class _ProjectDetailPanelState extends ConsumerState<ProjectDetailPanel> {
     return switch (_tab) {
       _DetailTab.vision => VisionTab(
         project: project,
-        legacyContent: _buildLegacyOverviewContent(context, ref, colors, accent),
+        legacyContent: _buildLegacyOverviewContent(
+          context,
+          ref,
+          colors,
+          accent,
+        ),
       ),
       _DetailTab.roadmap => RoadmapTab(
         project: project,
@@ -399,10 +405,19 @@ class _EmptyZeitstrahlState extends StatelessWidget {
 /// exception in this detail view to the "hide when nothing to show"
 /// convention (Vision's own legacy guard, Zeitstrahl's tier-0 gate). An
 /// always-present tab gives the user a stable, predictable place to look for
-/// links, even if it's currently empty. Reuses [VisionLinksSection]
-/// unchanged; that widget renders `SizedBox.shrink()` for an empty list
-/// (correct when embedded as a section inside another tab), so this wrapper
-/// supplies a visible empty state instead of leaving the tab blank.
+/// links, even if it's currently empty.
+///
+/// Merges two sources (2026-07-22-links-tab-missing-sources-3): the
+/// hand-authored [VisionData.links] (from `docs/product/VISION.md`) and the
+/// auto-detected [ExternalResource]s from `detectExternalResources()`
+/// (GitHub via git remote, Vercel via `.vercel/project.json`,
+/// Figma/Firebase/Vercel via an allowlisted `.md` scan, Claude Memory) —
+/// the same detector already used by the delete-project dialog, now also
+/// wired into this tab. Both providers are watched independently so the tab
+/// shows whichever source resolves first rather than blocking on the
+/// slower one; the loading state below only applies while BOTH are still
+/// pending, since [LinksTabContent] can render partial data as each
+/// `AsyncValue` moves from loading to data/error.
 class _LinksTabBody extends ConsumerWidget {
   const _LinksTabBody({required this.project});
 
@@ -412,23 +427,30 @@ class _LinksTabBody extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = Theme.of(context).extension<AppColors>()!;
     final visionAsync = ref.watch(visionProvider(project));
+    final resourcesAsync = ref.watch(externalResourcesProvider(project));
     final qa = ref.read(quickActionsProvider);
 
-    return visionAsync.when(
-      loading: () => Center(
+    if (visionAsync.isLoading && resourcesAsync.isLoading) {
+      return Center(
         child: CircularProgressIndicator(color: colors.cyan, strokeWidth: 2),
-      ),
-      error: (_, _) => _EmptyLinksState(colors: colors),
-      data: (vision) {
-        final links = vision?.links ?? const [];
-        if (links.isEmpty) {
-          return _EmptyLinksState(colors: colors);
-        }
-        return SingleChildScrollView(
-          child: VisionLinksSection(links: links, colors: colors, qa: qa),
-        );
-      },
+      );
+    }
+
+    final manualLinks = visionAsync.value?.links ?? const [];
+    final resources = resourcesAsync.value ?? const [];
+
+    final content = LinksTabContent(
+      resources: resources,
+      manualLinks: manualLinks,
+      colors: colors,
+      qa: qa,
     );
+
+    if (content.isEmpty) {
+      return _EmptyLinksState(colors: colors);
+    }
+
+    return SingleChildScrollView(child: content);
   }
 }
 
