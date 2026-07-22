@@ -163,6 +163,29 @@ class _DeleteProjectDialogState extends ConsumerState<DeleteProjectDialog> {
   /// within the same dialog session).
   final Map<String, GhScopeStatus> _ghScopeResults = {};
 
+  /// URIs of GitHub resources with a [_checkGithubScope] call currently in
+  /// flight (Spec 008 review fix — In-flight-Race Finding 1). Non-empty
+  /// means at least one selected resource's active-delete eligibility is
+  /// still unconfirmed:
+  /// - [_onDeleteButtonPressed] must not start the deletion flow while a
+  ///   pending check exists for a currently-selected resource (Finding
+  ///   1a) — the "Loeschen" button is disabled for the duration instead
+  ///   (immediate visible feedback).
+  /// - [_checkGithubScope] must not show [GithubPermissionPopup] once the
+  ///   check resolves if the user already unchecked the resource in the
+  ///   meantime (Finding 1b) — the late popup would contradict the user's
+  ///   own already-reverted decision.
+  final Set<String> _pendingScopeChecks = {};
+
+  /// Whether any currently *selected* resource still has a GitHub scope
+  /// check in flight. Only resources still in [_selectedResources] count —
+  /// a pending check for a resource the user already unchecked does not
+  /// block deletion (there is nothing destructive-external left to guard).
+  bool get _hasPendingScopeCheckForSelected {
+    if (_pendingScopeChecks.isEmpty) return false;
+    return _pendingScopeChecks.any(_selectedResources.contains);
+  }
+
   /// Resolves once both [_loadResources] and [_resolveAvailability] have
   /// settled. Exposed only so widget tests can await the dialog's initial
   /// async load (both spawn real processes / do real file I/O that
@@ -257,9 +280,28 @@ class _DeleteProjectDialogState extends ConsumerState<DeleteProjectDialog> {
   ///   the popup immediately (FR-011) — the checkbox is already unchecked
   ///   at that point, so no further state change is needed there.
   Future<void> _checkGithubScope(ExternalResource resource) async {
-    final status = await _resolveCheckDeleteRepoScope()();
+    _pendingScopeChecks.add(resource.uri);
+
+    final GhScopeStatus status;
+    try {
+      status = await _resolveCheckDeleteRepoScope()();
+    } finally {
+      if (mounted) {
+        setState(() => _pendingScopeChecks.remove(resource.uri));
+      } else {
+        _pendingScopeChecks.remove(resource.uri);
+      }
+    }
 
     if (!mounted) return;
+
+    // Review fix (In-flight-Race Finding 1b): if the user already
+    // unchecked this resource while the check was still running, their
+    // decision already stands — a late popup (or a late result-map write)
+    // would be misleading, so bail out before touching either.
+    if (!_selectedResources.contains(resource.uri)) {
+      return;
+    }
 
     setState(() => _ghScopeResults[resource.uri] = status);
 
@@ -335,8 +377,18 @@ class _DeleteProjectDialogState extends ConsumerState<DeleteProjectDialog> {
   /// is the ONLY path from [_DialogStep.form] — there is no other call
   /// site that starts the flow, so a destructive-external resource can
   /// never be deleted with just the project-name confirmation (SC-004).
+  ///
+  /// Review fix (In-flight-Race Finding 1a): also guarded on
+  /// [_hasPendingScopeCheckForSelected] — the "Loeschen" button is
+  /// disabled for the same condition in [_buildButtons], so this check is
+  /// belt-and-suspenders in case the button is ever reached while
+  /// technically still enabled (e.g. a race between rebuild and tap).
   void _onDeleteButtonPressed() {
-    if (!_nameMatches || _step != _DialogStep.form) return;
+    if (!_nameMatches ||
+        _step != _DialogStep.form ||
+        _hasPendingScopeCheckForSelected) {
+      return;
+    }
 
     if (_hasCheckedDestructiveExternal) {
       setState(() => _step = _DialogStep.destructiveWarning);
@@ -703,8 +755,15 @@ class _DeleteProjectDialogState extends ConsumerState<DeleteProjectDialog> {
     // Once the button has been activated once, _step is no longer `form`
     // (it moves to destructiveWarning or straight to running), so this
     // button is disabled for the remainder of the flow — a second
-    // activation cannot start a duplicate run (FR-016).
-    final deleteEnabled = _nameMatches && _step == _DialogStep.form;
+    // activation cannot start a duplicate run (FR-016). Also disabled
+    // while a GitHub scope check for a currently-selected resource is
+    // still in flight (review fix — In-flight-Race Finding 1a): starting
+    // the flow before the check settles would bypass the whole point of
+    // the pre-flight check.
+    final deleteEnabled =
+        _nameMatches &&
+        _step == _DialogStep.form &&
+        !_hasPendingScopeCheckForSelected;
 
     return Wrap(
       alignment: WrapAlignment.end,
