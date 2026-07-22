@@ -4,6 +4,29 @@ import 'package:pro_orc/data/services/gh_detection_service.dart';
 import 'package:pro_orc/features/shell/glass_dialog.dart';
 import 'package:pro_orc/theme/n3_colors.dart';
 
+/// Extracts the repo owner (first path segment) from a GitHub URL of the
+/// form `https://github.com/<owner>/<repo>` (Spec 009, FR-001/FR-002).
+///
+/// Returns `null` when [githubUrl] does not parse into a [Uri] or has no
+/// non-empty first path segment (e.g. `https://github.com/` or a
+/// non-URL string) — callers must treat `null` as "cannot determine
+/// owner" and fall back to owner-less copy, never render an empty/blank
+/// bold token.
+///
+/// The URL passed in always originates from the app's own git-remote
+/// config (`git_reader.dart::_remoteToGithubUrl`), never from raw user
+/// input, so simple path-segment parsing is sufficient here — no regex
+/// hardening needed.
+String? extractGithubOwner(String githubUrl) {
+  final uri = Uri.tryParse(githubUrl);
+  if (uri == null || !uri.hasScheme || !uri.hasAuthority) return null;
+
+  final segments = uri.pathSegments;
+  if (segments.isEmpty) return null;
+  final owner = segments.first;
+  return owner.isEmpty ? null : owner;
+}
+
 /// Missing-GitHub-permission pre-flight popup (Spec 008, FR-004/FR-004a/
 /// FR-008/FR-012/FR-013).
 ///
@@ -33,12 +56,23 @@ class GithubPermissionPopup extends StatelessWidget {
     super.key,
     required this.status,
     required this.onOpenTerminal,
+    this.repoOwner,
   });
 
   /// The pre-flight result driving which body/action this popup shows.
   /// Must not be [GhScopeStatus.present] — callers only show this popup on
   /// a blocking result.
   final GhScopeStatus status;
+
+  /// The GitHub repo owner (e.g. `'acme-corp'`), already extracted by the
+  /// caller via [extractGithubOwner] from the resource's `githubUrl`
+  /// (Spec 009, FR-001). This widget does NOT parse URLs itself —
+  /// separation of concerns keeps the extraction in exactly one place.
+  ///
+  /// `null` means the owner could not be determined (FR-002 fallback):
+  /// the body renders the previous owner-less text unchanged, for both
+  /// affected states.
+  final String? repoOwner;
 
   /// Invoked when the user taps the action button (only ever shown for
   /// [GhScopeStatus.missing] / [GhScopeStatus.checkFailed]). The caller
@@ -54,24 +88,61 @@ class GithubPermissionPopup extends StatelessWidget {
       'Terminal oeffnen & Berechtigung nachfordern';
   static const String _cliUnavailableBody =
       'GitHub CLI (gh) ist nicht installiert oder nicht angemeldet';
+  static const String _missingBody =
+      'Die aktuelle GitHub-CLI-Session hat nicht den '
+      "'delete_repo'-Scope. Dieser Scope muss gewaehrt werden, bevor "
+      'das Repository geloescht werden kann.';
 
   bool get _showsRefreshAction => status != GhScopeStatus.cliUnavailable;
 
-  String get _bodyText {
+  /// The owner-less fallback body text for the current [status] (FR-002)
+  /// — unchanged from the pre-Spec-009 behaviour.
+  String get _bodyTextFallback {
     switch (status) {
       case GhScopeStatus.cliUnavailable:
         return _cliUnavailableBody;
       case GhScopeStatus.missing:
       case GhScopeStatus.checkFailed:
-        return 'Die aktuelle GitHub-CLI-Session hat nicht den '
-            "'delete_repo'-Scope. Dieser Scope muss gewaehrt werden, bevor "
-            'das Repository geloescht werden kann.';
+        return _missingBody;
       case GhScopeStatus.present:
         // Callers never show this popup for `present` — kept exhaustive so
         // a future GhScopeStatus value fails to compile here instead of
         // silently falling through.
         return '';
     }
+  }
+
+  /// Builds the body's rich-text spans (Spec 009, FR-001/FR-002).
+  ///
+  /// When [repoOwner] is present, weaves in the approved owner hint
+  /// ("Dieses Repository gehoert zu **{owner}** — melde dich im Terminal
+  /// mit einem Account an, der Loeschrechte fuer dieses Repo hat.") ahead
+  /// of the existing status-specific explanation, with the owner name in
+  /// its own bold [TextSpan] — the surrounding prose spans stay at the
+  /// default (non-bold) style. When [repoOwner] is `null`, falls back to
+  /// the previous owner-less text as a single plain span — no bold span,
+  /// no empty placeholder.
+  List<TextSpan> _bodySpans(AppColors colors) {
+    final proseStyle = TextStyle(color: colors.textSec, fontSize: 13);
+    final owner = repoOwner;
+
+    if (owner == null) {
+      return [TextSpan(text: _bodyTextFallback, style: proseStyle)];
+    }
+
+    return [
+      const TextSpan(text: 'Dieses Repository gehoert zu '),
+      TextSpan(
+        text: owner,
+        style: const TextStyle(fontWeight: FontWeight.bold),
+      ),
+      const TextSpan(
+        text:
+            ' — melde dich im Terminal mit einem Account an, der '
+            'Loeschrechte fuer dieses Repo hat. ',
+      ),
+      TextSpan(text: _bodyTextFallback),
+    ];
   }
 
   void _dismiss(BuildContext context) {
@@ -144,9 +215,11 @@ class GithubPermissionPopup extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            _bodyText,
-            style: TextStyle(color: colors.textSec, fontSize: 13),
+          Text.rich(
+            TextSpan(
+              style: TextStyle(color: colors.textSec, fontSize: 13),
+              children: _bodySpans(colors),
+            ),
           ),
           if (!_showsRefreshAction) ...[
             const SizedBox(height: 8),
