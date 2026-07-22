@@ -12,12 +12,12 @@ updated: 2026-07-22
 
 ## In-flight features
 
-- **011-permission-popup-repo-owner** — Show Repo Owner in the Missing-Permission Popup (milestone: m8-project-organization, stage: verify) — scope: projects/pro-orc/spec/009-permission-popup-repo-owner.md
+None.
 
 ## Next cursor
 
-**011-permission-popup-repo-owner** — recommended next feature (all dependencies (010-deletion-scope-preflight-check) are done).
+None — no eligible feature (all done/cancelled, or blocked by unmet dependencies).
 
 ## How to continue
 
-Run `a1-plan` to create an executable plan for the next-cursor feature, or `a1-execute` if a plan already exists.
+Run `a1-progress` to review overall project state and decide the next milestone.

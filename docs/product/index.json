@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated": "2026-07-22T13:27:53.872Z",
+  "generated": "2026-07-22T13:29:58.691Z",
   "project": {
     "id": "pro-orc",
     "title": "Pro Orc",
@@ -183,19 +183,19 @@
       "id": "011-permission-popup-repo-owner",
       "milestone": "m8-project-organization",
       "title": "Show Repo Owner in the Missing-Permission Popup",
-      "status": "in-flight",
-      "stage": "verify",
+      "status": "done",
+      "stage": "done",
       "depends_on": [
         "010-deletion-scope-preflight-check"
       ],
       "started": "2026-07-22",
-      "finished": null,
+      "finished": "2026-07-22",
       "spec_path": "projects/pro-orc/spec/009-permission-popup-repo-owner.md",
       "plan_path": null
     }
   ],
   "next": null,
-  "cursor": "011-permission-popup-repo-owner",
+  "cursor": null,
   "vision": {
     "path": "docs/product/VISION.md",
     "updated": "2026-07-15",

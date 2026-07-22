@@ -142,12 +142,12 @@ features:
   - id: 011-permission-popup-repo-owner
     milestone: m8-project-organization
     title: "Show Repo Owner in the Missing-Permission Popup"
-    status: in-flight
-    stage: verify
+    status: done
+    stage: done
     depends_on:
       - 010-deletion-scope-preflight-check
     started: 2026-07-22
-    finished: null
+    finished: 2026-07-22
     spec_path: projects/pro-orc/spec/009-permission-popup-repo-owner.md
     plan_path: null
 next: null
@@ -242,6 +242,9 @@ None.
 - **2026-07-22** — 011-permission-popup-repo-owner -> complete — stage transition via `product stage`
 - **2026-07-22** — 011-permission-popup-repo-owner -> review — stage transition via `product stage`
 - **2026-07-22** — 011-permission-popup-repo-owner -> verify — stage transition via `product stage`
+- **2026-07-22** — 011-permission-popup-repo-owner -> merge — stage transition via `product stage`
+- **2026-07-22** — 011-permission-popup-repo-owner -> origin-cleanup — stage transition via `product stage`
+- **2026-07-22** — 011-permission-popup-repo-owner -> done — stage transition via `product stage`
 
 ## Appendix — migrated details
 
