@@ -147,6 +147,19 @@ void main() {
       });
     });
 
+    group('openTerminalWithGhScopeRefresh', () {
+      test('command is the constant gh auth refresh -s delete_repo string', () {
+        final script = service.buildGhScopeRefreshScript();
+
+        // Same AppleScript-escaping shape as the other terminal builders —
+        // no cd, no interpolation, just the constant command.
+        expect(script, contains(r'gh auth refresh -s delete_repo'));
+        expect(script, contains('tell application "Terminal"'));
+        expect(script, contains('do script'));
+        expect(script, isNot(contains('cd ')));
+      });
+    });
+
     group('isValidSkillName', () {
       test('accepts plausible skill names, with or without leading slash', () {
         expect(isValidSkillName('a1-fix'), isTrue);
