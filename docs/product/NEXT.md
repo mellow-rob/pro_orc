@@ -4,7 +4,7 @@
 
 # Pro Orc
 
-updated: 2026-07-20
+updated: 2026-07-22
 
 ## You are here
 
@@ -12,12 +12,12 @@ updated: 2026-07-20
 
 ## In-flight features
 
-None.
+- **010-deletion-scope-preflight-check** — Pre-Flight Permission Check for Destructive External Deletions (milestone: m8-project-organization, stage: verify) — scope: projects/pro-orc/spec/008-deletion-scope-preflight-check.md
 
 ## Next cursor
 
-None — no eligible feature (all done/cancelled, or blocked by unmet dependencies).
+**010-deletion-scope-preflight-check** — recommended next feature (all dependencies (009-complete-project-deletion) are done).
 
 ## How to continue
 
-Run `a1-progress` to review overall project state and decide the next milestone.
+Run `a1-plan` to create an executable plan for the next-cursor feature, or `a1-execute` if a plan already exists.

@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated": "2026-07-20T14:55:19.541Z",
+  "generated": "2026-07-22T07:13:50.628Z",
   "project": {
     "id": "pro-orc",
     "title": "Pro Orc",
@@ -164,8 +164,22 @@
       "finished": "2026-07-20",
       "spec_path": "projects/pro-orc/spec/007-complete-project-deletion.md",
       "plan_path": null
+    },
+    {
+      "id": "010-deletion-scope-preflight-check",
+      "milestone": "m8-project-organization",
+      "title": "Pre-Flight Permission Check for Destructive External Deletions",
+      "status": "in-flight",
+      "stage": "verify",
+      "depends_on": [
+        "009-complete-project-deletion"
+      ],
+      "started": "2026-07-21",
+      "finished": null,
+      "spec_path": "projects/pro-orc/spec/008-deletion-scope-preflight-check.md",
+      "plan_path": null
     }
   ],
   "next": null,
-  "cursor": null
+  "cursor": "010-deletion-scope-preflight-check"
 }

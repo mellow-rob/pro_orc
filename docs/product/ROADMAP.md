@@ -4,7 +4,7 @@ type: roadmap
 project: pro-orc
 title: "Pro Orc"
 status: active
-updated: 2026-07-20
+updated: 2026-07-22
 source: "scaffolded by a1-tools product init"
 milestones:
   - id: m1-stabilization
@@ -128,6 +128,17 @@ features:
     finished: 2026-07-20
     spec_path: projects/pro-orc/spec/007-complete-project-deletion.md
     plan_path: null
+  - id: 010-deletion-scope-preflight-check
+    milestone: m8-project-organization
+    title: "Pre-Flight Permission Check for Destructive External Deletions"
+    status: in-flight
+    stage: verify
+    depends_on:
+      - 009-complete-project-deletion
+    started: 2026-07-21
+    finished: null
+    spec_path: projects/pro-orc/spec/008-deletion-scope-preflight-check.md
+    plan_path: null
 next: null
 ---
 
@@ -205,6 +216,12 @@ None.
 - **2026-07-19** — feature '009-complete-project-deletion' added — new feature via `product add-feature`
 - **2026-07-19** — feature.md created for '009-complete-project-deletion' — formal spec/plan attached via `product feature-init`
 - **2026-07-20** — 009-complete-project-deletion -> done — stage transition via `product stage`
+- **2026-07-21** — feature '010-deletion-scope-preflight-check' added — Detect a missing GitHub delete_repo scope when the user checks the resource, before any deletion is attempted
+- **2026-07-21** — feature.md created for '010-deletion-scope-preflight-check' — formal spec/plan attached via `product feature-init`
+- **2026-07-21** — 010-deletion-scope-preflight-check -> started — stage transition via `product stage`
+- **2026-07-22** — 010-deletion-scope-preflight-check -> complete — stage transition via `product stage`
+- **2026-07-22** — 010-deletion-scope-preflight-check -> review — stage transition via `product stage`
+- **2026-07-22** — 010-deletion-scope-preflight-check -> verify — stage transition via `product stage`
 
 ## Appendix — migrated details
 
