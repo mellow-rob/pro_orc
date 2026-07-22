@@ -195,6 +195,16 @@ void main() {
       expect(result.outcome, DeletionOutcome.success);
     });
 
+    // NOTE (Wave 4, 008-deletion-scope-preflight-check, FR-009): this test
+    // is the execution-time fallback-safety-net guard for the new pre-flight
+    // check feature. Spec FR-009 requires that the existing missingScope
+    // detection here in external_deletion_service.dart keeps working
+    // unmodified, because the checkbox-time pre-flight check (introduced in
+    // Waves 1-3 of this feature) narrows but does not eliminate every path
+    // that can reach an actual `gh repo delete` call. This test was
+    // originally written for Feature 007 (Complete Project Deletion) — it is
+    // intentionally reused, not duplicated, since it already asserts exactly
+    // the behavior FR-009 requires to remain intact.
     test('a missing delete_repo scope maps to missingScope with the refresh '
         'hint, DISTINCT from notAuthenticated (FR-009)', () async {
       final result = await deleteGh(
