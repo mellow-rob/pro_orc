@@ -120,4 +120,78 @@ void main() {
     expect(find.text('Demo Projekt'), findsOneWidget);
     expect(find.text('Eine Beschreibung'), findsOneWidget);
   });
+
+  testWidgets('keeps Claude button and quick actions inside a 240px grid cell '
+      'even with a1 progress + a maximally long description', (tester) async {
+    final database = AppDatabase(NativeDatabase.memory());
+    addTearDown(database.close);
+
+    const longDescription =
+        'Diese Beschreibung ist absichtlich sehr lang formuliert, damit '
+        'sie bei typischer Kartenbreite garantiert auf drei volle Zeilen '
+        'umbricht und den maximal moeglichen vertikalen Platzbedarf der '
+        'Beschreibung im Kartenlayout auf die Probe stellt, inklusive '
+        'weiterer Fuellwoerter fuer zusaetzliche Zeilenlaenge und Umbruch.';
+
+    const project = ProjectModel(
+      folderId: 'demo',
+      displayName: 'Demo Projekt mit langem Namen fuer Umbruch',
+      path: '/tmp/demo',
+      projectType: ProjectType.code,
+      description: longDescription,
+      a1: A1Data(
+        phases: [
+          A1Phase(name: 'M1', checkedTasks: 1, totalTasks: 4, planPath: 'x'),
+        ],
+      ),
+    );
+
+    // Simulates the real grid cell: SliverGridDelegateWithFixedCrossAxisCount
+    // (group_section.dart) gives every card exactly 240px of height and a
+    // typical single-column card width.
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          appDatabaseProvider.overrideWithValue(database),
+          watcherProvider.overrideWith(
+            (ref) => const Stream<WatchEvent>.empty(),
+          ),
+        ],
+        child: MaterialApp(
+          theme: ThemeData.dark().copyWith(extensions: const [AppColors.dark]),
+          home: Scaffold(
+            body: Align(
+              alignment: Alignment.topLeft,
+              child: SizedBox(
+                key: const Key('grid-cell'),
+                width: 280,
+                height: 240,
+                child: ProjectCard(project: project),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(tester.takeException(), isNull);
+
+    final cellRect = tester.getRect(find.byKey(const Key('grid-cell')));
+    final buttonRect = tester.getRect(
+      find.widgetWithText(TextButton, 'Claude'),
+    );
+    final quickActionsRect = tester.getRect(find.byTooltip('Finder').first);
+
+    expect(
+      buttonRect.bottom,
+      lessThanOrEqualTo(cellRect.bottom),
+      reason: 'Claude button must stay within the 240px grid cell',
+    );
+    expect(
+      quickActionsRect.bottom,
+      lessThanOrEqualTo(cellRect.bottom),
+      reason: 'Quick actions row must stay within the 240px grid cell',
+    );
+  });
 }
