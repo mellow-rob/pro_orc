@@ -145,6 +145,77 @@ void main() {
 
       expect(name, isNull);
     });
+
+    test('returns null for the vercel.com/blog marketing URL — a blog post '
+        'link (e.g. from a research notes .md file) is not a real dashboard '
+        'project (2026-07-23-vercel-blog-url-classified-as-project-2)', () {
+      final name = deriveVercelProjectName(
+        'https://vercel.com/blog/common-mistakes-with-the-next-js-app-'
+        'router-and-how-to-fix-them',
+      );
+
+      expect(name, isNull);
+    });
+
+    test('returns null for sibling Vercel marketing/docs routes', () {
+      expect(
+        deriveVercelProjectName('https://vercel.com/docs/frameworks/nextjs'),
+        isNull,
+      );
+      expect(
+        deriveVercelProjectName('https://vercel.com/templates/next.js/blog'),
+        isNull,
+      );
+      expect(
+        deriveVercelProjectName('https://vercel.com/pricing/enterprise'),
+        isNull,
+      );
+    });
+
+    test('still derives the project name for a real dashboard URL — the '
+        'blocklist expansion must not regress the positive case', () {
+      final name = deriveVercelProjectName(
+        'https://vercel.com/roberts-projects-fb13711c/naida',
+      );
+
+      expect(name, 'naida');
+    });
+  });
+
+  group('isVercelDashboardProjectUrl', () {
+    test('rejects the vercel.com/blog marketing URL', () {
+      expect(
+        isVercelDashboardProjectUrl(
+          'https://vercel.com/blog/common-mistakes-with-the-next-js-app-'
+          'router-and-how-to-fix-them',
+        ),
+        isFalse,
+      );
+    });
+
+    test('rejects sibling marketing/docs routes', () {
+      expect(
+        isVercelDashboardProjectUrl(
+          'https://vercel.com/docs/frameworks/nextjs',
+        ),
+        isFalse,
+      );
+      expect(
+        isVercelDashboardProjectUrl(
+          'https://vercel.com/templates/next.js/blog',
+        ),
+        isFalse,
+      );
+    });
+
+    test('still accepts a real dashboard project URL', () {
+      expect(
+        isVercelDashboardProjectUrl(
+          'https://vercel.com/roberts-projects-fb13711c/naida',
+        ),
+        isTrue,
+      );
+    });
   });
 
   group('deriveGhOwnerRepo', () {

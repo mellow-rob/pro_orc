@@ -240,6 +240,35 @@ for more details.
       );
     });
 
+    test('does not classify a vercel.com/blog marketing URL scanned from a '
+        'research notes .md file as a real Vercel project — it must not '
+        'appear as an active-delete "Vercel-Projekt" entry '
+        '(2026-07-23-vercel-blog-url-classified-as-project-2)', () async {
+      final file = File(p.join(tmp.path, 'PITFALLS.md'));
+      await file.writeAsString(
+        'See https://vercel.com/blog/common-mistakes-with-the-next-js-app-'
+        'router-and-how-to-fix-them for details.',
+      );
+
+      final project = projectWithMdFiles([
+        MdFileInfo(
+          name: 'PITFALLS.md',
+          relativePath: '.planning/research/PITFALLS.md',
+          path: file.path,
+        ),
+      ]);
+
+      final resources = await detectExternalResources(project);
+
+      expect(
+        resources.any((r) => r.type == ExternalResourceType.vercel),
+        isFalse,
+        reason:
+            'the vercel.com/blog marketing link must never be '
+            'classified as a real, actively-deletable Vercel project',
+      );
+    });
+
     test(
       'lists a real Vercel dashboard URL alongside a boilerplate '
       'vercel.com/new link only once, correctly classified as vercel',
