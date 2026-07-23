@@ -2,13 +2,51 @@ import 'dart:convert';
 import 'dart:developer' as developer;
 import 'dart:io';
 
+import 'package:meta/meta.dart';
 import 'package:path/path.dart' as p;
 
 import 'package:pro_orc/data/models/external_resource.dart';
 import 'package:pro_orc/data/models/project_model.dart';
 import 'package:pro_orc/data/services/external_deletion_service.dart'
-    show isVercelDashboardProjectUrl;
+    show deriveVercelProjectName, isVercelDashboardProjectUrl;
 import 'package:pro_orc/data/services/memory_reader.dart';
+import 'package:pro_orc/data/services/vercel_detection_service.dart';
+
+/// In-memory, process-lifetime cache of `orgId` -> resolved team slug (or
+/// `null` for "resolution attempted and failed"). A Vercel team's slug
+/// essentially never changes during an app session, so this avoids shelling
+/// out to `vercel teams list` once per project every time the Links tab (or
+/// the delete dialog) is opened — see
+/// `2026-07-23-vercel-url-uses-orgid-not-slug.md`. Deliberately a simple
+/// static map, not persisted to disk: it only needs to survive within one
+/// running app instance.
+final Map<String, String?> _teamSlugCache = {};
+
+/// Clears [_teamSlugCache]. Test-only — production code never needs to
+/// invalidate this cache mid-session (a team's slug doesn't change), but
+/// tests exercising different resolution outcomes for the same `orgId`
+/// fixture must not leak a cached result from one test into the next.
+@visibleForTesting
+void resetVercelTeamSlugCacheForTesting() {
+  _teamSlugCache.clear();
+}
+
+/// Resolves [orgId] to its Vercel dashboard URL slug via [service],
+/// consulting/populating [_teamSlugCache] first so the CLI is invoked at
+/// most once per distinct `orgId` per app session. Never throws — returns
+/// `null` on any resolution failure (see
+/// [VercelDetectionService.resolveTeamSlug]).
+Future<String?> _resolveTeamSlugCached(
+  String orgId,
+  VercelDetectionService service,
+) async {
+  if (_teamSlugCache.containsKey(orgId)) {
+    return _teamSlugCache[orgId];
+  }
+  final slug = await service.resolveTeamSlug(orgId);
+  _teamSlugCache[orgId] = slug;
+  return slug;
+}
 
 /// Detects all external resources linked to [project].
 ///
@@ -18,13 +56,25 @@ import 'package:pro_orc/data/services/memory_reader.dart';
 /// - CLN-04: Claude Memory directory (~/.claude/projects/...)
 /// - CLN-05: Vercel project (from the CLI's own `.vercel/project.json`)
 ///
+/// [vercelDetectionService] resolves a Vercel team's opaque `orgId` to its
+/// dashboard URL slug (injectable for tests; defaults to the real CLI).
+///
 /// Returns an empty list on any error. Individual detection steps are
 /// wrapped separately so one failure does not abort the rest.
 Future<List<ExternalResource>> detectExternalResources(
-  ProjectModel project,
-) async {
+  ProjectModel project, {
+  VercelDetectionService vercelDetectionService =
+      const VercelDetectionService(),
+}) async {
   final resources = <ExternalResource>[];
   final seenUris = <String>{};
+  // Secondary dedup key for Vercel resources specifically: the synthetic
+  // `.vercel/project.json` URL and a human-written `.md` dashboard URL for
+  // the SAME project can legitimately differ byte-for-byte (opaque orgId vs.
+  // team slug, or CLI slug-resolution failing) — comparing by `projectName`
+  // catches that duplicate even when `seenUris` (exact-string) doesn't. See
+  // 2026-07-23-vercel-url-uses-orgid-not-slug.
+  final seenVercelProjectNames = <String>{};
 
   // CLN-02: GitHub
   try {
@@ -56,10 +106,15 @@ Future<List<ExternalResource>> detectExternalResources(
   // directly via project.path: ProjectScanner skips hidden directories
   // during scan, so `.vercel/` is never reachable via project.mdFiles.
   try {
-    final vercelResource = await _detectVercelProjectJson(project.path);
+    final vercelResource = await _detectVercelProjectJson(
+      project.path,
+      vercelDetectionService,
+    );
     if (vercelResource != null && !seenUris.contains(vercelResource.uri)) {
       resources.add(vercelResource);
       seenUris.add(vercelResource.uri);
+      final projectName = deriveVercelProjectName(vercelResource.uri);
+      if (projectName != null) seenVercelProjectNames.add(projectName);
     }
   } catch (e) {
     developer.log(
@@ -97,7 +152,11 @@ Future<List<ExternalResource>> detectExternalResources(
   // Reuses project.mdFiles (already discovered by ProjectScanner._scanMdFiles)
   // instead of re-walking the directory tree — avoids scanning .planning/ twice.
   try {
-    final urlResources = await _scanMdFilesForUrls(project.mdFiles, seenUris);
+    final urlResources = await _scanMdFilesForUrls(
+      project.mdFiles,
+      seenUris,
+      seenVercelProjectNames,
+    );
     resources.addAll(urlResources);
   } catch (e) {
     developer.log(
@@ -125,9 +184,18 @@ Future<List<ExternalResource>> detectExternalResources(
 /// several distinct resources under the same domain (e.g. two different
 /// `vercel.com/{scope}/{project}` dashboards for prod + preview) — deduping
 /// by domain would incorrectly drop the second one.
+///
+/// [seenVercelProjectNames] additionally suppresses a Vercel entry whose
+/// derived project name was already emitted by `.vercel/project.json`
+/// detection, even when the two URLs differ byte-for-byte (opaque orgId vs.
+/// team slug) — see 2026-07-23-vercel-url-uses-orgid-not-slug. Mutated
+/// in-place as new Vercel entries are found here, so two distinct md-scanned
+/// Vercel URLs for the same project name (unlikely, but possible) also dedup
+/// against each other, not just against the `.vercel/project.json` entry.
 Future<List<ExternalResource>> _scanMdFilesForUrls(
   List<MdFileInfo>? mdFiles,
   Set<String> seenUris,
+  Set<String> seenVercelProjectNames,
 ) async {
   if (mdFiles == null || mdFiles.isEmpty) return [];
 
@@ -168,6 +236,16 @@ Future<List<ExternalResource>> _scanMdFilesForUrls(
 
         final resource = _classifyUrl(url, host, parsed);
         if (resource == null) continue; // not a known resource domain
+
+        if (resource.type == ExternalResourceType.vercel) {
+          final projectName = deriveVercelProjectName(resource.uri);
+          if (projectName != null) {
+            if (seenVercelProjectNames.contains(projectName)) {
+              continue; // same Vercel project already found, different URL form
+            }
+            seenVercelProjectNames.add(projectName);
+          }
+        }
 
         foundUrls[url] = resource;
       }
@@ -266,21 +344,38 @@ ExternalResource? _classifyUrl(String url, String host, Uri parsed) {
 /// never mention the deployment URL at all, which is the common case, not
 /// the exception (2026-07-21-vercel-detection-requires-md-link).
 ///
-/// The resource's `uri` is a synthetic `https://vercel.com/<orgId>/<name>`
-/// dashboard URL rather than a made-up custom scheme: this keeps it a
-/// perfectly ordinary input to [isVercelDashboardProjectUrl] /
-/// `deriveVercelProjectName` (both already validate and parse
-/// `vercel.com/<scope>/<project>` paths — no separate code path needed for
-/// deletion), and it also means an *identical* dashboard URL later found in
-/// a `.md` file dedups naturally via the caller's `seenUris` set. Falls
-/// back to a `projectId`-keyed synthetic URI when `orgId` is absent (still
-/// unique per project, though not a browsable dashboard link).
+/// The resource's `uri` is a `https://vercel.com/<scope>/<name>` dashboard
+/// URL rather than a made-up custom scheme: this keeps it a perfectly
+/// ordinary input to [isVercelDashboardProjectUrl] / `deriveVercelProjectName`
+/// (both already validate and parse `vercel.com/<scope>/<project>` paths —
+/// no separate code path needed for deletion).
+///
+/// `<scope>` must be the team's human-readable URL **slug**
+/// (e.g. `roberts-projects-fb13711c`), not the opaque `orgId`
+/// (e.g. `team_yABWsykG53iYgFAWXpvnYn7m`) stored in `project.json` — Vercel
+/// dashboard URLs 404 on the opaque id even for a correctly logged-in team
+/// member. [vercelDetectionService] resolves `orgId` -> slug via
+/// `vercel teams list` (cached per `orgId` for the app session, see
+/// [_teamSlugCache]); see 2026-07-23-vercel-url-uses-orgid-not-slug for the
+/// full incident writeup.
+///
+/// Slug resolution can fail (CLI not installed, not logged in, network
+/// down, timeout) — [detectExternalResources] must never hang or crash on
+/// that. On failure this falls back to the pre-fix `orgId`-scoped URL: it
+/// stays non-routable (same as today, no new regression) but the resource
+/// is still listed and still correctly attributed for deletion purposes.
+/// The `.md`/`.vercel/project.json` duplicate-chip case in that fallback
+/// path is caught by the caller's `projectName`-based dedup instead of URL
+/// equality (see [detectExternalResources]'s `seenVercelProjectNames`).
 ///
 /// Returns `null` (silently, no throw) when `.vercel/project.json` does not
 /// exist, is not valid JSON, or has no non-empty `projectName` — mirroring
 /// the error-tolerance of the other detection steps in
 /// [detectExternalResources].
-Future<ExternalResource?> _detectVercelProjectJson(String projectPath) async {
+Future<ExternalResource?> _detectVercelProjectJson(
+  String projectPath,
+  VercelDetectionService vercelDetectionService,
+) async {
   final file = File(p.join(projectPath, '.vercel', 'project.json'));
   if (!await file.exists()) return null;
 
@@ -302,7 +397,14 @@ Future<ExternalResource?> _detectVercelProjectJson(String projectPath) async {
   if (projectName is! String || projectName.isEmpty) return null;
 
   final orgId = data['orgId'];
-  final scope = (orgId is String && orgId.isNotEmpty) ? orgId : null;
+  String? scope;
+  if (orgId is String && orgId.isNotEmpty) {
+    scope = await _resolveTeamSlugCached(orgId, vercelDetectionService);
+    // Resolution failed — fall back to the opaque id so the resource is
+    // still listed (non-routable, matching pre-fix behavior) rather than
+    // dropped or left to crash the detection pipeline.
+    scope ??= orgId;
+  }
   final uri = scope != null
       ? 'https://vercel.com/$scope/$projectName'
       : 'https://vercel.com/_/$projectName';
