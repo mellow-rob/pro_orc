@@ -52,9 +52,38 @@ List<String> buildGhDeleteArgs(String ownerRepo) {
 /// Path segments that are known Vercel routes rather than `<scope>/<project>`
 /// dashboard paths — e.g. `vercel.com/new` is the "create a new project"
 /// boilerplate link that every `create-next-app` README ships by default
-/// (`utm_campaign=create-next-app-readme`). A URL whose first segment
-/// matches one of these is never a real, deletable project.
-const _nonProjectVercelSegments = {'new', 'dashboard', 'login', 'signup'};
+/// (`utm_campaign=create-next-app-readme`), and `vercel.com/blog/<slug>` is
+/// a marketing blog post that legitimately gets linked from research/notes
+/// files (e.g. `vercel.com/blog/common-mistakes-with-the-next-js-app-router-
+/// and-how-to-fix-them`), not a dashboard project
+/// (2026-07-23-vercel-blog-url-classified-as-project-2). A URL whose first
+/// segment matches one of these is never a real, deletable project — mirrors
+/// the `firebase.google.com` docs-vs-console distinction in
+/// `resource_detector.dart`'s `_classifyUrl`, applied to Vercel's own set of
+/// well-known non-project top-level marketing/docs routes.
+const _nonProjectVercelSegments = {
+  'new',
+  'dashboard',
+  'login',
+  'signup',
+  'blog',
+  'docs',
+  'templates',
+  'guides',
+  'changelog',
+  'pricing',
+  'contact',
+  'help',
+  'solutions',
+  'resources',
+  'about',
+  'legal',
+  'careers',
+  'partners',
+  'home',
+  'security',
+  'enterprise',
+};
 
 /// Validates that [uri] (already confirmed to be a `vercel.com` /
 /// `*.vercel.com` host) points at a real `<scope>/<project>` dashboard page
