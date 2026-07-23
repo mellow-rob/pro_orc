@@ -1,5 +1,31 @@
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pro_orc/data/services/vercel_detection_service.dart';
+
+/// Injects a fixed [ProcessResult] regardless of the command invoked, so the
+/// service's parsing logic can be exercised without a real `vercel` binary —
+/// mirrors `gh_detection_service_test.dart`'s `_fixedRunner`.
+VercelTeamsRunner _fixedRunner(ProcessResult result) {
+  return (String command, List<String> args, {Duration? timeout}) async =>
+      result;
+}
+
+/// Injects a runner that never completes within any reasonable timeout, to
+/// simulate a hung `vercel` process.
+VercelTeamsRunner _hangingRunner() {
+  return (String command, List<String> args, {Duration? timeout}) async {
+    await Future<void>.delayed(const Duration(seconds: 30));
+    return ProcessResult(0, 0, '', '');
+  };
+}
+
+/// Injects a runner that throws, simulating a process-launch failure.
+VercelTeamsRunner _throwingRunner() {
+  return (String command, List<String> args, {Duration? timeout}) async {
+    throw ProcessException(command, args, 'simulated launch failure');
+  };
+}
 
 void main() {
   group('VercelDetectionService', () {
@@ -57,5 +83,114 @@ void main() {
         expect(available, isFalse);
       },
     );
+  });
+
+  group('VercelDetectionService.resolveTeamSlug() — '
+      '2026-07-23-vercel-url-uses-orgid-not-slug', () {
+    const orgId = 'team_yABWsykG53iYgFAWXpvnYn7m';
+    const teamsListJson = '''
+{
+  "teams": [
+    {
+      "id": "team_yABWsykG53iYgFAWXpvnYn7m",
+      "slug": "roberts-projects-fb13711c",
+      "name": "Robert's projects",
+      "current": true
+    }
+  ],
+  "pagination": { "count": 1, "next": null, "prev": null }
+}
+''';
+
+    test(
+      'resolves the slug for a matching team id (real CLI output shape)',
+      () async {
+        final service = VercelDetectionService(
+          whichCommand: 'true',
+          vercelCommand: 'true',
+          teamsRunner: _fixedRunner(ProcessResult(0, 0, teamsListJson, '')),
+        );
+
+        final slug = await service.resolveTeamSlug(orgId);
+
+        expect(slug, equals('roberts-projects-fb13711c'));
+      },
+    );
+
+    test('returns null when no team matches the given orgId', () async {
+      final service = VercelDetectionService(
+        whichCommand: 'true',
+        vercelCommand: 'true',
+        teamsRunner: _fixedRunner(ProcessResult(0, 0, teamsListJson, '')),
+      );
+
+      final slug = await service.resolveTeamSlug('team_does_not_exist');
+
+      expect(slug, isNull);
+    });
+
+    test('returns null (no throw) when the CLI is unavailable '
+        '(not installed / not logged in)', () async {
+      final service = VercelDetectionService(
+        whichCommand: 'false', // simulates `which vercel` failing
+        teamsRunner: _fixedRunner(ProcessResult(0, 0, teamsListJson, '')),
+      );
+
+      final slug = await service.resolveTeamSlug(orgId);
+
+      expect(slug, isNull);
+    });
+
+    test('returns null (no throw) when the process exits non-zero', () async {
+      final service = VercelDetectionService(
+        whichCommand: 'true',
+        vercelCommand: 'true',
+        teamsRunner: _fixedRunner(ProcessResult(0, 1, '', 'not logged in')),
+      );
+
+      final slug = await service.resolveTeamSlug(orgId);
+
+      expect(slug, isNull);
+    });
+
+    test('returns null (no throw) on unparseable/garbage stdout', () async {
+      final service = VercelDetectionService(
+        whichCommand: 'true',
+        vercelCommand: 'true',
+        teamsRunner: _fixedRunner(
+          ProcessResult(0, 0, 'not valid json at all', ''),
+        ),
+      );
+
+      final slug = await service.resolveTeamSlug(orgId);
+
+      expect(slug, isNull);
+    });
+
+    test('returns null (no throw) when the runner throws', () async {
+      final service = VercelDetectionService(
+        whichCommand: 'true',
+        vercelCommand: 'true',
+        teamsRunner: _throwingRunner(),
+      );
+
+      final slug = await service.resolveTeamSlug(orgId);
+
+      expect(slug, isNull);
+    });
+
+    test('returns null (no throw, no hang) when the CLI process hangs — '
+        'bounded by an explicit timeout, never blocks indefinitely', () async {
+      final service = VercelDetectionService(
+        whichCommand: 'true',
+        vercelCommand: 'true',
+        teamsRunner: _hangingRunner(),
+        teamsTimeout: const Duration(milliseconds: 50),
+      );
+
+      final slug = await service.resolveTeamSlug(orgId);
+
+      expect(slug, isNull);
+    }, timeout: const Timeout(Duration(seconds: 5)));
   });
 }

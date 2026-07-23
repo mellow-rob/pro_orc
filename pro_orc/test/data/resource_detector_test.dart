@@ -9,6 +9,42 @@ import 'package:pro_orc/data/models/project_type.dart';
 import 'package:pro_orc/data/services/external_deletion_service.dart'
     show deriveVercelProjectName;
 import 'package:pro_orc/data/services/resource_detector.dart';
+import 'package:pro_orc/data/services/vercel_detection_service.dart';
+
+/// A [VercelDetectionService] whose `resolveTeamSlug` never shells out to
+/// the real `vercel` CLI — tests must never depend on this machine's actual
+/// Vercel login state or network access. `whichCommand`/`vercelCommand` are
+/// pinned to `false` so [VercelDetectionService.isAvailable] (and therefore
+/// [VercelDetectionService.resolveTeamSlug], which checks it first) always
+/// resolves quickly to "unavailable" without spawning a real `vercel`
+/// process, unless a [teamsRunner] is supplied to simulate a specific CLI
+/// response.
+VercelDetectionService fakeVercelDetectionService({
+  VercelTeamsRunner? teamsRunner,
+}) {
+  return VercelDetectionService(
+    whichCommand: teamsRunner != null ? 'true' : 'false',
+    vercelCommand: teamsRunner != null ? 'true' : 'false',
+    teamsRunner: teamsRunner ?? _unusedTeamsRunner,
+  );
+}
+
+Future<ProcessResult> _unusedTeamsRunner(
+  String command,
+  List<String> args, {
+  Duration? timeout,
+}) async {
+  throw StateError(
+    'teamsRunner should not be invoked when the CLI is stubbed unavailable',
+  );
+}
+
+/// Injects a fixed [ProcessResult] regardless of the command invoked, for
+/// simulating a specific `vercel teams list --format json` response.
+VercelTeamsRunner fixedTeamsRunner(ProcessResult result) {
+  return (String command, List<String> args, {Duration? timeout}) async =>
+      result;
+}
 
 void main() {
   group('detectExternalResources', () {
@@ -338,6 +374,10 @@ Production: https://vercel.com/my-scope/my-project
 
     setUp(() async {
       tmp = await Directory.systemTemp.createTemp('resource_detector_test_');
+      // Every test in this group works with orgId `team_yABWsykG53iYgFAWXpvnYn7m`
+      // fixtures under different resolution outcomes — a cache hit leaking
+      // from one test to the next would silently short-circuit CLI stubs.
+      resetVercelTeamSlugCacheForTesting();
     });
 
     tearDown(() async {
@@ -372,7 +412,10 @@ Production: https://vercel.com/my-scope/my-project
 
       final project = projectAt(tmp);
 
-      final resources = await detectExternalResources(project);
+      final resources = await detectExternalResources(
+        project,
+        vercelDetectionService: fakeVercelDetectionService(),
+      );
 
       final vercelResources = resources.where(
         (r) => r.type == ExternalResourceType.vercel,
@@ -388,62 +431,65 @@ Production: https://vercel.com/my-scope/my-project
       );
     });
 
-    test(
-      'a project with .vercel/project.json AND a boilerplate '
-      'vercel.com/new md-file link produces exactly one Vercel entry — '
-      'from .vercel/project.json, the boilerplate link contributes nothing '
-      '(2026-07-21-vercel-detection-requires-md-link)',
-      () async {
-        await writeVercelProjectJson(
-          tmp,
-          '{"projectId":"prj_nRO4D2ZbHyO8v5XvuREdMZEOyw0P",'
-          '"orgId":"team_yABWsykG53iYgFAWXpvnYn7m",'
-          '"projectName":"steuerberater-scheinemann"}',
-        );
+    test('a project with .vercel/project.json AND a boilerplate '
+        'vercel.com/new md-file link produces exactly one Vercel entry — '
+        'from .vercel/project.json, the boilerplate link contributes nothing '
+        '(2026-07-21-vercel-detection-requires-md-link)', () async {
+      await writeVercelProjectJson(
+        tmp,
+        '{"projectId":"prj_nRO4D2ZbHyO8v5XvuREdMZEOyw0P",'
+        '"orgId":"team_yABWsykG53iYgFAWXpvnYn7m",'
+        '"projectName":"steuerberater-scheinemann"}',
+      );
 
-        final file = File(p.join(tmp.path, 'README.md'));
-        await file.writeAsString(
-          'Deploy on Vercel: '
-          'https://vercel.com/new?utm_medium=default-template&filter=next.js'
-          '&utm_source=create-next-app&utm_campaign=create-next-app-readme',
-        );
+      final file = File(p.join(tmp.path, 'README.md'));
+      await file.writeAsString(
+        'Deploy on Vercel: '
+        'https://vercel.com/new?utm_medium=default-template&filter=next.js'
+        '&utm_source=create-next-app&utm_campaign=create-next-app-readme',
+      );
 
-        final project = projectAt(
-          tmp,
-          mdFiles: [
-            MdFileInfo(
-              name: 'README.md',
-              relativePath: 'README.md',
-              path: file.path,
-            ),
-          ],
-        );
+      final project = projectAt(
+        tmp,
+        mdFiles: [
+          MdFileInfo(
+            name: 'README.md',
+            relativePath: 'README.md',
+            path: file.path,
+          ),
+        ],
+      );
 
-        final resources = await detectExternalResources(project);
+      final resources = await detectExternalResources(
+        project,
+        vercelDetectionService: fakeVercelDetectionService(),
+      );
 
-        final vercelResources = resources.where(
-          (r) => r.type == ExternalResourceType.vercel,
-        );
-        expect(
-          vercelResources,
-          hasLength(1),
-          reason:
-              'exactly one Vercel entry expected: from .vercel/project.json. '
-              'The boilerplate md-link must not add a second entry, and '
-              'must not suppress the .vercel/project.json entry either.',
-        );
-        expect(
-          deriveVercelProjectName(vercelResources.first.uri),
-          equals('steuerberater-scheinemann'),
-        );
-      },
-    );
+      final vercelResources = resources.where(
+        (r) => r.type == ExternalResourceType.vercel,
+      );
+      expect(
+        vercelResources,
+        hasLength(1),
+        reason:
+            'exactly one Vercel entry expected: from .vercel/project.json. '
+            'The boilerplate md-link must not add a second entry, and '
+            'must not suppress the .vercel/project.json entry either.',
+      );
+      expect(
+        deriveVercelProjectName(vercelResources.first.uri),
+        equals('steuerberater-scheinemann'),
+      );
+    });
 
     test('a project without a .vercel/ folder produces no Vercel resource from '
         'this path (existing md-scan behavior unchanged)', () async {
       final project = projectAt(tmp);
 
-      final resources = await detectExternalResources(project);
+      final resources = await detectExternalResources(
+        project,
+        vercelDetectionService: fakeVercelDetectionService(),
+      );
 
       expect(
         resources.where((r) => r.type == ExternalResourceType.vercel),
@@ -451,40 +497,118 @@ Production: https://vercel.com/my-scope/my-project
       );
     });
 
-    test(
-      'dedups: a real vercel.com dashboard URL in a .md file for the same '
-      'project as .vercel/project.json produces exactly one Vercel entry',
-      () async {
-        await writeVercelProjectJson(
-          tmp,
-          '{"projectId":"prj_x","orgId":"team_yABWsykG53iYgFAWXpvnYn7m",'
-          '"projectName":"my-project"}',
-        );
+    test('dedups (CLI-resolution success path): a real slug-form vercel.com '
+        'dashboard URL in a .md file for the SAME project as '
+        '.vercel/project.json produces exactly one Vercel entry — the '
+        'realistic case (2026-07-23-vercel-url-uses-orgid-not-slug). '
+        'Previously this test used the SAME opaque team_... id in both the '
+        'synthetic and .md-file URL, which masked the real-world bug: humans '
+        'write the slug form (e.g. roberts-projects-fb13711c), not the '
+        'opaque id, so the two URLs are byte-different unless the opaque id '
+        'is actually resolved to the slug.', () async {
+      const orgId = 'team_yABWsykG53iYgFAWXpvnYn7m';
+      const slug = 'roberts-projects-fb13711c';
 
-        final file = File(p.join(tmp.path, 'STATE.md'));
-        await file.writeAsString(
-          'Deployed at https://vercel.com/team_yABWsykG53iYgFAWXpvnYn7m/my-project.',
-        );
+      await writeVercelProjectJson(
+        tmp,
+        '{"projectId":"prj_x","orgId":"$orgId",'
+        '"projectName":"my-project"}',
+      );
 
-        final project = projectAt(
-          tmp,
-          mdFiles: [
-            MdFileInfo(
-              name: 'STATE.md',
-              relativePath: 'STATE.md',
-              path: file.path,
+      final file = File(p.join(tmp.path, 'STATE.md'));
+      await file.writeAsString(
+        'Deployed at https://vercel.com/$slug/my-project.',
+      );
+
+      final project = projectAt(
+        tmp,
+        mdFiles: [
+          MdFileInfo(
+            name: 'STATE.md',
+            relativePath: 'STATE.md',
+            path: file.path,
+          ),
+        ],
+      );
+
+      final resources = await detectExternalResources(
+        project,
+        vercelDetectionService: fakeVercelDetectionService(
+          teamsRunner: fixedTeamsRunner(
+            ProcessResult(
+              0,
+              0,
+              '{"teams":[{"id":"$orgId","slug":"$slug"}]}',
+              '',
             ),
-          ],
-        );
+          ),
+        ),
+      );
 
-        final resources = await detectExternalResources(project);
+      final vercelResources = resources.where(
+        (r) => r.type == ExternalResourceType.vercel,
+      );
+      expect(
+        vercelResources,
+        hasLength(1),
+        reason:
+            'once the opaque orgId resolves to the real slug, the '
+            'synthetic URL and the human-written .md URL converge and '
+            'dedup naturally via seenUris',
+      );
+      expect(
+        vercelResources.first.uri,
+        equals('https://vercel.com/$slug/my-project'),
+      );
+    });
 
-        expect(
-          resources.where((r) => r.type == ExternalResourceType.vercel),
-          hasLength(1),
-        );
-      },
-    );
+    test('dedups (CLI-resolution FAILURE path): even when slug resolution '
+        'fails, a slug-form .md URL for the SAME project as '
+        '.vercel/project.json still produces exactly one Vercel entry — via '
+        'projectName-based dedup, not URL-string equality '
+        '(2026-07-23-vercel-url-uses-orgid-not-slug)', () async {
+      const orgId = 'team_yABWsykG53iYgFAWXpvnYn7m';
+
+      await writeVercelProjectJson(
+        tmp,
+        '{"projectId":"prj_x","orgId":"$orgId",'
+        '"projectName":"my-project"}',
+      );
+
+      final file = File(p.join(tmp.path, 'STATE.md'));
+      await file.writeAsString(
+        'Deployed at https://vercel.com/roberts-projects-fb13711c/my-project.',
+      );
+
+      final project = projectAt(
+        tmp,
+        mdFiles: [
+          MdFileInfo(
+            name: 'STATE.md',
+            relativePath: 'STATE.md',
+            path: file.path,
+          ),
+        ],
+      );
+
+      final resources = await detectExternalResources(
+        project,
+        // CLI unavailable — resolution fails, synthetic URL falls back to
+        // the opaque orgId, which byte-differs from the .md slug URL.
+        vercelDetectionService: fakeVercelDetectionService(),
+      );
+
+      final vercelResources = resources.where(
+        (r) => r.type == ExternalResourceType.vercel,
+      );
+      expect(
+        vercelResources,
+        hasLength(1),
+        reason:
+            'projectName-based dedup must catch this even though the two '
+            'URLs are byte-different (opaque orgId fallback vs. slug)',
+      );
+    });
 
     test('a corrupt/invalid .vercel/project.json is silently skipped — no '
         'crash, rest of detection still runs', () async {
@@ -506,7 +630,10 @@ Production: https://vercel.com/my-scope/my-project
         ],
       );
 
-      final resources = await detectExternalResources(project);
+      final resources = await detectExternalResources(
+        project,
+        vercelDetectionService: fakeVercelDetectionService(),
+      );
 
       expect(
         resources.where((r) => r.type == ExternalResourceType.vercel),
@@ -528,11 +655,112 @@ Production: https://vercel.com/my-scope/my-project
 
         final project = projectAt(tmp);
 
-        final resources = await detectExternalResources(project);
+        final resources = await detectExternalResources(
+          project,
+          vercelDetectionService: fakeVercelDetectionService(),
+        );
 
         expect(
           resources.where((r) => r.type == ExternalResourceType.vercel),
           isEmpty,
+        );
+      },
+    );
+
+    test('slug resolution failure never crashes/hangs detection — a project '
+        'with a valid orgId still yields a resource (fallback URL) even when '
+        'the CLI is unavailable', () async {
+      await writeVercelProjectJson(
+        tmp,
+        '{"projectId":"prj_x","orgId":"team_yABWsykG53iYgFAWXpvnYn7m",'
+        '"projectName":"my-project"}',
+      );
+
+      final project = projectAt(tmp);
+
+      final resources = await detectExternalResources(
+        project,
+        vercelDetectionService: fakeVercelDetectionService(),
+      );
+
+      final vercelResources = resources.where(
+        (r) => r.type == ExternalResourceType.vercel,
+      );
+      expect(vercelResources, hasLength(1));
+      expect(
+        vercelResources.first.uri,
+        equals('https://vercel.com/team_yABWsykG53iYgFAWXpvnYn7m/my-project'),
+        reason:
+            'fallback to the opaque orgId (pre-fix behavior) — still '
+            'listed and attributable, just non-routable, when CLI '
+            'resolution fails',
+      );
+    });
+
+    test(
+      'in-memory team-slug cache: two projects under the same orgId only '
+      'invoke the teams-list CLI call once — not once per project '
+      '(2026-07-23-vercel-url-uses-orgid-not-slug caching requirement)',
+      () async {
+        const orgId = 'team_yABWsykG53iYgFAWXpvnYn7m';
+        const slug = 'roberts-projects-fb13711c';
+        var callCount = 0;
+
+        VercelDetectionService serviceForCall() => fakeVercelDetectionService(
+          teamsRunner: (command, args, {timeout}) async {
+            callCount++;
+            return ProcessResult(
+              0,
+              0,
+              '{"teams":[{"id":"$orgId","slug":"$slug"}]}',
+              '',
+            );
+          },
+        );
+
+        final tmp2 = await Directory.systemTemp.createTemp(
+          'resource_detector_test_',
+        );
+        addTearDown(() async {
+          if (await tmp2.exists()) await tmp2.delete(recursive: true);
+        });
+
+        await writeVercelProjectJson(
+          tmp,
+          '{"projectId":"prj_a","orgId":"$orgId","projectName":"project-a"}',
+        );
+        await writeVercelProjectJson(
+          tmp2,
+          '{"projectId":"prj_b","orgId":"$orgId","projectName":"project-b"}',
+        );
+
+        final resourcesA = await detectExternalResources(
+          projectAt(tmp),
+          vercelDetectionService: serviceForCall(),
+        );
+        final resourcesB = await detectExternalResources(
+          projectAt(tmp2),
+          vercelDetectionService: serviceForCall(),
+        );
+
+        expect(
+          resourcesA
+              .firstWhere((r) => r.type == ExternalResourceType.vercel)
+              .uri,
+          equals('https://vercel.com/$slug/project-a'),
+        );
+        expect(
+          resourcesB
+              .firstWhere((r) => r.type == ExternalResourceType.vercel)
+              .uri,
+          equals('https://vercel.com/$slug/project-b'),
+        );
+        expect(
+          callCount,
+          equals(1),
+          reason:
+              'the second project shares the same orgId, so its slug '
+              'must come from the in-memory cache, not a second CLI call',
         );
       },
     );
